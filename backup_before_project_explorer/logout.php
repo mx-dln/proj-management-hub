@@ -1,0 +1,1 @@
+<?php require_once __DIR__ . '/config/helpers.php'; require_once __DIR__ . '/controllers/Controllers.php'; (new AuthController())->logout();

@@ -1,0 +1,16 @@
+RewriteEngine On
+
+# Block access to sensitive directories
+RewriteRule ^config/ - [F,L]
+RewriteRule ^models/ - [F,L]
+RewriteRule ^controllers/ - [F,L]
+RewriteRule ^includes/ - [F,L]
+RewriteRule ^layouts/ - [F,L]
+RewriteRule ^database/ - [F,L]
+RewriteRule ^logs/ - [F,L]
+
+# Prevent directory listing
+Options -Indexes
+
+# Default page
+DirectoryIndex index.php
