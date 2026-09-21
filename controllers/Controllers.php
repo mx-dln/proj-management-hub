@@ -6,6 +6,7 @@ require_once __DIR__ . '/../models/UserModel.php';
 require_once __DIR__ . '/../models/FacultyModel.php';
 require_once __DIR__ . '/../models/ProgramModel.php';
 require_once __DIR__ . '/../models/ProjectModel.php';
+require_once __DIR__ . '/../models/ExplorerModel.php';
 
 class AuthController {
     public function login($username, $password) {
@@ -39,6 +40,7 @@ class DashboardController {
         $stats = AssignmentVisibility::getDashboardStats();
         $userId = $_SESSION['user_id'] ?? 0;
         $role = $_SESSION['role'] ?? '';
+        $facultyId = $_SESSION['faculty_id'] ?? null;
 
         if ($role === 'admin') {
             $recentActivities = db()->query("SELECT al.*, u.username FROM audit_logs al LEFT JOIN users u ON al.user_id = u.id ORDER BY al.created_at DESC LIMIT 10")->fetchAll();
@@ -51,6 +53,63 @@ class DashboardController {
         $notifications = db()->prepare("SELECT * FROM notifications WHERE user_id = ? AND is_read = 0 ORDER BY created_at DESC LIMIT 10");
         $notifications->execute([$userId]);
         $notifications = $notifications->fetchAll();
+
+        if ($role === 'faculty' && $facultyId) {
+            $projectWhere = "WHERE p.deleted_at IS NULL AND p.id IN (SELECT project_id FROM project_assignments WHERE faculty_id = ? AND is_active = 1)";
+            $projectParams = [$facultyId];
+            $activityWhere = "WHERE ea.deleted_at IS NULL AND ea.id IN (SELECT activity_id FROM activity_assignments WHERE faculty_id = ? AND is_active = 1)";
+            $activityParams = [$facultyId];
+        } else {
+            $projectWhere = "WHERE p.deleted_at IS NULL";
+            $projectParams = [];
+            $activityWhere = "WHERE ea.deleted_at IS NULL";
+            $activityParams = [];
+        }
+
+        $projectStatusStmt = db()->prepare("SELECT p.status, COUNT(*) as total FROM projects p {$projectWhere} GROUP BY p.status ORDER BY total DESC");
+        $projectStatusStmt->execute($projectParams);
+        $projectStatus = $projectStatusStmt->fetchAll();
+
+        $activityStatusStmt = db()->prepare("SELECT ea.status, COUNT(*) as total FROM extension_activities ea {$activityWhere} GROUP BY ea.status ORDER BY total DESC");
+        $activityStatusStmt->execute($activityParams);
+        $activityStatus = $activityStatusStmt->fetchAll();
+
+        $monthlyStmt = db()->prepare("SELECT DATE_FORMAT(COALESCE(ea.start_datetime, ea.created_at), '%b') as month_label, MONTH(COALESCE(ea.start_datetime, ea.created_at)) as month_num, COUNT(*) as total FROM extension_activities ea {$activityWhere} AND YEAR(COALESCE(ea.start_datetime, ea.created_at)) = YEAR(CURDATE()) GROUP BY MONTH(COALESCE(ea.start_datetime, ea.created_at)), DATE_FORMAT(COALESCE(ea.start_datetime, ea.created_at), '%b') ORDER BY MONTH(COALESCE(ea.start_datetime, ea.created_at))");
+        $monthlyStmt->execute($activityParams);
+        $monthlyRows = $monthlyStmt->fetchAll();
+        $monthlyByNumber = [];
+        foreach ($monthlyRows as $row) {
+            $monthlyByNumber[(int)$row['month_num']] = (int)$row['total'];
+        }
+        $monthlyActivities = [];
+        for ($month = 1; $month <= 12; $month++) {
+            $monthlyActivities[] = [
+                'month_label' => date('M', mktime(0, 0, 0, $month, 1)),
+                'month_num' => $month,
+                'total' => $monthlyByNumber[$month] ?? 0,
+            ];
+        }
+
+        $departmentStmt = db()->prepare("SELECT COALESCE(d.name, 'Unassigned') as department, COUNT(DISTINCT fp.id) as total FROM faculty_profiles fp LEFT JOIN departments d ON fp.department_id = d.id GROUP BY COALESCE(d.name, 'Unassigned') ORDER BY total DESC LIMIT 6");
+        $departmentStmt->execute();
+        $departmentLoad = $departmentStmt->fetchAll();
+
+        $topProjectsStmt = db()->prepare("SELECT p.title, p.status, p.completion_percentage, p.budget FROM projects p {$projectWhere} ORDER BY p.completion_percentage DESC, p.updated_at DESC LIMIT 5");
+        $topProjectsStmt->execute($projectParams);
+        $topProjects = $topProjectsStmt->fetchAll();
+
+        $budgetStmt = db()->prepare("SELECT COALESCE(SUM(p.budget), 0) as total_budget, COALESCE(AVG(p.completion_percentage), 0) as average_completion FROM projects p {$projectWhere}");
+        $budgetStmt->execute($projectParams);
+        $budgetSummary = $budgetStmt->fetch();
+
+        $participantStmt = db()->prepare("SELECT COUNT(*) as total FROM activity_participants ap JOIN extension_activities ea ON ap.activity_id = ea.id {$activityWhere}");
+        $participantStmt->execute($activityParams);
+        $participantTotal = (int)$participantStmt->fetch()['total'];
+
+        $programPerformanceStmt = db()->prepare("SELECT pr.title, COUNT(DISTINCT p.id) as projects, COUNT(DISTINCT ea.id) as activities, COALESCE(AVG(p.completion_percentage), 0) as completion FROM programs pr LEFT JOIN projects p ON p.program_id = pr.id AND p.deleted_at IS NULL LEFT JOIN components c ON c.project_id = p.id AND c.deleted_at IS NULL LEFT JOIN extension_activities ea ON ea.component_id = c.id AND ea.deleted_at IS NULL WHERE pr.deleted_at IS NULL GROUP BY pr.id, pr.title ORDER BY activities DESC, projects DESC LIMIT 5");
+        $programPerformanceStmt->execute();
+        $programPerformance = $programPerformanceStmt->fetchAll();
+        $driveStats = (new ExplorerModel())->storageStats();
 
         require_once __DIR__ . '/../layouts/header.php';
         require_once __DIR__ . '/../views/dashboard/index.php';
@@ -132,6 +191,21 @@ class ProjectController {
         $proposals = db()->prepare("SELECT * FROM proposals WHERE project_id = ? ORDER BY created_at DESC");
         $proposals->execute([$id]);
         $proposals = $proposals->fetchAll();
+        $projectDocuments = db()->prepare("SELECT d.*, dc.name as category_name FROM documents d LEFT JOIN document_categories dc ON d.category_id = dc.id WHERE d.entity_type = 'project' AND d.entity_id = ? AND d.deleted_at IS NULL ORDER BY d.created_at DESC");
+        $projectDocuments->execute([$id]);
+        $projectDocuments = $projectDocuments->fetchAll();
+        $projectMoas = db()->prepare("SELECT m.*, pa.name as partner_name FROM moas m LEFT JOIN partner_agencies pa ON m.partner_agency_id = pa.id WHERE m.project_id = ? ORDER BY m.created_at DESC");
+        $projectMoas->execute([$id]);
+        $projectMoas = $projectMoas->fetchAll();
+        $projectReports = db()->prepare("SELECT * FROM accomplishment_reports WHERE project_id = ? ORDER BY period_year DESC, FIELD(period_quarter, 'Q4','Q3','Q2','Q1'), created_at DESC");
+        $projectReports->execute([$id]);
+        $projectReports = $projectReports->fetchAll();
+        $projectCertificates = db()->prepare("SELECT c.*, ea.title as activity_title FROM certificates c LEFT JOIN extension_activities ea ON c.activity_id = ea.id LEFT JOIN components co ON ea.component_id = co.id WHERE co.project_id = ? ORDER BY c.created_at DESC");
+        $projectCertificates->execute([$id]);
+        $projectCertificates = $projectCertificates->fetchAll();
+        $projectActivities = db()->prepare("SELECT ea.id, ea.title FROM extension_activities ea JOIN components co ON ea.component_id = co.id WHERE co.project_id = ? AND ea.deleted_at IS NULL ORDER BY ea.title");
+        $projectActivities->execute([$id]);
+        $projectActivities = $projectActivities->fetchAll();
         require_once __DIR__ . '/../layouts/header.php';
         require_once __DIR__ . '/../views/projects/view.php';
         require_once __DIR__ . '/../layouts/footer.php';
@@ -199,11 +273,20 @@ class ProposalController {
 
 class DocumentController {
     public function index() {
+        require_once __DIR__ . '/../models/DocumentModel.php';
+        $isDesignation = ($_GET['module'] ?? '') === 'designations';
+        $documentModule = $isDesignation ? 'designations' : 'documents';
+        $categories = db()->query('SELECT * FROM document_categories WHERE is_active = 1 ORDER BY name')->fetchAll();
+        $categoryId = $isDesignation ? '' : ($_GET['category'] ?? '');
+        $uploadTargets = DocumentModel::uploadTargets();
+        $canUpload = !empty($uploadTargets);
+        $uploadLimit = DocumentModel::uploadLimit();
+        $_SESSION['documents_csrf'] ??= bin2hex(random_bytes(32));
         $page = max(1, intval($_GET['page'] ?? 1));
         $limit = ITEMS_PER_PAGE;
         $offset = ($page - 1) * $limit;
 
-        $result = AssignmentVisibility::getVisibleDocuments($_GET['search'] ?? '', $_GET['category'] ?? '', $limit, $offset);
+        $result = AssignmentVisibility::getVisibleDocuments($_GET['search'] ?? '', $categoryId, $limit, $offset);
         $documents = $result['data'];
         $totalPages = ceil($result['total'] / $limit);
 
@@ -237,11 +320,11 @@ class MoaController {
 
         $role = $_SESSION['role'] ?? '';
         if ($role === 'admin') {
-            $moas = db()->query("SELECT m.*, p.title as project_title FROM moas m LEFT JOIN projects p ON m.project_id = p.id ORDER BY m.created_at DESC LIMIT $limit OFFSET $offset")->fetchAll();
+            $moas = db()->query("SELECT m.*, p.title as project_title, pa.name as partner_name FROM moas m LEFT JOIN projects p ON m.project_id = p.id LEFT JOIN partner_agencies pa ON m.partner_agency_id = pa.id ORDER BY m.created_at DESC LIMIT $limit OFFSET $offset")->fetchAll();
             $total = db()->query("SELECT COUNT(*) as c FROM moas")->fetch()['c'];
         } else {
             $fid = Permissions::getFacultyId();
-            $stmt = db()->prepare("SELECT m.*, p.title as project_title FROM moas m LEFT JOIN projects p ON m.project_id = p.id WHERE m.project_id IN (SELECT project_id FROM project_assignments WHERE faculty_id = ? AND is_active = 1) ORDER BY m.created_at DESC LIMIT ? OFFSET ?");
+            $stmt = db()->prepare("SELECT m.*, p.title as project_title, pa.name as partner_name FROM moas m LEFT JOIN projects p ON m.project_id = p.id LEFT JOIN partner_agencies pa ON m.partner_agency_id = pa.id WHERE m.project_id IN (SELECT project_id FROM project_assignments WHERE faculty_id = ? AND is_active = 1) ORDER BY m.created_at DESC LIMIT ? OFFSET ?");
             $stmt->execute([$fid, $limit, $offset]);
             $moas = $stmt->fetchAll();
             $cstmt = db()->prepare("SELECT COUNT(*) as c FROM moas WHERE project_id IN (SELECT project_id FROM project_assignments WHERE faculty_id = ? AND is_active = 1)");

@@ -264,6 +264,9 @@ function getStatusBadge(status) {
         'terminated': 'badge-terminated',
         'planned': 'badge-planned',
         'in_progress': 'badge-in_progress',
+        'generated': 'badge-submitted',
+        'printed': 'badge-pending',
+        'claimed': 'badge-approved',
     };
     const labels = {
         'under_review': 'Under Review',

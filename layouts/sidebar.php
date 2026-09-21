@@ -2,28 +2,22 @@
 $currentPage = $_GET['module'] ?? 'dashboard';
 $user = currentUser();
 $notifCount = getUnreadNotificationCount($user['id']);
+$projectPages = ['projects', 'programs', 'components', 'activities', 'project-files'];
+$primaryItems = [
+    ['icon' => 'fas fa-chart-pie', 'label' => 'Dashboard', 'module' => 'dashboard', 'roles' => ['admin','faculty','viewer']],
+    ['icon' => 'fas fa-diagram-project', 'label' => 'Project Management', 'module' => 'projects', 'roles' => ['admin','faculty','viewer']],
+    ['icon' => 'fas fa-file-alt', 'label' => 'Proposals', 'module' => 'proposals', 'roles' => ['admin','faculty']],
+    ['icon' => 'fas fa-file-signature', 'label' => 'Designation', 'module' => 'designations', 'roles' => ['admin','faculty','viewer']],
+    ['icon' => 'fas fa-handshake', 'label' => 'MOA', 'module' => 'moa', 'roles' => ['admin','viewer']],
+    ['icon' => 'fas fa-clipboard-check', 'label' => 'Accomplishments', 'module' => 'reports', 'roles' => ['admin','faculty','viewer']],
+    ['icon' => 'fas fa-award', 'label' => 'Certificates', 'module' => 'certificates', 'roles' => ['admin','faculty','viewer']],
+];
 
 $navGroups = [
-    'dashboard' => [
-        'label' => 'Dashboard',
+    'records' => [
+        'label' => 'Records',
         'items' => [
-            ['icon' => 'fas fa-chart-pie', 'label' => 'Dashboard', 'module' => 'dashboard', 'roles' => ['admin','faculty','viewer']],
-        ]
-    ],
-    'project_management' => [
-        'label' => 'Project Management',
-        'items' => [
-            ['icon' => 'fas fa-sitemap', 'label' => 'Project Explorer', 'module' => 'explorer', 'roles' => ['admin','faculty','viewer']],
-        ]
-    ],
-    'operations' => [
-        'label' => 'Operations',
-        'items' => [
-            ['icon' => 'fas fa-file-alt', 'label' => 'Proposals', 'module' => 'proposals', 'roles' => ['admin','faculty']],
             ['icon' => 'fas fa-archive', 'label' => 'Documents', 'module' => 'documents', 'roles' => ['admin','faculty','viewer']],
-            ['icon' => 'fas fa-handshake', 'label' => 'MOAs', 'module' => 'moa', 'roles' => ['admin','viewer']],
-            ['icon' => 'fas fa-clipboard-check', 'label' => 'Reports', 'module' => 'reports', 'roles' => ['admin','faculty','viewer']],
-            ['icon' => 'fas fa-award', 'label' => 'Certificates', 'module' => 'certificates', 'roles' => ['admin','faculty','viewer']],
         ]
     ],
     'people' => [
@@ -72,7 +66,16 @@ foreach ($navGroups as $groupKey => $group) {
         <p class="text-[10px] text-white/30 mt-2">Project Management Hub v1.0</p>
     </div>
 
-    <nav class="mt-3 px-3 overflow-y-auto h-[calc(100vh-7rem)]">
+    <nav class="mt-3 px-3 overflow-y-auto h-[calc(100vh-7rem)]" aria-label="Main navigation">
+        <div class="pb-3 mb-3 border-b border-[#1E7A4B]" data-primary-navigation>
+            <?php foreach ($primaryItems as $item): ?>
+                <?php if (!in_array($user['role'], $item['roles'], true)) continue;
+                $isActive = $currentPage === $item['module'] || ($item['module'] === 'projects' && in_array($currentPage, $projectPages, true)); ?>
+                <a href="<?= SITE_URL ?>/index.php?module=<?= $item['module'] ?>" class="sidebar-item <?= $isActive ? 'active' : '' ?>" <?= $isActive ? 'aria-current="page"' : '' ?> aria-label="<?= e($item['label']) ?>">
+                    <i class="<?= $item['icon'] ?>" aria-hidden="true"></i><span><?= e($item['label']) ?></span>
+                </a>
+            <?php endforeach; ?>
+        </div>
         <?php foreach ($navGroups as $groupKey => $group): ?>
             <?php
             $hasAccess = false;

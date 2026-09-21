@@ -10,10 +10,11 @@ $user = currentUser();
 
 switch ($action) {
     case 'create':
-        Permissions::requirePermission(Permissions::canCreateProject());
+        $programId = intval($_POST['program_id'] ?? 0);
+        Permissions::requirePermission(Permissions::canCreateProjectInProgram($programId));
         $data = [
             'project_code' => generateCode('PROJ', 'projects', 'project_code'),
-            'program_id' => intval($_POST['program_id'] ?? 0),
+            'program_id' => $programId,
             'title' => sanitize($_POST['title'] ?? ''),
             'description' => sanitize($_POST['description'] ?? ''),
             'start_date' => !empty($_POST['start_date']) ? $_POST['start_date'] : null,
@@ -32,6 +33,10 @@ switch ($action) {
         if (empty($data['program_id'])) jsonResponse(['success' => false, 'message' => 'Program is required'], 400);
         try {
             $id = $model->create($data);
+            if (($user['role'] ?? '') === 'faculty' && !empty($_SESSION['faculty_id'])) {
+                db()->prepare("INSERT INTO project_assignments (project_id, faculty_id, assignment_type, assigned_by) VALUES (?, ?, 'leader', ?) ON DUPLICATE KEY UPDATE is_active = 1, assignment_type = 'leader'")
+                    ->execute([$id, (int)$_SESSION['faculty_id'], $user['id']]);
+            }
             auditLog('create', 'project', $id, 'Created project: ' . $data['title'], false, $id);
             jsonResponse(['success' => true, 'message' => 'Project created', 'id' => $id]);
         } catch (Exception $e) { jsonResponse(['success' => false, 'message' => 'Failed: ' . $e->getMessage()], 500); }

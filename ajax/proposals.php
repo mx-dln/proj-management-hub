@@ -7,6 +7,33 @@ $action = $_GET['action'] ?? '';
 $user = currentUser();
 
 switch ($action) {
+    case 'file':
+        $id = intval($_GET['id'] ?? 0);
+        $stmt = db()->prepare("SELECT * FROM proposals WHERE id = ?");
+        $stmt->execute([$id]);
+        $proposal = $stmt->fetch();
+        if (!$proposal || empty($proposal['attachment'])) jsonResponse(['success' => false, 'message' => 'File not found'], 404);
+        $isOwner = (int)$proposal['submitted_by'] === (int)$user['id'];
+        $canRead = $user['role'] === 'admin' || $isOwner;
+        if (!$canRead && !empty($proposal['project_id']) && $_SESSION['faculty_id']) {
+            $access = db()->prepare("SELECT 1 FROM project_assignments WHERE project_id = ? AND faculty_id = ? AND is_active = 1 LIMIT 1");
+            $access->execute([(int)$proposal['project_id'], (int)$_SESSION['faculty_id']]);
+            $canRead = (bool)$access->fetchColumn();
+        }
+        if (!$canRead) jsonResponse(['success' => false, 'message' => 'Permission denied'], 403);
+        $base = realpath(UPLOAD_PATH);
+        $file = realpath(UPLOAD_PATH . $proposal['attachment']);
+        if (!$base || !$file || strpos($file, $base) !== 0 || !is_file($file)) jsonResponse(['success' => false, 'message' => 'File missing'], 404);
+        $name = basename($proposal['attachment']);
+        $mime = mime_content_type($file) ?: 'application/octet-stream';
+        $inline = !isset($_GET['download']) && in_array($mime, ['application/pdf', 'image/jpeg', 'image/png', 'text/plain'], true);
+        header('Content-Type: ' . $mime);
+        header('Content-Length: ' . filesize($file));
+        header('X-Content-Type-Options: nosniff');
+        header('Content-Disposition: ' . ($inline ? 'inline' : 'attachment') . "; filename=\"proposal-file\"; filename*=UTF-8''" . rawurlencode($name));
+        readfile($file);
+        exit;
+
     case 'create_program_proposal':
         // Faculty submits a proposal for a new program
         if (!in_array($user['role'], ['faculty', 'admin'])) {
@@ -46,6 +73,10 @@ switch ($action) {
                 $data['submitted_by'], $data['date_submitted'], $data['status'], $data['remarks']
             ]);
             $id = db()->lastInsertId();
+            if (!empty($_FILES['attachment']['tmp_name'])) {
+                $result = uploadFile($_FILES['attachment'], 'proposals', ['pdf','doc','docx']);
+                if ($result['success']) db()->prepare("UPDATE proposals SET attachment = ? WHERE id = ?")->execute([$result['file_path'], $id]);
+            }
 
             // Notify admins
             $admins = db()->query("SELECT id FROM users WHERE role = 'admin' AND deleted_at IS NULL")->fetchAll();
@@ -92,12 +123,17 @@ switch ($action) {
         $proposal->execute([$id]);
         $p = $proposal->fetch();
         if (!$p) jsonResponse(['success' => false, 'message' => 'Not found'], 404);
-        Permissions::requirePermission(Permissions::canSubmitProposal($p['project_id']));
+        $isOwner = (int)$p['submitted_by'] === (int)$user['id'];
+        $isProgramProposal = empty($p['project_id']);
+        $canSubmit = $user['role'] === 'faculty'
+            && $isOwner
+            && in_array($p['status'], ['draft', 'returned'])
+            && ($isProgramProposal || Permissions::canSubmitProposal((int)$p['project_id']));
+        Permissions::requirePermission($canSubmit);
         try {
-            $newStatus = $p['status'] === 'returned' ? 'resubmitted' : 'submitted';
-            db()->prepare("UPDATE proposals SET status = ?, date_submitted = CURDATE() WHERE id = ?")->execute([$newStatus, $id]);
+            db()->prepare("UPDATE proposals SET status = 'submitted', date_submitted = CURDATE(), reviewed_by = NULL, reviewed_at = NULL WHERE id = ?")->execute([$id]);
             db()->prepare("INSERT INTO proposal_approvals (proposal_id, approver_id, action, remarks) VALUES (?, ?, 'submitted', ?)")
-                ->execute([$id, $user['id'], 'Submitted for review']);
+                ->execute([$id, $user['id'], $p['status'] === 'returned' ? 'Resubmitted for review' : 'Submitted for review']);
             
             // Notify admin
             $admins = db()->query("SELECT id FROM users WHERE role = 'admin' AND deleted_at IS NULL")->fetchAll();
@@ -192,6 +228,9 @@ switch ($action) {
             $stmt->execute([$id]);
             $data = $stmt->fetch();
             if (!$data) jsonResponse(['success' => false, 'message' => 'Not found'], 404);
+            if (empty($data['project_title']) && empty($data['project_id'])) {
+                $data['project_title'] = $data['title'];
+            }
             
             // Parse remarks if it's JSON (program proposal)
             $meta = json_decode($data['remarks'], true);

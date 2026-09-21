@@ -1,120 +1,22 @@
-<div class="mb-6 flex items-center justify-between">
-    <div>
-        <h1 class="text-2xl font-bold text-[#F9FAFB]">Project Explorer</h1>
-        <p class="text-[#9CA3AF] text-sm mt-1">Browse and manage the extension project hierarchy</p>
-    </div>
-    <div class="flex gap-2">
-        <?php if ($_SESSION['role'] === 'faculty'): ?>
-            <button onclick="openSubmitProposal()" class="btn-ghost"><i class="fas fa-file-alt mr-1"></i> Submit Proposal</button>
-        <?php endif; ?>
-        <?php if ($_SESSION['role'] === 'admin'): ?>
-            <button onclick="openCreateProgram()" class="btn-primary"><i class="fas fa-plus mr-1"></i> New Program</button>
-        <?php endif; ?>
-    </div>
-</div>
-
-<!-- Search -->
-<div class="mb-4">
-    <div class="relative">
-        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7280] text-sm"></i>
-        <input type="text" id="explorer-search" placeholder="Search programs, projects..." class="filter-input pl-10">
-    </div>
-</div>
-
-<!-- Explorer Layout -->
-<div class="explorer-layout">
-    <div class="explorer-tree" id="explorer-tree">
-        <div class="p-4 text-center text-[#6B7280] text-sm">Loading...</div>
-    </div>
-    <div class="explorer-detail" id="explorer-detail">
-        <div class="explorer-empty">
-            <div class="explorer-empty-icon"><i class="fas fa-layer-group"></i></div>
-            <h3 class="explorer-empty-title">Select an item</h3>
-            <p class="explorer-empty-text">Choose a program or project from the tree to view details, or select Components/Activities to manage them.</p>
-        </div>
-    </div>
-</div>
-
-<script>
-const userRole = '<?= $_SESSION['role'] ?? '' ?>';
-const siteUrl = '<?= SITE_URL ?>';
-window.activityTypes = <?= json_encode(array_map(fn($t) => ['value'=>$t['id'],'label'=>$t['name']], db()->query("SELECT id, name FROM activity_types WHERE is_active = 1")->fetchAll())) ?>;
-
-function openCreateProgram() {
-    const sl = getSlideOver({ size: 'md', title: 'New Program', subtitle: 'Create extension program' });
-    const formHtml = `
-        <div class="form-section">
-            <h4 class="form-section-title">Program Information</h4>
-            <div class="form-grid">
-                ${fieldHtml({ name: 'title', label: 'Program Title', required: true, fullWidth: true })}
-                ${fieldHtml({ name: 'description', label: 'Description', type: 'textarea', fullWidth: true, rows: 3 })}
-                ${fieldHtml({ name: 'college', label: 'College' })}
-                ${fieldHtml({ name: 'campus', label: 'Campus', value: 'Cauayan Campus' })}
-            </div>
-        </div>
-        <div class="form-section">
-            <h4 class="form-section-title">Timeline & Budget</h4>
-            <div class="form-grid">
-                ${fieldHtml({ name: 'start_date', label: 'Start Date', type: 'date' })}
-                ${fieldHtml({ name: 'end_date', label: 'End Date', type: 'date' })}
-                ${fieldHtml({ name: 'budget_allocation', label: 'Budget', type: 'number' })}
-            </div>
-        </div>
-        <div class="form-section">
-            <h4 class="form-section-title">Objectives</h4>
-            <div class="form-grid">
-                ${fieldHtml({ name: 'objectives', label: 'Objectives', type: 'textarea', fullWidth: true, rows: 3 })}
-                ${fieldHtml({ name: 'expected_outputs', label: 'Expected Outputs', type: 'textarea', fullWidth: true, rows: 3 })}
-            </div>
-        </div>`;
-    sl.openForm('New Program', 'Create program', formHtml, { showSaveAnother: true });
-    document.getElementById('slideoverForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        await submitSlideOverForm(sl, `${siteUrl}/ajax/programs.php?action=create`, new FormData(e.target), () => explorer.loadTree());
-    });
-}
-
-function openSubmitProposal() {
-    const sl = getSlideOver({ size: 'lg', title: 'Submit Proposal', subtitle: 'Propose a new extension program' });
-    const formHtml = `
-        <div class="form-section">
-            <h4 class="form-section-title">Proposal Information</h4>
-            <div class="form-grid">
-                ${fieldHtml({ name: 'title', label: 'Program/Project Title', required: true, fullWidth: true })}
-                ${fieldHtml({ name: 'description', label: 'Description', type: 'textarea', fullWidth: true, rows: 3, placeholder: 'Describe the proposed extension program or project' })}
-                ${fieldHtml({ name: 'college', label: 'College', placeholder: 'e.g., College of Agriculture' })}
-                ${fieldHtml({ name: 'campus', label: 'Campus', value: 'Cauayan Campus' })}
-            </div>
-        </div>
-        <div class="form-section">
-            <h4 class="form-section-title">Timeline & Budget</h4>
-            <div class="form-grid">
-                ${fieldHtml({ name: 'start_date', label: 'Proposed Start Date', type: 'date' })}
-                ${fieldHtml({ name: 'end_date', label: 'Proposed End Date', type: 'date' })}
-                ${fieldHtml({ name: 'budget', label: 'Estimated Budget', type: 'number' })}
-                ${fieldHtml({ name: 'funding_source', label: 'Funding Source', placeholder: 'e.g., University Fund, CHED, DOST' })}
-            </div>
-        </div>
-        <div class="form-section">
-            <h4 class="form-section-title">Details</h4>
-            <div class="form-grid">
-                ${fieldHtml({ name: 'objectives', label: 'Objectives', type: 'textarea', fullWidth: true, rows: 3 })}
-                ${fieldHtml({ name: 'beneficiaries', label: 'Target Beneficiaries', fullWidth: true, placeholder: 'e.g., Farmers, Senior Citizens, OSY' })}
-                ${fieldHtml({ name: 'location', label: 'Target Location', fullWidth: true })}
-                ${fieldHtml({ name: 'remarks', label: 'Additional Remarks', type: 'textarea', fullWidth: true, rows: 2 })}
-            </div>
-        </div>
-        <div class="p-3 rounded-lg bg-[#1E3A8A] border border-[#2563EB] text-[#BFDBFE] text-sm">
-            <i class="fas fa-info-circle mr-2"></i>
-            Your proposal will be reviewed by ETS and the Administrator. Once approved, a Program will be created automatically.
-        </div>`;
-    sl.openForm('Submit Proposal', 'Propose a new extension program', formHtml, { showSaveAnother: false, size: 'lg' });
-    document.getElementById('slideoverForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const formData = new FormData(e.target);
-        await submitSlideOverForm(sl, `${siteUrl}/ajax/proposals.php?action=create_program_proposal`, formData, () => {
-            showToast('Proposal submitted! ETS will review it.', 'success');
-        });
-    });
-}
-</script>
+<?php $_SESSION['explorer_csrf'] ??= bin2hex(random_bytes(32)); ?>
+<?php $explorerCssVersion = filemtime(__DIR__ . '/../../assets/css/explorer.css'); ?>
+<link rel="stylesheet" href="<?= e(SITE_URL) ?>/assets/css/explorer.css?v=<?= e($explorerCssVersion) ?>">
+<section id="project-drive" data-endpoint="<?= e(SITE_URL) ?>/ajax/drive.php" data-csrf="<?= e($_SESSION['explorer_csrf']) ?>">
+ <header class="pd-heading"><h1>Drive</h1><span id="pd-count"></span></header>
+ <div class="pd-toolbar">
+  <div class="pd-new-wrap"><button id="pd-new" class="btn-primary"><i class="fas fa-plus"></i> New</button><div id="pd-new-menu" class="pd-menu" hidden></div></div>
+  <button id="pd-upload" class="btn-ghost" hidden><i class="fas fa-upload"></i> Upload</button>
+  <label class="pd-search"><i class="fas fa-search"></i><input id="pd-search" type="search" placeholder="Search in Project Drive" aria-label="Search in Project Drive"></label>
+  <div class="pd-views" role="group" aria-label="View"><button id="pd-grid" title="Grid view" aria-label="Grid view"><i class="fas fa-border-all"></i></button><button id="pd-list" title="List view" aria-label="List view"><i class="fas fa-list"></i></button></div>
+ </div>
+ <div id="pd-busy" class="pd-busy" hidden><span></span></div>
+ <div id="pd-limit" class="pd-limit" hidden></div>
+ <div class="pd-navigation"><button id="pd-back" title="Back" aria-label="Back"><i class="fas fa-arrow-left"></i></button><button id="pd-forward" title="Forward" aria-label="Forward"><i class="fas fa-arrow-right"></i></button><nav id="pd-breadcrumbs" aria-label="Folder path"></nav></div>
+ <div id="pd-status" role="status" aria-live="polite"></div><div id="pd-items" aria-label="Folder contents"></div>
+ <input id="pd-files" type="file" multiple hidden><input id="pd-folder-files" type="file" webkitdirectory multiple hidden><div id="pd-context" class="pd-menu" hidden></div>
+ <section id="pd-queue" class="pd-queue" hidden aria-label="Upload progress">
+  <header><strong id="pd-queue-title">Uploads</strong><button id="pd-queue-min" type="button" title="Minimize uploads" aria-label="Minimize uploads"><i class="fas fa-minus"></i></button></header>
+  <div id="pd-queue-list"></div>
+ </section>
+ <dialog id="pd-dialog"><form id="pd-form"><header><h2 id="pd-dialog-title"></h2><button type="button" id="pd-close" title="Close" aria-label="Close"><i class="fas fa-xmark"></i></button></header><div id="pd-dialog-body"></div><p id="pd-dialog-error" role="alert"></p><footer id="pd-dialog-footer"><button type="button" id="pd-cancel" class="btn-ghost">Cancel</button><button type="submit" id="pd-submit" class="btn-primary">Save</button></footer></form></dialog>
+</section>

@@ -35,6 +35,6 @@
     <script src="<?= SITE_URL ?>/assets/js/app.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/slideover.js"></script>
     <script src="<?= SITE_URL ?>/assets/js/assignments.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/explorer.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/explorer.js?v=<?= e(filemtime(__DIR__ . '/../assets/js/explorer.js')) ?>"></script>
 </body>
 </html>

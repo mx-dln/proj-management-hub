@@ -1,5 +1,10 @@
 RewriteEngine On
 
+# Explorer bytes are served only through the authenticated download endpoint.
+RewriteRule ^uploads/explorer(?:/|$) - [F,L]
+RewriteRule ^uploads/documents/private(?:/|$) - [F,L]
+RewriteRule ^backup[^/]*(?:/|$) - [F,L]
+
 # Block access to sensitive directories
 RewriteRule ^config/ - [F,L]
 RewriteRule ^models/ - [F,L]
@@ -8,6 +13,8 @@ RewriteRule ^includes/ - [F,L]
 RewriteRule ^layouts/ - [F,L]
 RewriteRule ^database/ - [F,L]
 RewriteRule ^logs/ - [F,L]
+RewriteRule ^vendor/ - [F,L]
+RewriteRule ^composer\.(json|lock)$ - [F,L]
 
 # Prevent directory listing
 Options -Indexes

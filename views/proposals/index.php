@@ -1,5 +1,8 @@
 <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
     <div><h1 class="text-2xl font-bold text-[#F9FAFB]">Proposals</h1><p class="text-[#9CA3AF] text-sm mt-1">Manage project proposals</p></div>
+    <?php if ($_SESSION['role'] === 'faculty'): ?>
+        <button onclick="openProposalSubmit()" class="btn-primary"><i class="fas fa-plus mr-1"></i> Add Proposal</button>
+    <?php endif; ?>
 </div>
 
 <div class="filter-bar mb-6">
@@ -16,12 +19,13 @@
         <?php if (empty($proposals)): ?>
             <div class="empty-state"><div class="empty-state-icon"><i class="fas fa-file-alt"></i></div><h3 class="empty-state-title">No proposals found</h3></div>
         <?php else: ?>
-            <div class="overflow-x-auto"><table class="data-table"><thead><tr><th>Number</th><th>Title</th><th>Project</th><th>Submitted</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+            <div class="overflow-x-auto"><table class="data-table proposals-table"><thead><tr><th>Number</th><th>Title</th><th>Project</th><th>File</th><th>Submitted</th><th>Status</th><th>Actions</th></tr></thead><tbody>
                 <?php foreach ($proposals as $i => $p): ?>
                     <tr class="animate-row" style="animation-delay:<?= $i * 0.05 ?>s">
                         <td data-label="Number"><span class="table-code"><?= e($p['proposal_number']) ?></span></td>
                         <td data-label="Title"><span class="table-title"><?= e($p['title']) ?></span></td>
-                        <td data-label="Project"><span class="text-[#D1D5DB]"><?= e($p['project_title'] ?? '-') ?></span></td>
+                        <td data-label="Project"><span class="text-[#D1D5DB]"><?= e($p['project_title'] ?? $p['title'] ?? '-') ?></span></td>
+                        <td data-label="File"><?php if (!empty($p['attachment'])): ?><a href="<?= SITE_URL ?>/ajax/proposals.php?action=file&amp;id=<?= (int)$p['id'] ?>" target="_blank" rel="noopener" class="action-btn proposal-file-action" title="Open uploaded proposal" aria-label="Open uploaded proposal"><i class="fas fa-file-alt text-sm"></i></a><?php else: ?><span class="text-[#6B7280]">-</span><?php endif; ?></td>
                         <td data-label="Submitted"><span class="table-date"><?= formatDate($p['date_submitted']) ?></span></td>
                         <td data-label="Status"><?= getStatusBadge($p['status']) ?></td>
                         <td data-label="Actions">
@@ -61,7 +65,36 @@
 </div>
 
 <script>
-const siteUrl = '<?= SITE_URL ?>';
+const siteUrl = window.location.origin;
+
+function openProposalSubmit() {
+    const sl = getSlideOver({ size: 'lg' });
+    const formHtml = `
+        <div class="form-section">
+            <h4 class="form-section-title">Proposal Information</h4>
+            <div class="form-grid">
+                ${fieldHtml({ name: 'title', label: 'Project / Proposal Title', required: true, fullWidth: true })}
+                ${fieldHtml({ name: 'description', label: 'Description', type: 'textarea', rows: 3, fullWidth: true })}
+                ${fieldHtml({ name: 'college', label: 'College' })}
+                ${fieldHtml({ name: 'campus', label: 'Campus', value: 'Cauayan Campus' })}
+                ${fieldHtml({ name: 'start_date', label: 'Start Date', type: 'date' })}
+                ${fieldHtml({ name: 'end_date', label: 'End Date', type: 'date' })}
+                ${fieldHtml({ name: 'budget', label: 'Budget', type: 'number', placeholder: '0.00' })}
+                ${fieldHtml({ name: 'funding_source', label: 'Funding Source' })}
+                ${fieldHtml({ name: 'location', label: 'Location' })}
+                ${fieldHtml({ name: 'beneficiaries', label: 'Beneficiaries' })}
+                ${fieldHtml({ name: 'objectives', label: 'Objectives', type: 'textarea', rows: 3, fullWidth: true })}
+                <label class="form-label full-width">Proposal File
+                    <input name="attachment" type="file" accept=".pdf,.doc,.docx" class="form-input">
+                </label>
+            </div>
+        </div>`;
+    sl.openForm('Add Proposal', 'Send proposal to admin for review', formHtml, { showSaveAnother: false, size: 'lg' });
+    document.getElementById('slideoverForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await submitSlideOverForm(sl, `${siteUrl}/ajax/proposals.php?action=create_program_proposal`, new FormData(e.target), () => location.reload());
+    });
+}
 
 document.addEventListener('DOMContentLoaded', function() {
     const returnForm = document.getElementById('returnForm');
@@ -109,6 +142,13 @@ async function viewProposal(id, btn) {
             viewFieldHtml('Submitted', formatDate(data.date_submitted)),
             viewFieldHtml('Submitted By', escapeHtml(data.submitter_name || '-')),
         ]);
+        if (data.attachment) {
+            const fileUrl = `${siteUrl}/ajax/proposals.php?action=file&id=${Number(data.id)}`;
+            content += `<div class="form-section"><h4 class="form-section-title">Uploaded Proposal File</h4><div class="flex flex-wrap gap-2">
+                <a href="${fileUrl}" target="_blank" rel="noopener" class="btn-ghost"><i class="fas fa-external-link-alt mr-1"></i> Open</a>
+                <a href="${fileUrl}&download=1" class="btn-primary"><i class="fas fa-download mr-1"></i> Download</a>
+            </div></div>`;
+        }
 
         // Parse remarks - might be JSON for program proposals
         let remarksHtml = '';

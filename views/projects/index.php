@@ -1,172 +1,109 @@
-<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-    <div><h1 class="text-2xl font-bold text-[#F9FAFB]">Projects</h1><p class="text-[#9CA3AF] text-sm mt-1">Manage extension projects</p></div>
-    <?php if (Permissions::canCreateProject()): ?>
-        <button onclick="openCreateProject()" class="btn-primary"><i class="fas fa-plus mr-1"></i> New Project</button>
-    <?php endif; ?>
-</div>
-
-<div class="filter-bar mb-6">
-    <form method="GET" class="flex flex-col md:flex-row gap-3">
-        <input type="hidden" name="module" value="projects">
-        <div class="flex-1"><input type="text" name="search" placeholder="Search projects..." value="<?= e($_GET['search'] ?? '') ?>" class="filter-input"></div>
-        <select name="status" class="filter-select"><option value="">All Status</option><?php foreach(['draft','planned','ongoing','completed','cancelled'] as $s): ?><option value="<?= $s ?>" <?= ($_GET['status']??'')===$s?'selected':'' ?>><?= ucfirst($s) ?></option><?php endforeach; ?></select>
-        <button type="submit" class="btn-primary"><i class="fas fa-search"></i></button>
-    </form>
-</div>
-
-<div id="projectsTable">
-    <div class="data-table-container">
-        <?php if(empty($result['data'])): ?>
-            <div class="empty-state"><div class="empty-state-icon"><i class="fas fa-folder-open"></i></div><h3 class="empty-state-title">No projects found</h3></div>
-        <?php else: ?>
-            <div class="overflow-x-auto"><table class="data-table"><thead><tr>
-                <th>Code</th><th>Project</th><th>Program</th><th>Budget</th><th>Status</th><th>Progress</th><th>Actions</th>
-            </tr></thead><tbody>
-                <?php foreach($result['data'] as $i=>$p): ?>
-                    <tr class="animate-row" style="animation-delay:<?= $i*0.05 ?>s">
-                        <td data-label="Code"><span class="table-code"><?= e($p['project_code']) ?></span></td>
-                        <td data-label="Project"><span class="table-title"><?= e($p['title']) ?></span></td>
-                        <td data-label="Program"><span class="text-[#D1D5DB]"><?= e($p['program_title'] ?? '-') ?></span></td>
-                        <td data-label="Budget"><span class="table-amount"><?= formatCurrency($p['budget']) ?></span></td>
-                        <td data-label="Status"><?= getStatusBadge($p['status']) ?></td>
-                        <td data-label="Progress"><div class="flex items-center gap-2"><div class="progress-bar w-16"><div class="progress-fill" style="width:<?= $p['completion_percentage'] ?>%"></div></div><span class="text-xs text-[#9CA3AF]"><?= $p['completion_percentage'] ?>%</span></div></td>
-                        <td data-label="Actions">
-                            <div class="flex items-center justify-end gap-1">
-                                <button onclick="viewProject(<?= $p['id'] ?>, this)" class="action-btn" data-loading title="View"><i class="fas fa-eye text-sm"></i></button>
-                                <?php if(Permissions::canEditProject($p['id'])): ?>
-                                    <button onclick="editProject(<?= $p['id'] ?>, this)" class="action-btn" data-loading title="Edit"><i class="fas fa-edit text-sm"></i></button>
-                                <?php endif; ?>
-                                <?php if(Permissions::canAssignMembers()): ?>
-                                    <button onclick="openAssignments('project', <?= $p['id'] ?>, '<?= e(addslashes($p['title'])) ?>')" class="action-btn" title="Assign"><i class="fas fa-users text-sm"></i></button>
-                                <?php endif; ?>
-                            </div>
-                        </td>
-                    </tr>
-                <?php endforeach; ?>
-            </tbody></table></div>
+<div class="sketch-board">
+    <div class="sketch-head">
+        <div>
+            <h1>Project Management</h1>
+            <p>(MGA PROJECTS)</p>
+        </div>
+        <?php if (Permissions::canCreateProject()): ?>
+            <button onclick="openCreateProject()" class="btn-primary"><i class="fas fa-plus mr-1"></i> New Program</button>
         <?php endif; ?>
     </div>
+
+    <div class="sketch-project-layout">
+        <aside class="sketch-list">
+            <form method="GET" class="sketch-search">
+                <input type="hidden" name="module" value="projects">
+                <input type="search" name="search" value="<?= e($_GET['search'] ?? '') ?>" placeholder="Search projects">
+            </form>
+            <?php if(empty($result['data'])): ?>
+                <div class="sketch-empty">No projects yet</div>
+            <?php else: ?>
+                <?php foreach($result['data'] as $p): ?>
+                    <button type="button" class="sketch-project-row" onclick="viewProject(<?= (int)$p['id'] ?>, this)">
+                        <i class="fas fa-caret-right"></i>
+                        <span><?= e($p['title']) ?></span>
+                        <small><?= e($p['project_code']) ?></small>
+                    </button>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </aside>
+
+        <section class="sketch-form-panel">
+            <div class="sketch-form-title">
+                <button onclick="openCreateProject()" class="btn-primary"><i class="fas fa-plus mr-1"></i> New Program</button>
+            </div>
+            <form id="inlineProjectForm" class="sketch-form">
+                <label>Project Title:<input name="title" required></label>
+                <label>Project Leader:<input name="project_leader" placeholder="Assign after saving"></label>
+                <label class="full">Description:<textarea name="description" rows="2"></textarea></label>
+                <div class="two">
+                    <label>College:<input name="college"></label>
+                    <label>Campus:<input name="location"></label>
+                </div>
+                <div class="two">
+                    <label>Start Date:<input name="start_date" type="date"></label>
+                    <label>End Date:<input name="end_date" type="date"></label>
+                </div>
+                <label class="full">Objectives:<textarea name="objectives" rows="2"></textarea></label>
+                <label class="full">Expected Output:<textarea name="expected_outputs" rows="2"></textarea></label>
+                <label class="full">Parent Program:
+                    <select name="program_id" required>
+                        <option value="">Select program</option>
+                        <?php foreach($programs as $program): ?><option value="<?= (int)$program['id'] ?>"><?= e($program['title']) ?></option><?php endforeach; ?>
+                    </select>
+                </label>
+                <div class="sketch-actions">
+                    <button type="reset" class="btn-ghost">Cancel</button>
+                    <button type="submit" name="again" value="1" class="btn-ghost">Save & Create Another</button>
+                    <button type="submit" class="btn-primary">Save</button>
+                </div>
+            </form>
+        </section>
+    </div>
 </div>
+
+<style>
+.sketch-board{background:#172331;border:1px solid #374151;border-radius:10px;overflow:hidden;color:#F9FAFB}
+.sketch-head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 18px;border-bottom:1px solid #374151;background:#111827}
+.sketch-head h1{font-size:22px;font-weight:800}.sketch-head p{font-size:12px;color:#9CA3AF;margin-top:3px}
+.sketch-project-layout{display:grid;grid-template-columns:300px 1fr;min-height:560px}
+.sketch-list{border-right:1px solid #374151;padding:14px;background:#16202c}
+.sketch-search input,.sketch-form input,.sketch-form textarea,.sketch-form select{width:100%;background:#0F172A;border:1px solid #374151;border-radius:7px;color:#F9FAFB;padding:9px 10px}
+.sketch-project-row{width:100%;display:grid;grid-template-columns:16px 1fr;gap:8px;text-align:left;align-items:center;padding:10px 8px;border-radius:7px;color:#D1D5DB;margin-top:8px}
+.sketch-project-row:hover{background:#203348;color:#fff}.sketch-project-row small{grid-column:2;color:#6B7280;font-size:11px}
+.sketch-empty{color:#6B7280;text-align:center;padding:32px 10px}.sketch-form-panel{padding:20px 24px}
+.sketch-form-title{margin-bottom:18px}.sketch-form{display:grid;gap:13px;max-width:850px}
+.sketch-form label{display:grid;gap:6px;color:#D1D5DB;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.02em}
+.sketch-form .two{display:grid;grid-template-columns:1fr 1fr;gap:14px}.sketch-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:10px}
+@media(max-width:900px){.sketch-project-layout{grid-template-columns:1fr}.sketch-list{border-right:0;border-bottom:1px solid #374151}.sketch-form .two{grid-template-columns:1fr}}
+</style>
 
 <script>
 const siteUrl = '<?= SITE_URL ?>';
 const programsList = <?= json_encode($programs) ?>;
-
-function refreshProjectsTable() {
-    const params = new URLSearchParams(window.location.search);
-    fetch(`${siteUrl}/index.php?module=projects&${params.toString()}`)
-        .then(r => r.text())
-        .then(html => {
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
-            const newTable = doc.getElementById('projectsTable');
-            if (newTable) document.getElementById('projectsTable').innerHTML = newTable.innerHTML;
-        });
-}
-
-function openCreateProject() {
-    const sl = getSlideOver({ size: 'lg', title: 'New Project', subtitle: 'Create extension project' });
-    const programOptions = programsList.map(p => ({ value: p.id, label: p.title }));
-    const formHtml = `
-        <div class="form-section">
-            <h4 class="form-section-title">Project Information</h4>
-            <div class="form-grid">
-                ${fieldHtml({ name: 'title', label: 'Project Title', required: true, placeholder: 'Enter project title', fullWidth: true })}
-                ${fieldHtml({ name: 'program_id', label: 'Parent Program', type: 'select', options: programOptions, required: true, fullWidth: true })}
-                ${fieldHtml({ name: 'description', label: 'Description', type: 'textarea', placeholder: 'Describe the project', fullWidth: true, rows: 3 })}
-                ${fieldHtml({ name: 'location', label: 'Location', placeholder: 'Project location' })}
-            </div>
-        </div>
-        <div class="form-section">
-            <h4 class="form-section-title">Timeline & Budget</h4>
-            <div class="form-grid">
-                ${fieldHtml({ name: 'start_date', label: 'Start Date', type: 'date' })}
-                ${fieldHtml({ name: 'end_date', label: 'End Date', type: 'date' })}
-                ${fieldHtml({ name: 'budget', label: 'Budget', type: 'number', placeholder: '0.00' })}
-                ${fieldHtml({ name: 'funding_source_id', label: 'Funding Source', type: 'select', options: <?= json_encode(array_map(fn($f) => ['value'=>$f['id'],'label'=>$f['name']], $fundingSources ?? [])) ?> })}
-            </div>
-        </div>
-        <div class="form-section">
-            <h4 class="form-section-title">Details</h4>
-            <div class="form-grid">
-                ${fieldHtml({ name: 'partner_agency_id', label: 'Partner Agency', type: 'select', options: <?= json_encode(array_map(fn($p) => ['value'=>$p['id'],'label'=>$p['name']], $partnerAgencies ?? [])) ?> })}
-                ${fieldHtml({ name: 'beneficiary_group_id', label: 'Beneficiary', type: 'select', options: <?= json_encode(array_map(fn($b) => ['value'=>$b['id'],'label'=>$b['name']], $beneficiaryGroups ?? [])) ?> })}
-                ${fieldHtml({ name: 'objectives', label: 'Objectives', type: 'textarea', fullWidth: true, rows: 3 })}
-                ${fieldHtml({ name: 'expected_outputs', label: 'Expected Outputs', type: 'textarea', fullWidth: true, rows: 3 })}
-            </div>
-        </div>`;
-    sl.openForm('New Project', 'Create extension project', formHtml, { showSaveAnother: true, size: 'lg' });
-    document.getElementById('slideoverForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        await submitSlideOverForm(sl, `${siteUrl}/ajax/projects.php?action=create`, new FormData(e.target), () => refreshProjectsTable());
-    });
-}
-
-async function viewProject(id, btn) {
-    const sl = getSlideOver({ size: 'lg', title: 'Project Details', subtitle: 'Loading...' });
+document.getElementById('inlineProjectForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const keepOpen = e.submitter?.name === 'again';
     try {
-        const data = await fetchWithLoading(`${siteUrl}/ajax/projects.php?action=get&id=${id}`, btn);
-        sl.setTitle(data.title);
-        sl.subtitle = data.project_code;
-        const content = `
-            ${viewSectionHtml('General Information', [
-                viewFieldHtml('Code', `<span class="table-code">${escapeHtml(data.project_code)}</span>`),
-                viewFieldHtml('Status', getStatusBadge(data.status)),
-                viewFieldHtml('Program', escapeHtml(data.program_title || '-')),
-                viewFieldHtml('Location', escapeHtml(data.location)),
-                viewFieldHtml('Budget', formatCurrency(data.budget)),
-                viewFieldHtml('Completion', data.completion_percentage + '%'),
-            ])}
-            ${data.description ? viewSectionHtml('Description', [`<div class="full-width"><p class="text-sm text-[#D1D5DB]">${escapeHtml(data.description)}</p></div>`]) : ''}
-            ${data.objectives ? viewSectionHtml('Objectives', [`<div class="full-width"><p class="text-sm text-[#D1D5DB]">${escapeHtml(data.objectives)}</p></div>`]) : ''}
-        `;
-        sl.openView(data.title, data.project_code, content, {
-            size: 'lg',
-            onEdit: data.canEdit ? () => editProject(id, null) : null
-        });
-    } catch (err) { console.error('Error:', err); showToast(err.message || 'Failed to load', 'error'); sl.close(true); }
-}
-
-async function editProject(id, btn) {
-    const sl = getSlideOver({ size: 'lg', title: 'Edit Project', subtitle: 'Loading...' });
-    try {
-        const data = await fetchWithLoading(`${siteUrl}/ajax/projects.php?action=get&id=${id}`, btn);
-        sl.setTitle('Edit Project');
-        sl.subtitle = data.project_code;
-        const programOptions = programsList.map(p => ({ value: p.id, label: p.title }));
-        const formHtml = `
-            <input type="hidden" name="id" value="${data.id}">
-            <div class="form-section">
-                <h4 class="form-section-title">Project Information</h4>
-                <div class="form-grid">
-                    ${fieldHtml({ name: 'title', label: 'Project Title', required: true, value: data.title, fullWidth: true })}
-                    ${fieldHtml({ name: 'program_id', label: 'Parent Program', type: 'select', options: programOptions, value: data.program_id, required: true, fullWidth: true })}
-                    ${fieldHtml({ name: 'description', label: 'Description', type: 'textarea', value: data.description, fullWidth: true, rows: 3 })}
-                    ${fieldHtml({ name: 'location', label: 'Location', value: data.location })}
-                </div>
-            </div>
-            <div class="form-section">
-                <h4 class="form-section-title">Timeline & Budget</h4>
-                <div class="form-grid">
-                    ${fieldHtml({ name: 'start_date', label: 'Start Date', type: 'date', value: data.start_date })}
-                    ${fieldHtml({ name: 'end_date', label: 'End Date', type: 'date', value: data.end_date })}
-                    ${fieldHtml({ name: 'budget', label: 'Budget', type: 'number', value: data.budget })}
-                    ${fieldHtml({ name: 'status', label: 'Status', type: 'select', value: data.status, options: [{value:'draft',label:'Draft'},{value:'planned',label:'Planned'},{value:'ongoing',label:'Ongoing'},{value:'completed',label:'Completed'},{value:'cancelled',label:'Cancelled'}] })}
-                    ${fieldHtml({ name: 'completion_percentage', label: 'Completion %', type: 'number', value: data.completion_percentage })}
-                </div>
-            </div>
-            <div class="form-section">
-                <h4 class="form-section-title">Details</h4>
-                <div class="form-grid">
-                    ${fieldHtml({ name: 'objectives', label: 'Objectives', type: 'textarea', value: data.objectives, fullWidth: true, rows: 3 })}
-                    ${fieldHtml({ name: 'expected_outputs', label: 'Expected Outputs', type: 'textarea', value: data.expected_outputs, fullWidth: true, rows: 3 })}
-                </div>
-            </div>`;
-        sl.openForm('Edit Project', data.project_code, formHtml, { showSaveAnother: false, size: 'lg' });
-        document.getElementById('slideoverForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            await submitSlideOverForm(sl, `${siteUrl}/ajax/projects.php?action=update`, new FormData(e.target), () => refreshProjectsTable());
-        });
-    } catch (err) { console.error('Error:', err); showToast(err.message || 'Failed to load', 'error'); sl.close(true); }
+        const data = await fetch(`${siteUrl}/ajax/projects.php?action=create`, { method:'POST', body:new FormData(e.target) }).then(r => r.json());
+        if (!data.success) throw new Error(data.message || 'Failed to save');
+        showToast(data.message || 'Saved');
+        if (keepOpen) e.target.reset(); else setTimeout(() => location.reload(), 700);
+    } catch (err) { showToast(err.message, 'error'); }
+});
+function openCreateProject(){ document.querySelector('#inlineProjectForm input[name="title"]')?.focus(); }
+async function viewProject(id, btn){
+    const data = await fetchWithLoading(`${siteUrl}/ajax/projects.php?action=get&id=${id}`, btn);
+    getSlideOver({size:'md'}).openView(data.title, data.project_code, viewSectionHtml('Project Information', [
+        viewFieldHtml('Project Title', escapeHtml(data.title || '-')),
+        viewFieldHtml('Project Leader', 'Assign members'),
+        viewFieldHtml('Description', escapeHtml(data.description || '-')),
+        viewFieldHtml('College', '-'),
+        viewFieldHtml('Campus', escapeHtml(data.location || '-')),
+        viewFieldHtml('Start Date', formatDate(data.start_date)),
+        viewFieldHtml('End Date', formatDate(data.end_date)),
+        viewFieldHtml('Objectives', escapeHtml(data.objectives || '-')),
+        viewFieldHtml('Expected Output', escapeHtml(data.expected_outputs || '-')),
+    ]), {size:'md'});
 }
 </script>

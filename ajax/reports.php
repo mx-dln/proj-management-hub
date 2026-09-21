@@ -19,16 +19,21 @@ switch ($action) {
             'title' => sanitize($_POST['title'] ?? ''),
             'summary' => sanitize($_POST['summary'] ?? ''),
             'submitted_by' => $user['id'],
-            'status' => 'draft',
+            'date_submitted' => date('Y-m-d'),
+            'status' => 'submitted',
         ];
         if (empty($data['title'])) jsonResponse(['success' => false, 'message' => 'Title is required'], 400);
         try {
-            $sql = "INSERT INTO accomplishment_reports (report_number, report_type, period_quarter, period_year, project_id, title, summary, submitted_by, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            $sql = "INSERT INTO accomplishment_reports (report_number, report_type, period_quarter, period_year, project_id, title, summary, submitted_by, date_submitted, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             db()->prepare($sql)->execute(array_values($data));
             $id = db()->lastInsertId();
             if (!empty($_FILES['attachment']['tmp_name'])) {
                 $result = uploadFile($_FILES['attachment'], 'reports');
-                if ($result['success']) db()->prepare("UPDATE accomplishment_reports SET attachment = ? WHERE id = ?")->execute([$result['file_path'], $id]);
+                if ($result['success']) {
+                    db()->prepare("UPDATE accomplishment_reports SET attachment = ? WHERE id = ?")->execute([$result['file_path'], $id]);
+                } else {
+                    jsonResponse(['success' => false, 'message' => $result['error'] ?? 'Attachment upload failed'], 422);
+                }
             }
             auditLog('create', 'report', $id, 'Created report: ' . $data['title'], false, $projectId);
             jsonResponse(['success' => true, 'message' => 'Report created', 'id' => $id]);

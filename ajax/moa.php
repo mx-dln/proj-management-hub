@@ -12,7 +12,7 @@ switch ($action) {
         $data = [
             'moa_number' => sanitize($_POST['moa_number'] ?? ''),
             'project_id' => intval($_POST['project_id'] ?? 0),
-            'partner_agency' => sanitize($_POST['partner_agency'] ?? ''),
+            'partner_agency_id' => intval($_POST['partner_agency_id'] ?? 0) ?: null,
             'date_signed' => !empty($_POST['date_signed']) ? $_POST['date_signed'] : null,
             'expiration_date' => !empty($_POST['expiration_date']) ? $_POST['expiration_date'] : null,
             'status' => 'pending',
@@ -21,7 +21,7 @@ switch ($action) {
         ];
         if (empty($data['moa_number'])) jsonResponse(['success' => false, 'message' => 'MOA number is required'], 400);
         try {
-            $sql = "INSERT INTO moas (moa_number, project_id, partner_agency, date_signed, expiration_date, status, remarks, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            $sql = "INSERT INTO moas (moa_number, project_id, partner_agency_id, date_signed, expiration_date, status, remarks, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
             db()->prepare($sql)->execute(array_values($data));
             $id = db()->lastInsertId();
             if (!empty($_FILES['attachment']['tmp_name'])) {
@@ -39,9 +39,10 @@ switch ($action) {
         Permissions::requirePermission(Permissions::canManageMoa());
         try {
             $fields = []; $params = [];
-            foreach (['moa_number','partner_agency','remarks','status'] as $f) {
+            foreach (['moa_number','remarks','status'] as $f) {
                 if (isset($input[$f])) { $fields[] = "$f = ?"; $params[] = sanitize($input[$f]); }
             }
+            if (isset($input['partner_agency_id'])) { $fields[] = "partner_agency_id = ?"; $params[] = intval($input['partner_agency_id']) ?: null; }
             foreach (['date_signed','expiration_date'] as $f) {
                 if (isset($input[$f])) { $fields[] = "$f = ?"; $params[] = $input[$f] ?: null; }
             }
@@ -55,7 +56,7 @@ switch ($action) {
         try {
             $id = intval($_GET['id'] ?? 0);
             if (!$id) jsonResponse(['success' => false, 'message' => 'Invalid ID'], 400);
-            $stmt = db()->prepare("SELECT m.*, p.title as project_title FROM moas m LEFT JOIN projects p ON m.project_id = p.id WHERE m.id = ?");
+            $stmt = db()->prepare("SELECT m.*, p.title as project_title, pa.name as partner_name FROM moas m LEFT JOIN projects p ON m.project_id = p.id LEFT JOIN partner_agencies pa ON m.partner_agency_id = pa.id WHERE m.id = ?");
             $stmt->execute([$id]);
             $data = $stmt->fetch();
             if (!$data) jsonResponse(['success' => false, 'message' => 'Not found'], 404);

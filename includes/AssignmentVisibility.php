@@ -162,7 +162,8 @@ class AssignmentVisibility {
         if ($facultyId) {
             // Faculty sees: their own proposals OR proposals for projects they're assigned to
             $where .= " AND (pr.submitted_by = ? OR pr.project_id IN (SELECT project_id FROM project_assignments WHERE faculty_id = ? AND is_active = 1))";
-            $params = array_merge([$userId, $facultyId], $params);
+            $params[] = $userId;
+            $params[] = $facultyId;
         }
         
         $countSql = "SELECT COUNT(*) as count FROM proposals pr{$where}";

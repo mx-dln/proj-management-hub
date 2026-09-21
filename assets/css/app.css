@@ -164,6 +164,14 @@
 .action-btn:hover { background: #324152; color: #F9FAFB; }
 .action-btn-danger:hover { background: #7F1D1D; color: #FCA5A5; }
 .action-btn-success:hover { background: #14532D; color: #86EFAC; }
+.proposals-table th:nth-child(1), .proposals-table td:nth-child(1) { width: 112px; }
+.proposals-table th:nth-child(4), .proposals-table td:nth-child(4) { width: 74px; text-align: center; }
+.proposals-table th:nth-child(5), .proposals-table td:nth-child(5) { width: 112px; }
+.proposals-table th:nth-child(6), .proposals-table td:nth-child(6) { width: 112px; }
+.proposals-table th:nth-child(7), .proposals-table td:nth-child(7) { width: 150px; text-align: right; }
+.proposals-table .table-code { display: inline-block; max-width: 92px; white-space: normal; overflow-wrap: anywhere; line-height: 1.45; }
+.proposal-file-action { width: 34px; height: 34px; border: 1px solid #374151; background: #1F2937; color: #D1D5DB; margin: 0 auto; }
+.proposal-file-action:hover { border-color: #0F643A; background: #14532D; color: #86EFAC; }
 
 /* Cards */
 .stat-card { background: #1F2937; border: 1px solid #374151; border-radius: 16px; padding: 20px; transition: all 0.2s ease; position: relative; overflow: hidden; }
@@ -816,3 +824,350 @@
     opacity: 1;
 }
 
+/* ============================================
+   PROJECT DRIVE
+   ============================================ */
+
+.drive-shell {
+    background: #111827;
+    border: 1px solid #374151;
+    border-radius: 14px;
+    overflow: hidden;
+    min-height: calc(100vh - 11rem);
+}
+
+.drive-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 16px;
+    background: #1F2937;
+    border-bottom: 1px solid #374151;
+}
+
+.drive-search {
+    flex: 1;
+    max-width: 680px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #111827;
+    border: 1px solid #374151;
+    border-radius: 999px;
+    padding: 0 14px;
+    color: #6B7280;
+}
+
+.drive-search input {
+    width: 100%;
+    height: 42px;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #F9FAFB;
+    font-size: 14px;
+}
+
+.drive-search input::placeholder { color: #6B7280; }
+.drive-actions { display: flex; align-items: center; gap: 8px; }
+
+.drive-breadcrumbs {
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: #111827;
+    border-bottom: 1px solid #243142;
+    color: #6B7280;
+    overflow-x: auto;
+}
+
+.drive-crumb {
+    border: none;
+    background: transparent;
+    color: #86EFAC;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 6px 8px;
+    border-radius: 8px;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.drive-crumb:hover { background: #1F2937; }
+.drive-crumb.active { color: #F9FAFB; cursor: default; }
+
+.drive-content {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    min-height: calc(100vh - 17rem);
+}
+
+.drive-sidebar {
+    background: #162033;
+    border-right: 1px solid #374151;
+    padding: 12px;
+}
+
+.drive-nav {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: #D1D5DB;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: left;
+}
+
+.drive-nav i { width: 18px; color: #86EFAC; }
+.drive-nav:hover, .drive-nav.active { background: #243142; color: #F9FAFB; }
+
+.drive-main {
+    min-width: 0;
+    padding: 18px;
+}
+
+.drive-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+
+.drive-header-row h2 {
+    color: #F9FAFB;
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.drive-header-row p {
+    color: #9CA3AF;
+    font-size: 13px;
+    margin-top: 2px;
+}
+
+.drive-items { min-height: 320px; }
+.drive-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 12px;
+}
+
+.drive-card {
+    min-height: 156px;
+    border: 1px solid #374151;
+    border-radius: 8px;
+    background: #1F2937;
+    padding: 16px;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+
+.drive-card:hover {
+    background: #243142;
+    border-color: #0F643A;
+    transform: translateY(-1px);
+}
+
+.drive-card-icon {
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    margin-bottom: 14px;
+    font-size: 20px;
+}
+
+.drive-card-icon.folder, .drive-icon.folder { background: #78350F; color: #FCD34D; }
+.drive-card-icon.file, .drive-icon.file { background: #1E3A8A; color: #BFDBFE; }
+.drive-card-title { color: #F9FAFB; font-size: 14px; font-weight: 700; line-height: 1.35; }
+.drive-card-meta { color: #9CA3AF; font-size: 12px; line-height: 1.35; margin-top: 5px; word-break: break-word; }
+
+.drive-table {
+    border: 1px solid #374151;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #1F2937;
+}
+
+.drive-table-head, .drive-row {
+    display: grid;
+    grid-template-columns: minmax(260px, 1.8fr) minmax(120px, .8fr) minmax(120px, .7fr) minmax(110px, .7fr) 86px;
+    align-items: center;
+    gap: 12px;
+}
+
+.drive-table-head {
+    min-height: 42px;
+    padding: 0 14px;
+    background: #0F643A;
+    color: #FFFFFF;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.drive-row {
+    min-height: 62px;
+    padding: 0 14px;
+    border-top: 1px solid #2D3748;
+    color: #D1D5DB;
+}
+
+.drive-row:hover { background: #243142; }
+
+.drive-name {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border: none;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+}
+
+.drive-icon {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+}
+
+.drive-name-title {
+    display: block;
+    color: #F9FAFB;
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.drive-name-subtitle {
+    display: block;
+    color: #9CA3AF;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.drive-cell {
+    min-width: 0;
+    color: #D1D5DB;
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.drive-row-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+}
+
+.drive-empty {
+    min-height: 320px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 32px;
+}
+
+.drive-skeleton {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 62px;
+    border-bottom: 1px solid #243142;
+}
+
+.drive-skeleton div, .drive-skeleton span {
+    display: block;
+    background: linear-gradient(90deg, #1F2937 25%, #374151 50%, #1F2937 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+}
+
+.drive-skeleton div { width: 34px; height: 34px; border-radius: 8px; margin-left: 14px; }
+.drive-skeleton span { width: min(420px, 60%); height: 14px; border-radius: 6px; }
+
+.drive-preview-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    background: #1E3A8A;
+    color: #BFDBFE;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.drive-file-frame {
+    width: 100%;
+    height: 560px;
+    border: 1px solid #374151;
+    border-radius: 8px;
+    background: #111827;
+}
+
+.drive-file-preview {
+    max-width: 100%;
+    max-height: 560px;
+    border-radius: 8px;
+    border: 1px solid #374151;
+    background: #111827;
+}
+
+.drive-file-placeholder {
+    min-height: 220px;
+    border: 1px dashed #374151;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: #9CA3AF;
+}
+
+@media (max-width: 900px) {
+    .drive-content { grid-template-columns: 1fr; }
+    .drive-sidebar { display: flex; overflow-x: auto; border-right: none; border-bottom: 1px solid #374151; }
+    .drive-nav { width: auto; flex: 0 0 auto; }
+    .drive-table-head { display: none; }
+    .drive-row {
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+        padding: 12px;
+    }
+    .drive-cell { display: none; }
+}
+/* Sketch revision screens */
+.sketch-board{background:#172331;border:1px solid #374151;border-radius:10px;overflow:hidden;color:#F9FAFB}
+.sketch-head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 18px;border-bottom:1px solid #374151;background:#111827}
+.sketch-head h1{font-size:22px;font-weight:800}.sketch-head p{font-size:12px;color:#9CA3AF;margin-top:3px}
+.sketch-empty{color:#6B7280;text-align:center;padding:32px 10px}
+.sketch-form{display:grid;gap:13px;max-width:850px}
+.sketch-form label{display:grid;gap:6px;color:#D1D5DB;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.02em}
+.sketch-form input,.sketch-form textarea,.sketch-form select{width:100%;background:#0F172A;border:1px solid #374151;border-radius:7px;color:#F9FAFB;padding:9px 10px}
+.sketch-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:10px;flex-wrap:wrap}

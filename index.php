@@ -36,6 +36,11 @@ switch ($module) {
         elseif ($action === 'view' && $id) $c->view($id);
         else $c->index();
         break;
+    case 'project-files':
+        require_once __DIR__ . '/layouts/header.php';
+        require_once __DIR__ . '/views/projects/files.php';
+        require_once __DIR__ . '/layouts/footer.php';
+        break;
     case 'components':
         (new ComponentController())->index();
         break;
@@ -49,6 +54,7 @@ switch ($module) {
         (new ProposalController())->index();
         break;
     case 'documents':
+    case 'designations':
         (new DocumentController())->index();
         break;
     case 'reports':
@@ -79,14 +85,17 @@ switch ($module) {
         break;
     case 'users':
         Permissions::requirePermission(Permissions::canManageUsers());
+        $departments = db()->query("SELECT * FROM departments ORDER BY name")->fetchAll();
+        $fundingSources = db()->query("SELECT * FROM funding_sources ORDER BY name")->fetchAll();
+        $activityTypes = db()->query("SELECT * FROM activity_types ORDER BY name")->fetchAll();
+        $documentCategories = db()->query("SELECT * FROM document_categories ORDER BY name")->fetchAll();
+        $settings = db()->query("SELECT * FROM settings ORDER BY setting_group, setting_key")->fetchAll();
         require_once __DIR__ . '/layouts/header.php';
         require_once __DIR__ . '/views/settings/index.php';
         require_once __DIR__ . '/layouts/footer.php';
         break;
     case 'analytics':
-        require_once __DIR__ . '/layouts/header.php';
-        require_once __DIR__ . '/views/dashboard/index.php';
-        require_once __DIR__ . '/layouts/footer.php';
+        (new DashboardController())->index();
         break;
     default:
         (new DashboardController())->index();

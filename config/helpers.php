@@ -92,6 +92,9 @@ function getStatusBadge($status) {
         'terminated' => 'bg-[#7F1D1D] text-[#FCA5A5]',
         'planned' => 'bg-[#374151] text-[#E5E7EB]',
         'in_progress' => 'bg-[#1E3A8A] text-[#BFDBFE]',
+        'generated' => 'bg-[#1E3A8A] text-[#BFDBFE]',
+        'printed' => 'bg-[#78350F] text-[#FCD34D]',
+        'claimed' => 'bg-[#14532D] text-[#86EFAC]',
     ];
     $labels = ['under_review' => 'Under Review', 'in_progress' => 'In Progress'];
     $class = $classes[$status] ?? 'bg-[#374151] text-[#E5E7EB]';
@@ -117,7 +120,16 @@ function createNotification($userId, $title, $message, $type = 'info', $entityTy
     try {
         $sql = "INSERT INTO notifications (user_id, title, message, type, entity_type, entity_id, action_url) VALUES (?, ?, ?, ?, ?, ?, ?)";
         db()->prepare($sql)->execute([$userId, $title, $message, $type, $entityType, $entityId, $actionUrl]);
+        $notificationId = (int)db()->lastInsertId();
     } catch (Exception $e) { error_log("Notification error: " . $e->getMessage()); }
+    if (isset($notificationId)) {
+        try {
+            require_once __DIR__ . '/../includes/EmailQueue.php';
+            (new EmailQueue(db()))->enqueue($notificationId, $entityType);
+        } catch (Throwable $e) {
+            error_log('Email queue could not accept notification ' . $notificationId . '. Check the mail migration and configuration.');
+        }
+    }
 }
 
 function getUnreadNotificationCount($userId) {

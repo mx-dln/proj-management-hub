@@ -8,14 +8,17 @@ $currentAction = $_GET['action'] ?? 'index';
 $pageLabels = [
     'dashboard' => 'Dashboard',
     'programs' => 'Programs',
-    'projects' => 'Projects',
+    'projects' => 'Project Management',
+    'project-files' => 'Project Files',
+    'designations' => 'Designation',
     'components' => 'Components',
     'activities' => 'Activities',
     'faculty' => 'Faculty',
     'proposals' => 'Proposals',
     'documents' => 'Documents',
-    'reports' => 'Reports',
-    'moa' => 'MOAs',
+    'explorer' => 'Drive',
+    'reports' => 'Accomplishments',
+    'moa' => 'MOA',
     'certificates' => 'Certificates',
     'partners' => 'Partner Agencies',
     'beneficiaries' => 'Beneficiaries',
@@ -34,7 +37,7 @@ $actionLabels = [
 $breadcrumbs = [['label' => 'Dashboard', 'url' => SITE_URL . '/index.php']];
 if ($currentPage !== 'dashboard') {
     $breadcrumbs[] = ['label' => $pageLabels[$currentPage] ?? ucfirst($currentPage), 'url' => SITE_URL . '/index.php?module=' . $currentPage];
-    if ($currentAction !== 'index' && $actionLabels[$currentAction] ?? false) {
+    if ($currentAction !== 'index' && ($actionLabels[$currentAction] ?? false)) {
         $breadcrumbs[] = ['label' => $actionLabels[$currentAction], 'url' => null];
     }
 }

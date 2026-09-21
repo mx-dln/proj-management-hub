@@ -1,57 +1,50 @@
 <?php
 require_once __DIR__ . '/../config/helpers.php';
-require_once __DIR__ . '/../includes/Permissions.php';
+require_once __DIR__ . '/../models/DocumentModel.php';
 
-requireLogin();
-$action = $_GET['action'] ?? '';
-$user = currentUser();
+if (!isLoggedIn()) jsonResponse(['success' => false, 'message' => 'Sign in to continue.'], 401);
+$stmt = db()->prepare('SELECT role FROM users WHERE id = ? AND is_active = 1 AND deleted_at IS NULL');
+$stmt->execute([$_SESSION['user_id']]);
+$role = $stmt->fetchColumn();
+if (!$role) jsonResponse(['success' => false, 'message' => 'Account unavailable.'], 403);
+$_SESSION['role'] = $role;
 
-switch ($action) {
-    case 'create':
-        $entityType = sanitize($_POST['entity_type'] ?? '');
-        $entityId = intval($_POST['entity_id'] ?? 0);
-        Permissions::requirePermission(Permissions::canUploadDocument($entityType, $entityId));
-        
-        if (empty($_FILES['file']['tmp_name'])) jsonResponse(['success' => false, 'message' => 'No file selected'], 400);
-        
-        $result = uploadFile($_FILES['file'], 'documents');
-        if ($result['success']) {
-            try {
-                $data = [
-                    'title' => sanitize($_POST['title'] ?? $result['original_name']),
-                    'category_id' => intval($_POST['category_id'] ?? 0) ?: null,
-                    'entity_type' => $entityType,
-                    'entity_id' => $entityId,
-                    'file_path' => $result['file_path'],
-                    'file_name' => $result['original_name'],
-                    'file_type' => pathinfo($result['original_name'], PATHINFO_EXTENSION),
-                    'description' => sanitize($_POST['description'] ?? ''),
-                    'uploaded_by' => $user['id'],
-                ];
-                $sql = "INSERT INTO documents (title, category_id, entity_type, entity_id, file_path, file_name, file_type, description, uploaded_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                db()->prepare($sql)->execute(array_values($data));
-                $id = db()->lastInsertId();
-                auditLog('create', 'document', $id, 'Uploaded document: ' . $data['title']);
-                jsonResponse(['success' => true, 'message' => 'Document uploaded', 'id' => $id]);
-            } catch (Exception $e) { jsonResponse(['success' => false, 'message' => 'Failed'], 500); }
-        } else {
-            jsonResponse(['success' => false, 'message' => $result['error']], 400);
-        }
-        break;
-
-    case 'get':
+try {
+    $action = $_GET['action'] ?? '';
+    if ($action === 'create') {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new RuntimeException('POST required.', 405);
+        if (empty($_POST) && (int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 0) throw new RuntimeException('Upload exceeds the server request limit. Choose a smaller file.', 413);
+        if (empty($_SESSION['documents_csrf']) || !is_string($_POST['csrf'] ?? null) || !hash_equals($_SESSION['documents_csrf'], $_POST['csrf'])) throw new RuntimeException('Session expired. Refresh and try again.', 403);
+        $id = DocumentModel::upload($_POST, $_FILES['file'] ?? []);
+        jsonResponse(['success' => true, 'message' => 'File uploaded.', 'id' => $id]);
+    }
+    if (!in_array($action, ['get', 'file'], true)) throw new RuntimeException('Invalid action.', 400);
+    $document = DocumentModel::find((int)($_GET['id'] ?? 0));
+    if (!DocumentModel::canRead($document)) throw new RuntimeException('Document not found or access denied.', 404);
+    if ($action === 'get') {
+        $document['has_file'] = false;
+        $document['previewable'] = false;
         try {
-            $id = intval($_GET['id'] ?? 0);
-            if (!$id) jsonResponse(['success' => false, 'message' => 'Invalid ID'], 400);
-            $stmt = db()->prepare("SELECT d.*, dc.name as category_name, CONCAT(fp.first_name, ' ', fp.last_name) as uploader_name FROM documents d LEFT JOIN document_categories dc ON d.category_id = dc.id LEFT JOIN faculty_profiles fp ON d.uploaded_by = fp.user_id WHERE d.id = ? AND d.deleted_at IS NULL");
-            $stmt->execute([$id]);
-            $data = $stmt->fetch();
-            if (!$data) jsonResponse(['success' => false, 'message' => 'Not found'], 404);
-            jsonResponse($data);
-        } catch (Exception $e) {
-            jsonResponse(['success' => false, 'message' => 'Error: ' . $e->getMessage()], 500);
-        }
-        break;
-
-    default: jsonResponse(['success' => false, 'message' => 'Invalid action'], 400);
+            $path = DocumentModel::filePath($document);
+            $document['has_file'] = true;
+            $document['previewable'] = DocumentModel::previewMime($path) !== null;
+        } catch (RuntimeException $e) { /* Keep metadata available for legacy missing attachments. */ }
+        unset($document['file_path']);
+        jsonResponse($document);
+    }
+    $path = DocumentModel::filePath($document);
+    $mime = DocumentModel::previewMime($path);
+    $inline = $mime && !isset($_GET['download']);
+    header('Content-Type: ' . ($inline ? $mime : 'application/octet-stream'));
+    header('Content-Disposition: ' . ($inline ? 'inline' : 'attachment') . "; filename=\"download\"; filename*=UTF-8''" . rawurlencode($document['file_name']));
+    header('Content-Length: ' . filesize($path));
+    header('X-Content-Type-Options: nosniff');
+    header('Cache-Control: private, no-store');
+    header("Content-Security-Policy: sandbox; default-src 'none'; style-src 'unsafe-inline'");
+    session_write_close();
+    if ($_SERVER['REQUEST_METHOD'] !== 'HEAD') readfile($path);
+} catch (Throwable $e) {
+    $code = in_array($e->getCode(), [400, 403, 404, 405, 413, 422], true) ? $e->getCode() : 500;
+    if ($code === 500) error_log('Documents: ' . $e->getMessage());
+    jsonResponse(['success' => false, 'message' => $code === 500 ? 'Could not complete the request. Please try again.' : $e->getMessage()], $code);
 }

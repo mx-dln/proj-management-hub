@@ -5,6 +5,7 @@
     <?php endif; ?>
 </div>
 
+<?php require __DIR__ . '/../projects/navigation.php'; ?>
 <div class="filter-bar mb-6">
     <form method="GET" class="flex flex-col md:flex-row gap-3">
         <input type="hidden" name="module" value="activities">

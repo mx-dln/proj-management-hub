@@ -1,768 +1,185 @@
-// Project Explorer - Management-Based Explorer v3
-
 class ProjectExplorer {
-    constructor() {
-        this.selectedNode = null;
-        this.expandedNodes = new Set();
-        this.loadedNodes = new Set();
-        this.loadExpandedState();
-    }
-
-    init() {
-        this.loadTree();
-        this.setupSearch();
-    }
-
-    // ============================================
-    // TREE - Navigation only
-    // ============================================
-    async loadTree() {
-        const container = document.getElementById('explorer-tree');
-        if (!container) return;
-        container.innerHTML = '<div class="p-4"><div class="skeleton skeleton-line long"></div><div class="skeleton skeleton-line medium"></div></div>';
-
-        try {
-            const response = await fetch(`${SITE_URL}/ajax/explorer.php?action=tree&parent_type=root`);
-            const text = await response.text();
-            let data;
-            try { data = JSON.parse(text); } catch (e) { container.innerHTML = '<div class="p-4 text-center text-[#FCA5A5] text-sm">Server error</div>'; return; }
-
-            if (data.success) {
-                container.innerHTML = '';
-                if (!data.nodes || data.nodes.length === 0) {
-                    container.innerHTML = '<div class="p-6 text-center"><i class="fas fa-folder-open text-3xl text-[#374151] mb-3"></i><p class="text-sm text-[#6B7280]">No programs found</p></div>';
-                    return;
-                }
-                data.nodes.forEach(node => this.renderNode(container, node, 0));
-                this.restoreExpandedState();
-            } else {
-                container.innerHTML = `<div class="p-4 text-center text-[#FCA5A5] text-sm">${escapeHtml(data.message || 'Failed')}</div>`;
-            }
-        } catch (err) {
-            container.innerHTML = '<div class="p-4 text-center text-[#FCA5A5] text-sm">Failed to load</div>';
-        }
-    }
-
-    renderNode(parent, node, depth) {
-        const nodeEl = document.createElement('div');
-        nodeEl.className = 'tree-node';
-        nodeEl.dataset.id = node.id;
-        nodeEl.dataset.type = node.type;
-
-        const isActive = this.selectedNode && this.selectedNode.id == node.id && this.selectedNode.type === node.type;
-        const isExpanded = this.expandedNodes.has(`${node.type}-${node.id}`);
-        const isAdmin = typeof userRole !== 'undefined' && userRole === 'admin';
-        const isFolder = node.type === 'components_folder' || node.type === 'activities_folder';
-
-        const showActions = isAdmin && !isFolder;
-
-        nodeEl.innerHTML = `
-            <div class="tree-item ${isActive ? 'active' : ''}" style="padding-left: ${16 + depth * 20}px" 
-                 data-node-key="${node.type}-${node.id}">
-                ${node.hasChildren ? `
-                    <span class="node-chevron ${isExpanded ? 'expanded' : ''}" onclick="event.stopPropagation(); explorer.toggleNode('${node.type}', ${node.id})">
-                        <i class="fas fa-chevron-right"></i>
-                    </span>
-                ` : '<span class="node-chevron" style="width:16px"></span>'}
-                <span class="node-icon" onclick="explorer.selectNode('${node.type}', ${node.id})" style="cursor:pointer">
-                    <i class="fas ${node.icon}"></i>
-                </span>
-                <span class="node-title" onclick="explorer.selectNode('${node.type}', ${node.id})" style="cursor:pointer">
-                    ${escapeHtml(node.title)}
-                    ${node.count !== undefined ? `<span class="text-[#6B7280] text-xs ml-1">(${node.count})</span>` : ''}
-                </span>
-                ${node.progress !== undefined ? `<span class="node-badge">${node.progress}%</span>` : ''}
-                ${showActions ? `
-                    <div class="node-actions">
-                        <button class="node-action-btn" onclick="event.stopPropagation(); explorer.editEntity('${node.type}', ${node.id})" title="Edit">
-                            <i class="fas fa-pencil"></i>
-                        </button>
-                        <button class="node-action-btn danger" onclick="event.stopPropagation(); explorer.deleteEntity('${node.type}', ${node.id}, '${escapeHtml(node.title)}')" title="Delete">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                ` : ''}
-            </div>
-            <div class="tree-children ${isExpanded ? 'expanded' : ''}" id="children-${node.type}-${node.id}"></div>
-        `;
-
-        parent.appendChild(nodeEl);
-
-        if (isExpanded && node.hasChildren) {
-            this.loadChildren(node.type, node.id);
-        }
-    }
-
-    async toggleNode(type, id) {
-        const key = `${type}-${id}`;
-        const isExpanded = this.expandedNodes.has(key);
-        if (isExpanded) { this.expandedNodes.delete(key); } else { this.expandedNodes.add(key); }
-
-        const childrenEl = document.getElementById(`children-${key}`);
-        const chevron = document.querySelector(`[data-node-key="${key}"] .node-chevron`);
-
-        if (isExpanded) {
-            if (childrenEl) childrenEl.classList.remove('expanded');
-            if (chevron) chevron.classList.remove('expanded');
-        } else {
-            if (childrenEl) childrenEl.classList.add('expanded');
-            if (chevron) chevron.classList.add('expanded');
-            if (!this.loadedNodes.has(key)) {
-                await this.loadChildren(type, id);
-            }
-        }
-        this.saveExpandedState();
-    }
-
-    async loadChildren(type, id) {
-        const key = `${type}-${id}`;
-        const childrenEl = document.getElementById(`children-${key}`);
-        if (!childrenEl) return;
-        childrenEl.innerHTML = '<div class="p-3"><div class="skeleton skeleton-line medium"></div></div>';
-
-        try {
-            const response = await fetch(`${SITE_URL}/ajax/explorer.php?action=tree&parent_type=${type}&parent_id=${id}`);
-            const text = await response.text();
-            let data;
-            try { data = JSON.parse(text); } catch (e) { childrenEl.innerHTML = '<div class="p-3 text-center text-[#FCA5A5] text-sm">Error</div>'; return; }
-
-            if (data.success) {
-                childrenEl.innerHTML = '';
-                if (!data.nodes || data.nodes.length === 0) {
-                    childrenEl.innerHTML = '<div class="p-3 text-center text-[#6B7280] text-sm">No items</div>';
-                } else {
-                    const depth = this.getDepth(type);
-                    data.nodes.forEach(node => this.renderNode(childrenEl, node, depth));
-                }
-                this.loadedNodes.add(key);
-            } else {
-                childrenEl.innerHTML = `<div class="p-3 text-center text-[#FCA5A5] text-sm">${escapeHtml(data.message || 'Failed')}</div>`;
-            }
-        } catch (err) {
-            childrenEl.innerHTML = '<div class="p-3 text-center text-[#FCA5A5] text-sm">Failed</div>';
-        }
-    }
-
-    getDepth(type) {
-        const depths = { 'program': 0, 'project': 1, 'components_folder': 2, 'activities_folder': 2 };
-        return (depths[type] || 0) + 1;
-    }
-
-    // ============================================
-    // SELECT & DETAIL
-    // ============================================
-    async selectNode(type, id) {
-        document.querySelectorAll('.tree-item').forEach(el => el.classList.remove('active'));
-        const nodeEl = document.querySelector(`[data-node-key="${type}-${id}"]`);
-        if (nodeEl) nodeEl.classList.add('active');
-        this.selectedNode = { type, id };
-        await this.loadDetail(type, id);
-    }
-
-    async loadDetail(type, id) {
-        const detailEl = document.getElementById('explorer-detail');
-        if (!detailEl) return;
-        detailEl.innerHTML = '<div class="p-6"><div class="skeleton skeleton-line long" style="height:32px"></div><div class="skeleton skeleton-line medium mt-4"></div></div>';
-
-        try {
-            const response = await fetch(`${SITE_URL}/ajax/explorer.php?action=detail&type=${type}&id=${id}`);
-            const text = await response.text();
-            let data;
-            try { data = JSON.parse(text); } catch (e) { detailEl.innerHTML = '<div class="explorer-empty"><div class="explorer-empty-icon"><i class="fas fa-exclamation-triangle"></i></div><p class="explorer-empty-title">Error</p></div>'; return; }
-
-            if (data.success && data.data) {
-                this.renderDetail(type, data.data);
-            } else {
-                detailEl.innerHTML = `<div class="explorer-empty"><div class="explorer-empty-icon"><i class="fas fa-exclamation-triangle"></i></div><p class="explorer-empty-title">Not Found</p><p class="explorer-empty-text">${escapeHtml(data.message || 'Item not found')}</p></div>`;
-            }
-        } catch (err) {
-            detailEl.innerHTML = '<div class="explorer-empty"><div class="explorer-empty-icon"><i class="fas fa-exclamation-triangle"></i></div><p class="explorer-empty-title">Error</p></div>';
-        }
-    }
-
-    renderDetail(type, data) {
-        const renderers = {
-            'program': () => this.renderProgramDetail(data),
-            'project': () => this.renderProjectDetail(data),
-            'components_folder': () => this.renderComponentsManagement(data),
-            'activities_folder': () => this.renderActivitiesManagement(data),
-        };
-        if (renderers[type]) renderers[type]();
-    }
-
-    // Program Detail
-    renderProgramDetail(data) {
-        const detailEl = document.getElementById('explorer-detail');
-        const isAdmin = userRole === 'admin';
-        detailEl.innerHTML = `
-            <div class="detail-header">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h2 class="detail-title">${escapeHtml(data.title)}</h2>
-                        <p class="detail-subtitle">${escapeHtml(data.program_code || '')} &middot; ${getStatusBadge(data.status)}</p>
-                    </div>
-                    ${isAdmin || userRole === 'faculty' ? `<div class="flex gap-2"><button onclick="explorer.openCreateProject(${data.id})" class="btn-primary text-sm"><i class="fas fa-plus mr-1"></i>New Project</button>${isAdmin ? '<button onclick="explorer.editEntity(\'program\', ' + data.id + ')" class="btn-ghost text-sm"><i class="fas fa-pencil mr-1"></i>Edit</button>' : ''}</div>` : ''}
-                </div>
-            </div>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <div class="stat-card"><p class="text-xs text-[#9CA3AF] uppercase">Projects</p><p class="text-2xl font-bold text-[#F9FAFB] mt-1">${data.projects_count || 0}</p></div>
-                <div class="stat-card"><p class="text-xs text-[#9CA3AF] uppercase">Components</p><p class="text-2xl font-bold text-[#F9FAFB] mt-1">${data.components_count || 0}</p></div>
-                <div class="stat-card"><p class="text-xs text-[#9CA3AF] uppercase">Activities</p><p class="text-2xl font-bold text-[#F9FAFB] mt-1">${data.activities_count || 0}</p></div>
-                <div class="stat-card"><p class="text-xs text-[#9CA3AF] uppercase">Faculty</p><p class="text-2xl font-bold text-[#F9FAFB] mt-1">${data.faculty_count || 0}</p></div>
-            </div>
-            <div class="detail-grid mb-6">
-                <div class="detail-field"><p class="detail-field-label">College</p><p class="detail-field-value">${escapeHtml(data.college || '-')}</p></div>
-                <div class="detail-field"><p class="detail-field-label">Campus</p><p class="detail-field-value">${escapeHtml(data.campus || '-')}</p></div>
-                <div class="detail-field"><p class="detail-field-label">Budget</p><p class="detail-field-value">${formatCurrency(data.budget_allocation)}</p></div>
-                <div class="detail-field"><p class="detail-field-label">Duration</p><p class="detail-field-value">${formatDate(data.start_date)} - ${formatDate(data.end_date)}</p></div>
-            </div>
-            ${data.description ? `<div class="detail-section"><h4 class="detail-section-title">Description</h4><p class="text-sm text-[#D1D5DB]">${escapeHtml(data.description)}</p></div>` : ''}
-            ${data.objectives ? `<div class="detail-section"><h4 class="detail-section-title">Objectives</h4><p class="text-sm text-[#D1D5DB]">${escapeHtml(data.objectives)}</p></div>` : ''}
-            ${data.assignments && data.assignments.length > 0 ? `<div class="detail-section"><h4 class="detail-section-title">Assigned Faculty</h4><div class="space-y-2">${data.assignments.map(a => `<div class="flex items-center gap-3 p-3 rounded-lg bg-[#111827] border border-[#374151]"><div class="avatar" style="width:32px;height:32px;font-size:12px"><i class="fas fa-user"></i></div><div class="flex-1"><p class="text-sm font-medium text-[#F9FAFB]">${escapeHtml(a.first_name)} ${escapeHtml(a.last_name)}</p><p class="text-xs text-[#6B7280]">${escapeHtml(a.department_name || '')}</p></div><span class="badge ${a.assignment_type === 'leader' ? 'badge-approved' : 'badge-submitted'}">${a.assignment_type}</span></div>`).join('')}</div></div>` : ''}
-        `;
-    }
-
-    // Project Detail
-    renderProjectDetail(data) {
-        const detailEl = document.getElementById('explorer-detail');
-        const isAdmin = userRole === 'admin';
-        detailEl.innerHTML = `
-            <div class="detail-header">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h2 class="detail-title">${escapeHtml(data.title)}</h2>
-                        <p class="detail-subtitle">${escapeHtml(data.project_code || '')} &middot; ${getStatusBadge(data.status)}</p>
-                    </div>
-                    ${userRole === 'admin' || userRole === 'faculty' ? `<div class="flex gap-2"><button onclick="explorer.openAssignments('project', ${data.id}, '${escapeHtml(data.title)}')" class="btn-ghost text-sm"><i class="fas fa-users mr-1"></i>Assign</button><button onclick="explorer.editEntity('project', ${data.id})" class="btn-ghost text-sm"><i class="fas fa-pencil mr-1"></i>Edit</button></div>` : ''}
-                </div>
-            </div>
-            <div class="detail-grid mb-6">
-                <div class="detail-field"><p class="detail-field-label">Program</p><p class="detail-field-value">${escapeHtml(data.program_title || '-')}</p></div>
-                <div class="detail-field"><p class="detail-field-label">Budget</p><p class="detail-field-value">${formatCurrency(data.budget)}</p></div>
-                <div class="detail-field"><p class="detail-field-label">Duration</p><p class="detail-field-value">${formatDate(data.start_date)} - ${formatDate(data.end_date)}</p></div>
-                <div class="detail-field"><p class="detail-field-label">Components</p><p class="detail-field-value">${data.components_count || 0}</p></div>
-                <div class="detail-field"><p class="detail-field-label">Location</p><p class="detail-field-value">${escapeHtml(data.location || '-')}</p></div>
-                <div class="detail-field"><p class="detail-field-label">Progress</p><div class="flex items-center gap-2 mt-1"><div class="progress-bar flex-1"><div class="progress-fill" style="width:${data.completion_percentage || 0}%"></div></div><span class="text-sm text-[#9CA3AF]">${data.completion_percentage || 0}%</span></div></div>
-            </div>
-            ${data.description ? `<div class="detail-section"><h4 class="detail-section-title">Description</h4><p class="text-sm text-[#D1D5DB]">${escapeHtml(data.description)}</p></div>` : ''}
-            ${data.assignments && data.assignments.length > 0 ? `<div class="detail-section"><h4 class="detail-section-title">Team Members</h4><div class="space-y-2">${data.assignments.map(a => `<div class="flex items-center gap-3 p-3 rounded-lg bg-[#111827] border border-[#374151]"><div class="avatar" style="width:32px;height:32px;font-size:12px"><i class="fas fa-user"></i></div><div class="flex-1"><p class="text-sm font-medium text-[#F9FAFB]">${escapeHtml(a.first_name)} ${escapeHtml(a.last_name)}</p></div><span class="badge ${a.assignment_type === 'leader' ? 'badge-approved' : 'badge-submitted'}">${a.assignment_type}</span></div>`).join('')}</div></div>` : ''}
-        `;
-    }
-
-    // Components Management
-    renderComponentsManagement(data) {
-        const detailEl = document.getElementById('explorer-detail');
-        const isAdmin = userRole === 'admin';
-        const components = data.components || [];
-        
-        detailEl.innerHTML = `
-            <div class="detail-header">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h2 class="detail-title">Components</h2>
-                        <p class="detail-subtitle">Manage components for ${escapeHtml(data.project_title || 'this project')}</p>
-                    </div>
-                    ${isAdmin ? `<button onclick="explorer.openCreateComponent(${data.project_id})" class="btn-primary text-sm"><i class="fas fa-plus mr-1"></i>Add Component</button>` : ''}
-                </div>
-            </div>
-            <div class="mb-4">
-                <input type="text" placeholder="Search components..." class="filter-input" oninput="explorer.filterComponents(this.value)">
-            </div>
-            <div id="components-list" class="data-table-container">
-                ${components.length === 0 ? `
-                    <div class="empty-state"><div class="empty-state-icon"><i class="fas fa-puzzle-piece"></i></div><h3 class="empty-state-title">No components</h3><p class="empty-state-text">Add components to organize activities.</p></div>
-                ` : `
-                    <div class="overflow-x-auto"><table class="data-table"><thead><tr>
-                        <th>Name</th><th>Status</th><th>Progress</th><th>Leader</th><th>Actions</th>
-                    </tr></thead><tbody>
-                        ${components.map((c, i) => `
-                            <tr class="animate-row" style="animation-delay:${i * 0.05}s" data-search="${(c.title || '').toLowerCase()}">
-                                <td data-label="Name"><span class="table-title">${escapeHtml(c.title)}</span><p class="text-xs text-[#6B7280]">${escapeHtml(c.component_code || '')}</p></td>
-                                <td data-label="Status">${getStatusBadge(c.status)}</td>
-                                <td data-label="Progress"><div class="flex items-center gap-2"><div class="progress-bar w-16"><div class="progress-fill" style="width:${c.completion_percentage || 0}%"></div></div><span class="text-xs text-[#9CA3AF]">${c.completion_percentage || 0}%</span></div></td>
-                                <td data-label="Leader"><span class="text-[#D1D5DB]">${escapeHtml(c.leader_name || '-')}</span></td>
-                                <td data-label="Actions">
-                                    <div class="flex items-center justify-end gap-1">
-                                        <button onclick="explorer.viewComponent(${c.id})" class="action-btn" title="View"><i class="fas fa-eye text-sm"></i></button>
-                                        <button onclick="explorer.editEntity('component', ${c.id})" class="action-btn" title="Edit"><i class="fas fa-pencil text-sm"></i></button>
-                                        <button onclick="explorer.deleteEntity('component', ${c.id}, '${escapeHtml(c.title)}')" class="action-btn action-btn-danger" title="Delete"><i class="fas fa-trash text-sm"></i></button>
-                                    </div>
-                                </td>
-                            </tr>
-                        `).join('')}
-                    </tbody></table></div>
-                `}
-            </div>
-        `;
-    }
-
-    // Activities Management
-    renderActivitiesManagement(data) {
-        const detailEl = document.getElementById('explorer-detail');
-        const isAdmin = userRole === 'admin';
-        const activities = data.activities || [];
-        
-        detailEl.innerHTML = `
-            <div class="detail-header">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h2 class="detail-title">Activities</h2>
-                        <p class="detail-subtitle">Manage activities for ${escapeHtml(data.project_title || 'this project')}</p>
-                    </div>
-                    ${isAdmin ? `<button onclick="explorer.openCreateActivity(${data.project_id})" class="btn-primary text-sm"><i class="fas fa-plus mr-1"></i>Add Activity</button>` : ''}
-                </div>
-            </div>
-            <div id="activities-list" class="data-table-container">
-                ${activities.length === 0 ? `
-                    <div class="empty-state"><div class="empty-state-icon"><i class="fas fa-calendar-check"></i></div><h3 class="empty-state-title">No activities</h3><p class="empty-state-text">Add activities to this project.</p></div>
-                ` : `
-                    <div class="overflow-x-auto"><table class="data-table"><thead><tr>
-                        <th>Activity</th><th>Component</th><th>Venue</th><th>Date</th><th>Status</th><th>Actions</th>
-                    </tr></thead><tbody>
-                        ${activities.map((a, i) => `
-                            <tr class="animate-row" style="animation-delay:${i * 0.05}s">
-                                <td data-label="Activity"><span class="table-title">${escapeHtml(a.title)}</span></td>
-                                <td data-label="Component"><span class="text-[#D1D5DB]">${escapeHtml(a.component_title || '-')}</span></td>
-                                <td data-label="Venue"><span class="text-[#D1D5DB]">${escapeHtml(a.venue || '-')}</span></td>
-                                <td data-label="Date"><span class="table-date">${a.start_datetime ? new Date(a.start_datetime).toLocaleDateString('en-PH', {month:'short',day:'numeric',year:'numeric'}) : '-'}</span></td>
-                                <td data-label="Status">${getStatusBadge(a.status)}</td>
-                                <td data-label="Actions">
-                                    <div class="flex items-center justify-end gap-1">
-                                        <button onclick="explorer.viewActivity(${a.id})" class="action-btn" title="View"><i class="fas fa-eye text-sm"></i></button>
-                                        <button onclick="explorer.editEntity('activity', ${a.id})" class="action-btn" title="Edit"><i class="fas fa-pencil text-sm"></i></button>
-                                        <button onclick="explorer.deleteEntity('activity', ${a.id}, '${escapeHtml(a.title)}')" class="action-btn action-btn-danger" title="Delete"><i class="fas fa-trash text-sm"></i></button>
-                                    </div>
-                                </td>
-                            </tr>
-                        `).join('')}
-                    </tbody></table></div>
-                `}
-            </div>
-        `;
-    }
-
-    filterComponents(query) {
-        const rows = document.querySelectorAll('#components-list tr[data-search]');
-        query = query.toLowerCase();
-        rows.forEach(row => {
-            row.style.display = row.dataset.search.includes(query) ? '' : 'none';
-        });
-    }
-
-    // View Component detail
-    async viewComponent(id) {
-        const sl = getSlideOver({ size: 'md', title: 'Component Details', subtitle: 'Loading...' });
-        try {
-            const response = await fetch(`${SITE_URL}/ajax/components.php?action=get&id=${id}`);
-            const data = await response.json();
-            sl.setTitle(data.title || 'Component');
-            sl.subtitle = data.component_code || '';
-            const content = viewSectionHtml('Component Information', [
-                viewFieldHtml('Code', `<span class="table-code">${escapeHtml(data.component_code || '')}</span>`),
-                viewFieldHtml('Status', getStatusBadge(data.status)),
-                viewFieldHtml('Project', escapeHtml(data.project_title || '-')),
-                viewFieldHtml('Start Date', formatDate(data.start_date)),
-                viewFieldHtml('End Date', formatDate(data.end_date)),
-                viewFieldHtml('Completion', (data.completion_percentage || 0) + '%'),
-            ]) + (data.description ? viewSectionHtml('Description', [`<div class="full-width"><p class="text-sm text-[#D1D5DB]">${escapeHtml(data.description)}</p></div>`]) : '')
-            + (data.expected_outputs ? viewSectionHtml('Expected Outputs', [`<div class="full-width"><p class="text-sm text-[#D1D5DB]">${escapeHtml(data.expected_outputs)}</p></div>`]) : '');
-            sl.openView(data.title, data.component_code, content, { size: 'md' });
-        } catch (err) { showToast('Failed to load', 'error'); sl.close(true); }
-    }
-
-    // View Activity detail
-    async viewActivity(id) {
-        const sl = getSlideOver({ size: 'lg', title: 'Activity Details', subtitle: 'Loading...' });
-        try {
-            const response = await fetch(`${SITE_URL}/ajax/activities.php?action=get&id=${id}`);
-            const data = await response.json();
-            sl.setTitle(data.title || 'Activity');
-            sl.subtitle = data.activity_code || '';
-            const content = viewSectionHtml('Activity Information', [
-                viewFieldHtml('Code', `<span class="table-code">${escapeHtml(data.activity_code || '')}</span>`),
-                viewFieldHtml('Status', getStatusBadge(data.status)),
-                viewFieldHtml('Type', escapeHtml(data.type_name || '-')),
-                viewFieldHtml('Component', escapeHtml(data.component_title || '-')),
-                viewFieldHtml('Venue', escapeHtml(data.venue || '-')),
-                viewFieldHtml('Start', data.start_datetime ? new Date(data.start_datetime).toLocaleString() : '-'),
-                viewFieldHtml('End', data.end_datetime ? new Date(data.end_datetime).toLocaleString() : '-'),
-                viewFieldHtml('Target Participants', data.target_participants || '-'),
-                viewFieldHtml('Budget', formatCurrency(data.budget_allocation)),
-            ]) + (data.description ? viewSectionHtml('Description', [`<div class="full-width"><p class="text-sm text-[#D1D5DB]">${escapeHtml(data.description)}</p></div>`]) : '')
-            + (data.objectives ? viewSectionHtml('Objectives', [`<div class="full-width"><p class="text-sm text-[#D1D5DB]">${escapeHtml(data.objectives)}</p></div>`]) : '');
-            sl.openView(data.title, data.activity_code, content, { size: 'lg' });
-        } catch (err) { showToast('Failed to load', 'error'); sl.close(true); }
-    }
-
-    // ============================================
-    // CRUD OPERATIONS
-    // ============================================
-    editEntity(type, id) {
-        // Show loading on the clicked button
-        const nodeEl = document.querySelector(`[data-node-key="${type}-${id}"]`);
-        if (nodeEl) {
-            const btn = nodeEl.querySelector('.node-action-btn');
-            if (btn) {
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-                btn.disabled = true;
-                setTimeout(() => {
-                    btn.innerHTML = '<i class="fas fa-pencil"></i>';
-                    btn.disabled = false;
-                }, 3000);
-            }
-        }
-
-        const editFunctions = {
-            'program': () => this.editProgram(id),
-            'project': () => this.editProject(id),
-            'component': () => this.editComponent(id),
-            'activity': () => this.editActivity(id),
-        };
-        if (editFunctions[type]) editFunctions[type]();
-    }
-
-    async editProgram(id) {
-        // Reset any loading buttons
-        document.querySelectorAll('.node-action-btn').forEach(btn => {
-            if (btn.disabled) { btn.innerHTML = '<i class="fas fa-pencil"></i>'; btn.disabled = false; }
-        });
-        
-        const sl = getSlideOver({ size: 'md', title: 'Edit Program', subtitle: 'Loading...' });
-        try {
-            const response = await fetch(`${SITE_URL}/ajax/programs.php?action=get&id=${id}`);
-            const data = await response.json();
-            sl.setTitle('Edit Program');
-            sl.subtitle = data.program_code || '';
-            const formHtml = `
-                <input type="hidden" name="id" value="${data.id}">
-                <div class="form-section">
-                    <h4 class="form-section-title">Program Information</h4>
-                    <div class="form-grid">
-                        ${fieldHtml({ name: 'title', label: 'Program Title', required: true, value: data.title, fullWidth: true })}
-                        ${fieldHtml({ name: 'description', label: 'Description', type: 'textarea', value: data.description, fullWidth: true, rows: 3 })}
-                        ${fieldHtml({ name: 'college', label: 'College', value: data.college })}
-                        ${fieldHtml({ name: 'campus', label: 'Campus', value: data.campus })}
-                    </div>
-                </div>
-                <div class="form-section">
-                    <h4 class="form-section-title">Timeline & Budget</h4>
-                    <div class="form-grid">
-                        ${fieldHtml({ name: 'start_date', label: 'Start Date', type: 'date', value: data.start_date })}
-                        ${fieldHtml({ name: 'end_date', label: 'End Date', type: 'date', value: data.end_date })}
-                        ${fieldHtml({ name: 'budget_allocation', label: 'Budget', type: 'number', value: data.budget_allocation })}
-                        ${fieldHtml({ name: 'status', label: 'Status', type: 'select', value: data.status, options: [{value:'draft',label:'Draft'},{value:'active',label:'Active'},{value:'completed',label:'Completed'},{value:'archived',label:'Archived'}] })}
-                    </div>
-                </div>
-                <div class="form-section">
-                    <h4 class="form-section-title">Objectives</h4>
-                    <div class="form-grid">
-                        ${fieldHtml({ name: 'objectives', label: 'Objectives', type: 'textarea', value: data.objectives, fullWidth: true, rows: 3 })}
-                        ${fieldHtml({ name: 'expected_outputs', label: 'Expected Outputs', type: 'textarea', value: data.expected_outputs, fullWidth: true, rows: 3 })}
-                    </div>
-                </div>`;
-            sl.openForm('Edit Program', data.program_code, formHtml, { showSaveAnother: false });
-            document.getElementById('slideoverForm').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                await submitSlideOverForm(sl, `${SITE_URL}/ajax/programs.php?action=update`, new FormData(e.target), () => {
-                    this.loadedNodes.clear();
-                    this.loadTree();
-                });
-            });
-        } catch (err) { showToast('Failed to load', 'error'); sl.close(true); }
-    }
-
-    async editProject(id) {
-        document.querySelectorAll('.node-action-btn').forEach(btn => {
-            if (btn.disabled) { btn.innerHTML = '<i class="fas fa-pencil"></i>'; btn.disabled = false; }
-        });
-        
-        const sl = getSlideOver({ size: 'lg', title: 'Edit Project', subtitle: 'Loading...' });
-        try {
-            const response = await fetch(`${SITE_URL}/ajax/projects.php?action=get&id=${id}`);
-            const data = await response.json();
-            sl.setTitle('Edit Project');
-            sl.subtitle = data.project_code || '';
-            const formHtml = `
-                <input type="hidden" name="id" value="${data.id}">
-                <div class="form-section">
-                    <h4 class="form-section-title">Project Information</h4>
-                    <div class="form-grid">
-                        ${fieldHtml({ name: 'title', label: 'Project Title', required: true, value: data.title, fullWidth: true })}
-                        ${fieldHtml({ name: 'description', label: 'Description', type: 'textarea', value: data.description, fullWidth: true, rows: 3 })}
-                        ${fieldHtml({ name: 'location', label: 'Location', value: data.location })}
-                    </div>
-                </div>
-                <div class="form-section">
-                    <h4 class="form-section-title">Timeline & Budget</h4>
-                    <div class="form-grid">
-                        ${fieldHtml({ name: 'start_date', label: 'Start Date', type: 'date', value: data.start_date })}
-                        ${fieldHtml({ name: 'end_date', label: 'End Date', type: 'date', value: data.end_date })}
-                        ${fieldHtml({ name: 'budget', label: 'Budget', type: 'number', value: data.budget })}
-                        ${fieldHtml({ name: 'status', label: 'Status', type: 'select', value: data.status, options: [{value:'draft',label:'Draft'},{value:'planned',label:'Planned'},{value:'ongoing',label:'Ongoing'},{value:'completed',label:'Completed'},{value:'cancelled',label:'Cancelled'}] })}
-                        ${fieldHtml({ name: 'completion_percentage', label: 'Completion %', type: 'number', value: data.completion_percentage })}
-                    </div>
-                </div>
-                <div class="form-section">
-                    <h4 class="form-section-title">Details</h4>
-                    <div class="form-grid">
-                        ${fieldHtml({ name: 'objectives', label: 'Objectives', type: 'textarea', value: data.objectives, fullWidth: true, rows: 3 })}
-                        ${fieldHtml({ name: 'expected_outputs', label: 'Expected Outputs', type: 'textarea', value: data.expected_outputs, fullWidth: true, rows: 3 })}
-                    </div>
-                </div>`;
-            sl.openForm('Edit Project', data.project_code, formHtml, { showSaveAnother: false, size: 'lg' });
-            document.getElementById('slideoverForm').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                await submitSlideOverForm(sl, `${SITE_URL}/ajax/projects.php?action=update`, new FormData(e.target), () => {
-                    this.loadedNodes.clear();
-                    this.loadTree();
-                });
-            });
-        } catch (err) { showToast('Failed to load', 'error'); sl.close(true); }
-    }
-
-    async editComponent(id) {
-        const sl = getSlideOver({ size: 'md', title: 'Edit Component', subtitle: 'Loading...' });
-        try {
-            const response = await fetch(`${SITE_URL}/ajax/components.php?action=get&id=${id}`);
-            const data = await response.json();
-            sl.setTitle('Edit Component');
-            sl.subtitle = data.component_code || '';
-            const formHtml = `
-                <input type="hidden" name="id" value="${data.id}">
-                <div class="form-section">
-                    <div class="form-grid">
-                        ${fieldHtml({ name: 'title', label: 'Title', required: true, value: data.title, fullWidth: true })}
-                        ${fieldHtml({ name: 'description', label: 'Description', type: 'textarea', value: data.description, fullWidth: true, rows: 3 })}
-                        ${fieldHtml({ name: 'status', label: 'Status', type: 'select', value: data.status, options: [{value:'planned',label:'Planned'},{value:'in_progress',label:'In Progress'},{value:'completed',label:'Completed'}] })}
-                        ${fieldHtml({ name: 'completion_percentage', label: 'Completion %', type: 'number', value: data.completion_percentage })}
-                        ${fieldHtml({ name: 'start_date', label: 'Start Date', type: 'date', value: data.start_date })}
-                        ${fieldHtml({ name: 'end_date', label: 'End Date', type: 'date', value: data.end_date })}
-                    </div>
-                </div>`;
-            sl.openForm('Edit Component', data.component_code, formHtml, { showSaveAnother: false });
-            document.getElementById('slideoverForm').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                await submitSlideOverForm(sl, `${SITE_URL}/ajax/components.php?action=update`, new FormData(e.target), () => {
-                    this.loadedNodes.clear();
-                    this.loadTree();
-                    if (this.selectedNode) this.loadDetail(this.selectedNode.type, this.selectedNode.id);
-                });
-            });
-        } catch (err) { showToast('Failed to load', 'error'); sl.close(true); }
-    }
-
-    async editActivity(id) {
-        const sl = getSlideOver({ size: 'lg', title: 'Edit Activity', subtitle: 'Loading...' });
-        try {
-            const response = await fetch(`${SITE_URL}/ajax/activities.php?action=get&id=${id}`);
-            const data = await response.json();
-            sl.setTitle('Edit Activity');
-            sl.subtitle = data.activity_code || '';
-            const typeOptions = window.activityTypes || [];
-            const formHtml = `
-                <input type="hidden" name="id" value="${data.id}">
-                <div class="form-section">
-                    <div class="form-grid">
-                        ${fieldHtml({ name: 'title', label: 'Title', required: true, value: data.title, fullWidth: true })}
-                        ${fieldHtml({ name: 'activity_type_id', label: 'Type', type: 'select', options: typeOptions, value: data.activity_type_id })}
-                        ${fieldHtml({ name: 'venue', label: 'Venue', value: data.venue })}
-                        ${fieldHtml({ name: 'status', label: 'Status', type: 'select', value: data.status, options: [{value:'planned',label:'Planned'},{value:'ongoing',label:'Ongoing'},{value:'completed',label:'Completed'},{value:'cancelled',label:'Cancelled'}] })}
-                        ${fieldHtml({ name: 'start_datetime', label: 'Start', type: 'datetime-local', value: data.start_datetime ? data.start_datetime.replace(' ','T').substring(0,16) : '' })}
-                        ${fieldHtml({ name: 'end_datetime', label: 'End', type: 'datetime-local', value: data.end_datetime ? data.end_datetime.replace(' ','T').substring(0,16) : '' })}
-                        ${fieldHtml({ name: 'target_participants', label: 'Target Participants', type: 'number', value: data.target_participants })}
-                        ${fieldHtml({ name: 'budget_allocation', label: 'Budget', type: 'number', value: data.budget_allocation })}
-                        ${fieldHtml({ name: 'description', label: 'Description', type: 'textarea', value: data.description, fullWidth: true, rows: 3 })}
-                        ${fieldHtml({ name: 'objectives', label: 'Objectives', type: 'textarea', value: data.objectives, fullWidth: true, rows: 2 })}
-                    </div>
-                </div>`;
-            sl.openForm('Edit Activity', data.activity_code, formHtml, { showSaveAnother: false, size: 'lg' });
-            document.getElementById('slideoverForm').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                await submitSlideOverForm(sl, `${SITE_URL}/ajax/activities.php?action=update`, new FormData(e.target), () => {
-                    this.loadedNodes.clear();
-                    this.loadTree();
-                    if (this.selectedNode) this.loadDetail(this.selectedNode.type, this.selectedNode.id);
-                });
-            });
-        } catch (err) { showToast('Failed to load', 'error'); sl.close(true); }
-    }
-
-    deleteEntity(type, id, name) {
-        const deleteUrls = {
-            'program': `${SITE_URL}/ajax/programs.php?action=delete&id=${id}`,
-            'project': `${SITE_URL}/ajax/projects.php?action=delete&id=${id}`,
-            'component': `${SITE_URL}/ajax/components.php?action=delete&id=${id}`,
-            'activity': `${SITE_URL}/ajax/activities.php?action=delete&id=${id}`,
-        };
-        if (deleteUrls[type]) {
-            showConfirm('Delete ' + type.charAt(0).toUpperCase() + type.slice(1), `Delete "${name}"?`, () => {
-                fetch(deleteUrls[type]).then(r => r.json()).then(data => {
-                    if (data.success) {
-                        showToast(data.message || 'Deleted');
-                        this.loadedNodes.clear();
-                        this.loadTree();
-                        document.getElementById('explorer-detail').innerHTML = '<div class="explorer-empty"><div class="explorer-empty-icon"><i class="fas fa-check-circle text-[#86EFAC]"></i></div><p class="explorer-empty-title">Deleted</p><p class="explorer-empty-text">Select another item from the tree.</p></div>';
-                    } else {
-                        showToast(data.message || 'Failed', 'error');
-                    }
-                }).catch(() => showToast('Error', 'error'));
-            }, 'Delete');
-        }
-    }
-
-    openAssignments(type, id, name) {
-        if (typeof window.openAssignments === 'function') {
-            window.openAssignments(type, id, name);
-        }
-    }
-
-    openCreateProject(programId) {
-        const sl = getSlideOver({ size: 'lg', title: 'New Project', subtitle: 'Create extension project' });
-        const formHtml = `
-            <input type="hidden" name="program_id" value="${programId}">
-            <div class="form-section">
-                <h4 class="form-section-title">Project Information</h4>
-                <div class="form-grid">
-                    ${fieldHtml({ name: 'title', label: 'Project Title', required: true, fullWidth: true })}
-                    ${fieldHtml({ name: 'description', label: 'Description', type: 'textarea', fullWidth: true, rows: 3 })}
-                    ${fieldHtml({ name: 'location', label: 'Location' })}
-                </div>
-            </div>
-            <div class="form-section">
-                <h4 class="form-section-title">Timeline & Budget</h4>
-                <div class="form-grid">
-                    ${fieldHtml({ name: 'start_date', label: 'Start Date', type: 'date' })}
-                    ${fieldHtml({ name: 'end_date', label: 'End Date', type: 'date' })}
-                    ${fieldHtml({ name: 'budget', label: 'Budget', type: 'number' })}
-                </div>
-            </div>
-            <div class="form-section">
-                <h4 class="form-section-title">Details</h4>
-                <div class="form-grid">
-                    ${fieldHtml({ name: 'objectives', label: 'Objectives', type: 'textarea', fullWidth: true, rows: 3 })}
-                    ${fieldHtml({ name: 'expected_outputs', label: 'Expected Outputs', type: 'textarea', fullWidth: true, rows: 2 })}
-                </div>
-            </div>`;
-        sl.openForm('New Project', 'Create project under program', formHtml, { showSaveAnother: true, size: 'lg' });
-        document.getElementById('slideoverForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            await submitSlideOverForm(sl, `${SITE_URL}/ajax/projects.php?action=create`, new FormData(e.target), () => {
-                this.loadedNodes.clear();
-                this.loadTree();
-                if (this.selectedNode) this.loadDetail(this.selectedNode.type, this.selectedNode.id);
-            });
-        });
-    }
-
-    openCreateComponent(projectId) {
-        const sl = getSlideOver({ size: 'md', title: 'New Component', subtitle: 'Create project component' });
-        const formHtml = `
-            <input type="hidden" name="project_id" value="${projectId}">
-            <div class="form-section">
-                <h4 class="form-section-title">Component Information</h4>
-                <div class="form-grid">
-                    ${fieldHtml({ name: 'title', label: 'Component Title', required: true, fullWidth: true })}
-                    ${fieldHtml({ name: 'description', label: 'Description', type: 'textarea', fullWidth: true, rows: 3 })}
-                    ${fieldHtml({ name: 'start_date', label: 'Start Date', type: 'date' })}
-                    ${fieldHtml({ name: 'end_date', label: 'End Date', type: 'date' })}
-                    ${fieldHtml({ name: 'expected_outputs', label: 'Expected Outputs', type: 'textarea', fullWidth: true, rows: 2 })}
-                </div>
-            </div>`;
-        sl.openForm('New Component', 'Create component', formHtml, { showSaveAnother: true });
-        document.getElementById('slideoverForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            await submitSlideOverForm(sl, `${SITE_URL}/ajax/components.php?action=create`, new FormData(e.target), () => {
-                this.loadedNodes.clear();
-                this.loadTree();
-                if (this.selectedNode) this.loadDetail(this.selectedNode.type, this.selectedNode.id);
-            });
-        });
-    }
-
-    openCreateActivity(projectId) {
-        const sl = getSlideOver({ size: 'lg', title: 'New Activity', subtitle: 'Create extension activity' });
-        const formHtml = `
-            <input type="hidden" name="project_id" value="${projectId}">
-            <div class="form-section">
-                <h4 class="form-section-title">Activity Information</h4>
-                <div class="form-grid">
-                    ${fieldHtml({ name: 'title', label: 'Activity Title', required: true, fullWidth: true })}
-                    ${fieldHtml({ name: 'activity_type_id', label: 'Type', type: 'select', options: window.activityTypes || [] })}
-                    ${fieldHtml({ name: 'venue', label: 'Venue' })}
-                </div>
-            </div>
-            <div class="form-section">
-                <h4 class="form-section-title">Schedule & Budget</h4>
-                <div class="form-grid">
-                    ${fieldHtml({ name: 'start_datetime', label: 'Start Date/Time', type: 'datetime-local' })}
-                    ${fieldHtml({ name: 'end_datetime', label: 'End Date/Time', type: 'datetime-local' })}
-                    ${fieldHtml({ name: 'target_participants', label: 'Target Participants', type: 'number' })}
-                    ${fieldHtml({ name: 'budget_allocation', label: 'Budget', type: 'number' })}
-                </div>
-            </div>
-            <div class="form-section">
-                <h4 class="form-section-title">Details</h4>
-                <div class="form-grid">
-                    ${fieldHtml({ name: 'description', label: 'Description', type: 'textarea', fullWidth: true, rows: 3 })}
-                    ${fieldHtml({ name: 'objectives', label: 'Objectives', type: 'textarea', fullWidth: true, rows: 2 })}
-                </div>
-            </div>`;
-        sl.openForm('New Activity', 'Create activity', formHtml, { showSaveAnother: true, size: 'lg' });
-        document.getElementById('slideoverForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            await submitSlideOverForm(sl, `${SITE_URL}/ajax/activities.php?action=create`, new FormData(e.target), () => {
-                this.loadedNodes.clear();
-                this.loadTree();
-                if (this.selectedNode) this.loadDetail(this.selectedNode.type, this.selectedNode.id);
-            });
-        });
-    }
-
-    // Search
-    setupSearch() {
-        const searchInput = document.getElementById('explorer-search');
-        if (!searchInput) return;
-        let timeout;
-        searchInput.addEventListener('input', (e) => {
-            clearTimeout(timeout);
-            timeout = setTimeout(() => this.search(e.target.value), 300);
-        });
-    }
-
-    async search(query) {
-        if (!query || query.length < 2) { this.loadTree(); return; }
-        const container = document.getElementById('explorer-tree');
-        container.innerHTML = '<div class="p-4 text-center text-[#6B7280] text-sm">Searching...</div>';
-        try {
-            const response = await fetch(`${SITE_URL}/ajax/explorer.php?action=search&q=${encodeURIComponent(query)}`);
-            const text = await response.text();
-            let data;
-            try { data = JSON.parse(text); } catch (e) { container.innerHTML = '<div class="p-4 text-center text-[#FCA5A5] text-sm">Error</div>'; return; }
-            if (data.success && data.results && data.results.length > 0) {
-                container.innerHTML = '';
-                data.results.forEach(node => {
-                    const icon = { 'program': 'fa-layer-group', 'project': 'fa-folder-open' }[node.type] || 'fa-file';
-                    this.renderNode(container, { ...node, icon, hasChildren: node.type === 'program' }, 0);
-                });
-            } else {
-                container.innerHTML = '<div class="p-6 text-center"><i class="fas fa-search text-3xl text-[#374151] mb-3"></i><p class="text-sm text-[#6B7280]">No results</p></div>';
-            }
-        } catch (err) {
-            container.innerHTML = '<div class="p-4 text-center text-[#FCA5A5] text-sm">Search failed</div>';
-        }
-    }
-
-    saveExpandedState() { localStorage.setItem('explorer_expanded', JSON.stringify([...this.expandedNodes])); }
-    loadExpandedState() { try { const s = localStorage.getItem('explorer_expanded'); if (s) this.expandedNodes = new Set(JSON.parse(s)); } catch (e) {} }
-    restoreExpandedState() {
-        this.expandedNodes.forEach(key => {
-            const c = document.getElementById(`children-${key}`);
-            const ch = document.querySelector(`[data-node-key="${key}"] .node-chevron`);
-            if (c) c.classList.add('expanded');
-            if (ch) ch.classList.add('expanded');
-        });
-    }
+ constructor(root) {
+  this.root=root; this.endpoint=root.dataset.endpoint; this.csrf=root.dataset.csrf;
+  this.id=Number(new URL(location.href).searchParams.get('folder')||0);
+  this.mode=localStorage.getItem('projectExplorerView')||'grid'; this.search=''; this.serial=0;
+  this.trail=history.state?.explorer?.trail||[this.id]; this.position=history.state?.explorer?.position||0;
+  this.queue=[]; this.queueSeq=0; this.queueRunning=false; this.folderCache=new Map(); this.busyCount=0;
+  this.$=id=>document.getElementById(`pd-${id}`);
+ }
+ async request(action,params={},body=null,progress=null) {
+  if(body) return this.xhr(action,params,body,progress);
+  const r=await fetch(`${this.endpoint}?${new URLSearchParams({action,...params})}`,{headers:{'X-Requested-With':'XMLHttpRequest'}});
+  let d; try {d=await r.json();} catch {throw new Error('Unable to load Explorer. Refresh and try again.');}
+  if(!r.ok||!d.success) throw new Error(d.message||'Request failed'); return d;
+ }
+ xhr(action,params,body,progress=null) {
+  return new Promise((resolve,reject)=>{
+   const xhr=new XMLHttpRequest(); xhr.open('POST',`${this.endpoint}?${new URLSearchParams({action,...params})}`);
+   xhr.setRequestHeader('X-Requested-With','XMLHttpRequest');
+   if(progress) xhr.upload.onprogress=e=>{if(e.lengthComputable)progress(Math.round((e.loaded/e.total)*100));};
+   xhr.onload=()=>{let d;try{d=JSON.parse(xhr.responseText);}catch{reject(new Error('The server rejected this upload before Drive could process it. Check post_max_size, upload_max_filesize, and restart EnvKit.'));return;}
+    if(xhr.status<200||xhr.status>=300||!d.success) reject(new Error(d.message||'Request failed')); else resolve(d);};
+   xhr.onerror=()=>reject(new Error('Network error while contacting Explorer.')); xhr.send(body);
+  });
+ }
+ init() {
+  this.$('grid').onclick=()=>this.view('grid'); this.$('list').onclick=()=>this.view('list');
+  this.$('new').onclick=()=>{this.$('new-menu').hidden=!this.$('new-menu').hidden;};
+  this.$('upload').onclick=()=>this.$('files').click();
+  this.$('files').onchange=e=>{this.enqueueFiles(e.target.files,this.id);e.target.value='';};
+  this.$('folder-files').onchange=e=>{this.enqueueFiles(e.target.files,this.id);e.target.value='';};
+  this.$('queue-min').onclick=()=>this.$('queue').classList.toggle('pd-queue-compact');
+  this.$('search').oninput=e=>{clearTimeout(this.timer);this.search=e.target.value;this.timer=setTimeout(()=>this.load(),250);};
+  this.$('back').onclick=()=>{if(this.position>0)history.back();};
+  this.$('forward').onclick=()=>{if(this.position<this.trail.length-1)history.forward();};
+  window.addEventListener('popstate',e=>{this.position=e.state?.explorer?.position||0;this.id=Number(new URL(location.href).searchParams.get('folder')||0);this.search='';this.$('search').value='';history.replaceState({...history.state,explorer:{trail:this.trail,position:this.position}},'');this.load();});
+  window.addEventListener('beforeunload',e=>{if(this.queueRunning){e.preventDefault();e.returnValue='';}});
+  document.addEventListener('click',e=>{if(!e.target.closest('.pd-new-wrap'))this.$('new-menu').hidden=true;if(!e.target.closest('#pd-context')&&!e.target.closest('.pd-more'))this.$('context').hidden=true;});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'){this.$('context').hidden=true;this.$('new-menu').hidden=true;}});
+  this.$('close').onclick=this.$('cancel').onclick=()=>this.$('dialog').close();
+  this.$('items').ondragover=e=>{e.preventDefault();this.$('items').classList.add('pd-drop');};
+  this.$('items').ondragleave=e=>{if(!this.$('items').contains(e.relatedTarget))this.$('items').classList.remove('pd-drop');};
+  this.$('items').ondrop=e=>this.drop(e,this.id);
+  this.load();
+ }
+ busy(label,on=true) {
+  this.busyCount+=on?1:-1; if(this.busyCount<0)this.busyCount=0;
+  const box=this.$('busy'); box.hidden=this.busyCount===0; box.querySelector('span').textContent=label||'Working...';
+  this.root.classList.toggle('pd-working',this.busyCount>0);
+ }
+ async withBusy(label,fn) {this.busy(label,true);try{return await fn();}finally{this.busy(label,false);}}
+ async navigate(id,add=true) {
+  this.id=Number(id);this.search='';this.$('search').value='';
+  if(add){this.trail=this.trail.slice(0,this.position+1);this.trail.push(this.id);history.replaceState({...history.state,explorer:{trail:this.trail,position:this.position}},'');this.position++;}
+  const url=new URL(location.href);url.searchParams.set('folder',this.id);history.pushState({explorer:{trail:this.trail,position:this.position}},'',url);
+  this.$('context').hidden=true;await this.load();
+ }
+ async load() {
+  const serial=++this.serial;this.status('Loading...');
+  try{const data=await this.request('list',{id:this.id,q:this.search});if(serial!==this.serial)return;this.data=data;this.render();this.status('');}
+  catch(e){if(serial===this.serial){this.$('items').replaceChildren();this.$('breadcrumbs').replaceChildren(this.button('My Drive','hard-drive',()=>this.navigate(0)));this.$('new').hidden=true;this.$('upload').hidden=true;this.status(e.message,true);}}
+ }
+ status(text,error=false){this.$('status').textContent=text;this.$('status').classList.toggle('pd-error',error);}
+ button(label,icon,handler,cls='') {const b=document.createElement('button');b.type='button';b.className=cls;if(icon){const i=document.createElement('i');i.className=`fas fa-${icon}`;b.append(i);}if(label)b.append(document.createTextNode(label));b.onclick=handler;return b;}
+ view(mode){this.mode=mode;localStorage.setItem('projectExplorerView',mode);if(this.data)this.render();}
+ fileUrl(n,download=false){return `${this.endpoint}?action=file&id=${n.id}${download?'&download=1':''}`;}
+ icon(n){if(n.kind!=='file')return 'folder';const e=n.extension;for(const [list,icon] of [[['jpg','jpeg','png','gif','webp'],'file-image'],[['pdf'],'file-pdf'],[['doc','docx'],'file-word'],[['xls','xlsx','csv'],'file-excel'],[['ppt','pptx'],'file-powerpoint'],[['mp4','webm','mov'],'file-video'],[['mp3','wav'],'file-audio'],[['zip'],'file-zipper']])if(list.includes(e))return icon;return 'file-lines';}
+ size(b){if(b==null)return '';if(b<1024)return `${b} B`;const u=b<1048576?1024:1048576;return `${(b/u).toFixed(1)} ${u===1024?'KB':'MB'}`;}
+ date(v){return v?new Date(v.replace(' ','T')).toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'}):'';}
+ type(n){if(n.kind==='file')return `${(n.extension||'file').toUpperCase()} file`;return ({component_group:'System folder',activity_group:'System folder'}[n.kind]||n.kind[0].toUpperCase()+n.kind.slice(1));}
+ render(){
+  const d=this.data;this.$('count').textContent=`${d.items.length} item${d.items.length===1?'':'s'}`;
+  this.$('back').disabled=this.position===0;this.$('forward').disabled=this.position>=this.trail.length-1;
+  const crumbs=this.$('breadcrumbs');crumbs.replaceChildren(this.button('My Drive','hard-drive',()=>this.navigate(0)));
+  for(const c of d.breadcrumbs){const i=document.createElement('i');i.className='fas fa-chevron-right';const b=this.button(c.name,null,()=>this.navigate(c.id));b.title=c.name;if(Number(c.id)===this.id)b.setAttribute('aria-current','page');crumbs.append(i,b);}
+  requestAnimationFrame(()=>{crumbs.scrollLeft=crumbs.scrollWidth;});
+  const limit=this.$('limit');limit.hidden=!d.upload||!d.storage; if(d.upload&&d.storage)limit.textContent=`Upload limit: ${this.size(d.storage.effective_upload_limit_bytes)} per file. Drive uses ${this.size(d.storage.used_bytes)}. Hosting free space: ${this.size(d.storage.disk_free_bytes)}.`;
+  this.$('new').hidden=!((d.create&&d.create.length)||d.upload);this.$('upload').hidden=!d.upload;this.$('new-menu').replaceChildren();
+  for(const option of d.create||[])this.$('new-menu').append(this.button(option.label.replace('_',' '),'folder-plus',()=>this.create(option)));
+  if(d.upload){this.$('new-menu').append(this.button('Upload file','upload',()=>this.$('files').click()));this.$('new-menu').append(this.button('Upload folder','folder-arrow-up',()=>this.$('folder-files').click()));}
+  this.$('grid').setAttribute('aria-pressed',this.mode==='grid');this.$('list').setAttribute('aria-pressed',this.mode==='list');
+  const container=this.$('items');container.className=`pd-${this.mode}`;container.replaceChildren();
+  if(!d.items.length){const empty=document.createElement('div');empty.className='pd-empty';const i=document.createElement('i');i.className='fas fa-folder-open';const p=document.createElement('p');p.textContent=this.search?'No matching items':'This folder is empty';empty.append(i,p);container.append(empty);return;}
+  if(this.mode==='list'){const row=document.createElement('div');row.className='pd-list-head';for(const l of ['Name','Owner','Modified','File Size','Type','']){const s=document.createElement('span');s.textContent=l;row.append(s);}container.append(row);}
+  for(const n of d.items){
+   const card=document.createElement('div');card.className='pd-item';card.tabIndex=0;card.setAttribute('role','group');card.setAttribute('aria-label',n.name);
+   card.ondblclick=()=>this.open(n);card.onkeydown=e=>{if(e.key==='Enter'&&e.target===card)this.open(n);};
+   card.onclick=()=>{container.querySelectorAll('.pd-selected').forEach(e=>e.classList.remove('pd-selected'));card.classList.add('pd-selected');};
+   card.oncontextmenu=e=>{e.preventDefault();this.menu(n,e.clientX,e.clientY);};card.draggable=n.writable;
+   card.ondragstart=e=>e.dataTransfer.setData('text/x-explorer-id',n.id);
+   if(n.kind!=='file'){
+    card.ondragover=e=>{e.preventDefault();card.classList.add('pd-drop');};card.ondragleave=()=>card.classList.remove('pd-drop');
+    card.ondrop=e=>{e.preventDefault();e.stopPropagation();card.classList.remove('pd-drop');this.$('items').classList.remove('pd-drop');if(e.dataTransfer.files.length)return this.drop(e,Number(n.id));const source=e.dataTransfer.getData('text/x-explorer-id');if(source)void this.change('move',{id:source,parent_id:n.id});};
+   }
+   const name=document.createElement('div');name.className='pd-name';const i=document.createElement('i');i.className=`fas fa-${this.icon(n)} pd-icon ${n.kind==='file'?'pd-file-icon':''}`;
+   const text=document.createElement('span');text.textContent=n.name;text.title=n.name;name.append(i,text);card.append(name);
+   if(this.mode==='grid'){const visual=document.createElement('div');visual.className=`pd-visual ${n.kind!=='file'?'pd-folder-visual':''}`;
+    if(['image/jpeg','image/png','image/gif','image/webp'].includes(n.mime_type)){const img=document.createElement('img');img.src=this.fileUrl(n);img.alt=n.name;img.loading='lazy';visual.append(img);}else visual.append(i.cloneNode());card.prepend(visual);
+    const meta=document.createElement('small');meta.textContent=this.search?n.location:this.type(n);card.append(meta);
+   }else for(const value of [n.owner,this.date(n.updated_at),this.size(n.size),this.type(n)]){const s=document.createElement('span');s.className='pd-cell';s.textContent=value||'';card.append(s);}
+   const more=this.button('','ellipsis-vertical',e=>{e.stopPropagation();const r=more.getBoundingClientRect();this.menu(n,r.right,r.bottom);},'pd-more');more.title=`Actions for ${n.name}`;more.setAttribute('aria-label',more.title);card.append(more);container.append(card);
+  }
+ }
+ menu(n,x,y){const m=this.$('context');m.replaceChildren();const add=(t,i,f)=>m.append(this.button(t,i,()=>{m.hidden=true;f();}));add(n.kind==='file'?'Open / Preview':'Open','folder-open',()=>this.open(n));if(n.kind==='file')add('Download','download',()=>this.download(n));if(n.writable){add('Rename','pen',()=>this.rename(n));add('Move','folder-tree',()=>this.move(n));add('Delete','trash',()=>this.remove(n));}add('Details','circle-info',()=>this.details(n));m.hidden=false;m.style.left=`${Math.max(8,Math.min(x,innerWidth-220))}px`;m.style.top=`${Math.max(8,Math.min(y,innerHeight-m.offsetHeight-8))}px`;m.querySelector('button').focus();}
+ open(n){if(n.kind!=='file')this.navigate(n.id);else this.details(n,true);}
+ download(n){const a=document.createElement('a');a.href=this.fileUrl(n,true);a.click();}
+ dialog(title,submit='Save'){this.$('dialog-title').textContent=title;this.$('dialog-body').replaceChildren();this.$('dialog-error').textContent='';this.$('dialog-footer').hidden=!submit;this.$('submit').textContent=submit||'Save';this.$('submit').disabled=false;this.$('dialog').classList.remove('pd-preview','pd-details');this.$('form').onsubmit=e=>e.preventDefault();this.$('new-menu').hidden=true;this.$('dialog').showModal();}
+ nameInput(value=''){const label=document.createElement('label');label.textContent='Name';const input=document.createElement('input');input.name='name';input.required=true;input.maxLength=255;input.value=value;label.append(input);this.$('dialog-body').append(label);input.focus();input.select();return input;}
+ submit(handler,label='Saving...'){this.$('form').onsubmit=async e=>{e.preventDefault();this.$('submit').disabled=true;try{await this.withBusy(label,handler);this.$('dialog').close();await this.load();}catch(error){this.$('dialog-error').textContent=error.message;}finally{this.$('submit').disabled=false;}};}
+ async post(action,values,progress=null){const body=new FormData();body.set('csrf',this.csrf);for(const [k,v]of Object.entries(values))body.set(k,v);return this.request(action,{},body,progress);}
+ async change(action,values){try{await this.withBusy(`${action[0].toUpperCase()+action.slice(1)}...`,()=>this.post(action,values));await this.load();}catch(e){this.status(e.message,true);}}
+ create(option=null){option=option||{label:`New ${this.data.next.replace('_',' ')}`,parent_id:this.id};this.dialog(option.label.replace('_',' '),'Create');const input=this.nameInput();this.submit(()=>this.post('create',{parent_id:option.parent_id,name:input.value}),'Creating...');}
+ rename(n){this.dialog('Rename');const input=this.nameInput(n.name);this.submit(()=>this.post('rename',{id:n.id,name:input.value}),'Renaming...');}
+ remove(n){this.dialog(`Delete ${n.name}?`,'Delete');const p=document.createElement('p');p.textContent=n.kind==='file'?'This file will be removed from Explorer.':'This folder and all its contents will be removed from Explorer.';this.$('dialog-body').append(p);this.submit(()=>this.post('delete',{id:n.id}),'Deleting...');}
+ async move(n){
+  this.dialog(`Move ${n.name}`,'Move here');let destination=Number(n.parent_id||0);let requestId=0;
+  const browse=async id=>{const serial=++requestId;this.$('submit').disabled=true;try{const d=await this.request('list',{id});if(serial!==requestId)return;destination=Number(id);const b=this.$('dialog-body');b.replaceChildren();const nav=document.createElement('div');nav.className='pd-move-path';nav.append(this.button('My Drive','hard-drive',()=>browse(0)));for(const p of d.breadcrumbs)nav.append(this.button(p.name,'chevron-right',()=>browse(p.id)));b.append(nav);for(const item of d.items.filter(i=>i.kind!=='file'&&i.id!==n.id))b.append(this.button(item.name,'folder',()=>browse(item.id),'pd-destination'));this.$('submit').disabled=!d.writable||(n.kind==='file'?!['component','activity','folder'].includes(d.current.kind):d.next!==n.kind)||d.breadcrumbs.some(i=>i.id===n.id);}catch(e){this.$('dialog-error').textContent=e.message;}};
+  this.submit(()=>this.post('move',{id:n.id,parent_id:destination}),'Moving...');await browse(destination);
+ }
+ async details(n,preview=false){
+  this.dialog(preview?n.name:'Details',null); if(!preview)this.$('dialog').classList.add('pd-details');
+  try{const d=await this.withBusy('Loading details...',()=>this.request('details',{id:n.id}));n=d.item;if(!this.$('dialog').open)return;const b=this.$('dialog-body');
+   if(preview){this.$('dialog').classList.add('pd-preview');let media;if(['image/jpeg','image/png','image/gif','image/webp'].includes(n.mime_type)){media=document.createElement('img');media.alt=n.name;}else if(['video/mp4','video/webm'].includes(n.mime_type)){media=document.createElement('video');media.controls=true;}else if(['audio/mpeg','audio/wav'].includes(n.mime_type)){media=document.createElement('audio');media.controls=true;}else if(['application/pdf','text/plain'].includes(n.mime_type)){media=document.createElement('iframe');media.title=n.name;}if(media){media.src=this.fileUrl(n);media.className='pd-media';b.append(media);}}
+   const dl=document.createElement('dl');const fields={Name:n.name,Type:this.type(n),Location:n.location,Owner:n.owner,Created:this.date(n.created_at),Modified:this.date(n.updated_at)};
+   if(n.kind==='file'){fields.Size=this.size(n.size);fields['MIME type']=n.mime_type;}else fields['Number of items']=n.item_count;
+   for(const [key,value]of Object.entries(fields))if(value!==null&&value!==''){const dt=document.createElement('dt');dt.textContent=key;const dd=document.createElement('dd');dd.textContent=value;dl.append(dt,dd);}b.append(dl);
+   if(n.kind==='file'){b.append(this.button('Download','download',()=>this.download(n),'btn-primary'));if(!preview&&['image/jpeg','image/png','image/gif','image/webp','application/pdf','text/plain','video/mp4','video/webm','audio/mpeg','audio/wav'].includes(n.mime_type))b.append(this.button('Preview','eye',()=>{this.$('dialog').close();this.details(n,true);},'btn-ghost'));}
+  }catch(e){this.$('dialog-error').textContent=e.message;}
+ }
+ async drop(e,parent=this.id){e.preventDefault();this.$('items').classList.remove('pd-drop');try{const entries=await this.collectDrop(e.dataTransfer);this.addUploads(entries,parent);}catch(error){this.status(error.message,true);}}
+ enqueueFiles(files,parent=this.id){this.addUploads(Array.from(files).map(file=>({file,path:[]})),parent);}
+ async collectDrop(dataTransfer) {
+  const items=Array.from(dataTransfer.items||[]).filter(item=>item.kind==='file');
+  if(!items.length) return Array.from(dataTransfer.files||[]).map(file=>({file,path:this.pathFromFile(file)}));
+  const collected=[];
+  for(const item of items){const entry=item.webkitGetAsEntry?.();if(entry) await this.walkEntry(entry,[],collected);else {const file=item.getAsFile();if(file)collected.push({file,path:this.pathFromFile(file)});}}
+  return collected;
+ }
+ pathFromFile(file){const parts=(file.webkitRelativePath||'').split('/').filter(Boolean);parts.pop();return parts;}
+ walkEntry(entry,path,out){
+  return new Promise((resolve,reject)=>{
+   if(entry.isFile){entry.file(file=>{out.push({file,path});resolve();},reject);return;}
+   if(!entry.isDirectory){resolve();return;}
+   const next=[...path,entry.name], reader=entry.createReader(), tasks=[];
+   const read=()=>reader.readEntries(entries=>{if(!entries.length){Promise.all(tasks).then(resolve,reject);return;}for(const child of entries)tasks.push(this.walkEntry(child,next,out));read();},reject);
+   read();
+  });
+ }
+ addUploads(entries,parent) {
+  if(!entries.length)return; if(parent===this.id&&this.data&&!this.data.upload){this.status('Open a component, activity, or folder to upload files.',true);return;}
+  for(const entry of entries){this.queue.push({id:++this.queueSeq,parent,file:entry.file,path:entry.path||[],name:entry.file.name,status:'queued',progress:0,error:''});}
+  this.renderQueue(); this.processQueue();
+ }
+ renderQueue() {
+  const panel=this.$('queue'), list=this.$('queue-list'); panel.hidden=this.queue.length===0; list.replaceChildren();
+  const active=this.queue.filter(q=>['queued','uploading','preparing'].includes(q.status)).length;
+  this.$('queue-title').textContent=active?`Uploading ${active} item${active===1?'':'s'}`:'Uploads complete';
+  for(const item of this.queue.slice(-8)){
+   const row=document.createElement('div');row.className=`pd-queue-row pd-${item.status}`;
+   const icon=document.createElement('i');icon.className=`fas fa-${item.status==='done'?'check-circle':item.status==='error'?'circle-exclamation':'cloud-arrow-up'}`;
+   const body=document.createElement('div'), name=document.createElement('strong'), meta=document.createElement('span'), bar=document.createElement('b');
+   name.textContent=item.path.length?[...item.path,item.name].join('/'):item.name;
+   meta.textContent=item.error||({queued:'Queued',preparing:'Preparing folders',uploading:`${item.progress}%`,done:'Uploaded'}[item.status]||item.status);
+   bar.style.width=`${item.status==='done'?100:item.progress}%`;body.append(name,meta,bar);row.append(icon,body);list.append(row);
+  }
+ }
+ async processQueue() {
+  if(this.queueRunning)return; this.queueRunning=true; this.busy('Uploading...',true);
+  try{
+   while(true){const item=this.queue.find(q=>q.status==='queued');if(!item)break;
+    try{item.status='preparing';this.renderQueue();const parent=await this.ensurePath(item.parent,item.path);item.status='uploading';item.progress=1;this.renderQueue();await this.post('upload',{parent_id:parent,file:item.file},p=>{item.progress=p;this.renderQueue();});item.status='done';item.progress=100;this.folderCache.clear();if(parent===this.id||item.parent===this.id)await this.load();}
+    catch(e){item.status='error';item.error=e.message;}
+    this.renderQueue();
+   }
+  } finally {this.queueRunning=false;this.busy('Uploading...',false);if(this.queue.some(q=>q.status==='done'))setTimeout(()=>{if(!this.queueRunning){this.queue=this.queue.filter(q=>q.status!=='done');this.renderQueue();}},4000);}
+ }
+ async ensurePath(parent,path) {
+  let id=parent; for(const raw of path){const name=raw.trim();if(!name)continue;const key=`${id}/${name.toLowerCase()}`;if(this.folderCache.has(key)){id=this.folderCache.get(key);continue;}
+   const listing=await this.request('list',{id});let folder=listing.items.find(item=>item.kind!=='file'&&item.name.toLowerCase()===name.toLowerCase());
+   if(!folder){folder=await this.withBusy('Creating upload folders...',()=>this.post('create',{parent_id:id,name}));folder={id:folder.id};}
+   id=Number(folder.id);this.folderCache.set(key,id);
+  } return id;
+ }
 }
-
-const explorer = new ProjectExplorer();
-document.addEventListener('DOMContentLoaded', () => { if (document.getElementById('explorer-tree')) explorer.init(); });
+document.addEventListener('DOMContentLoaded',()=>{const root=document.getElementById('project-drive');if(root){window.explorer=new ProjectExplorer(root);window.explorer.init();}});

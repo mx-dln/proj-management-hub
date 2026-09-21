@@ -131,7 +131,16 @@ class Permissions {
     // PROJECT PERMISSIONS (Admin only)
     // ============================================
 
-    public static function canCreateProject() { return self::isAdmin(); }
+    public static function canCreateProject() { return self::isAdmin() || self::isFaculty(); }
+    public static function canCreateProjectInProgram($programId) {
+        if (self::isAdmin()) return true;
+        if (!self::isFaculty()) return false;
+        $facultyId = self::getFacultyId();
+        if (!$facultyId || !$programId) return false;
+        $stmt = db()->prepare("SELECT id FROM program_assignments WHERE program_id = ? AND faculty_id = ? AND is_active = 1 LIMIT 1");
+        $stmt->execute([(int)$programId, $facultyId]);
+        return (bool)$stmt->fetch();
+    }
     public static function canEditProject($projectId) {
         if (self::isAdmin()) return true;
         if (self::isFaculty()) {
@@ -201,7 +210,7 @@ class Permissions {
     // ============================================
 
     public static function canCreateReport($projectId) {
-        return self::isFaculty() && self::isProjectLeader($projectId);
+        return self::isFaculty() && (self::isProjectLeader($projectId) || self::isAssignedToProject($projectId));
     }
 
     public static function canApproveReport() { return self::isAdmin(); }
