@@ -61,7 +61,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
-const siteUrl = window.location.origin;
+const siteUrl = <?= json_encode(SITE_URL) ?>;
 const certificateLogoUrl = `${siteUrl}/assets/images/logo.png`;
 
 function openGenerateCertificate() {

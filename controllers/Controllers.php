@@ -279,7 +279,7 @@ class DocumentController {
         $categories = db()->query('SELECT * FROM document_categories WHERE is_active = 1 ORDER BY name')->fetchAll();
         $categoryId = $isDesignation ? '' : ($_GET['category'] ?? '');
         $uploadTargets = DocumentModel::uploadTargets();
-        $canUpload = !empty($uploadTargets);
+        $canUpload = !empty($uploadTargets) && (!$isDesignation || Permissions::isAdmin());
         $uploadLimit = DocumentModel::uploadLimit();
         $_SESSION['documents_csrf'] ??= bin2hex(random_bytes(32));
         $page = max(1, intval($_GET['page'] ?? 1));
@@ -317,19 +317,37 @@ class MoaController {
         $page = max(1, intval($_GET['page'] ?? 1));
         $limit = ITEMS_PER_PAGE;
         $offset = ($page - 1) * $limit;
+        $search = trim($_GET['search'] ?? '');
+        $searchWhere = '';
+        $searchParams = [];
+        if ($search !== '') {
+            $searchWhere = " AND (m.moa_number LIKE ? OR p.title LIKE ? OR pa.name LIKE ? OR m.status LIKE ?)";
+            $searchParams = array_fill(0, 4, "%{$search}%");
+        }
 
         $role = $_SESSION['role'] ?? '';
-        if ($role === 'admin') {
-            $moas = db()->query("SELECT m.*, p.title as project_title, pa.name as partner_name FROM moas m LEFT JOIN projects p ON m.project_id = p.id LEFT JOIN partner_agencies pa ON m.partner_agency_id = pa.id ORDER BY m.created_at DESC LIMIT $limit OFFSET $offset")->fetchAll();
-            $total = db()->query("SELECT COUNT(*) as c FROM moas")->fetch()['c'];
+        if ($role === 'admin' || $role === 'viewer') {
+            $stmt = db()->prepare("SELECT m.*, p.title as project_title, pa.name as partner_name FROM moas m LEFT JOIN projects p ON m.project_id = p.id LEFT JOIN partner_agencies pa ON m.partner_agency_id = pa.id WHERE 1=1{$searchWhere} ORDER BY m.created_at DESC LIMIT ? OFFSET ?");
+            $stmt->execute(array_merge($searchParams, [$limit, $offset]));
+            $moas = $stmt->fetchAll();
+            $cstmt = db()->prepare("SELECT COUNT(*) as c FROM moas m LEFT JOIN projects p ON m.project_id = p.id LEFT JOIN partner_agencies pa ON m.partner_agency_id = pa.id WHERE 1=1{$searchWhere}");
+            $cstmt->execute($searchParams);
+            $total = $cstmt->fetch()['c'];
         } else {
             $fid = Permissions::getFacultyId();
-            $stmt = db()->prepare("SELECT m.*, p.title as project_title, pa.name as partner_name FROM moas m LEFT JOIN projects p ON m.project_id = p.id LEFT JOIN partner_agencies pa ON m.partner_agency_id = pa.id WHERE m.project_id IN (SELECT project_id FROM project_assignments WHERE faculty_id = ? AND is_active = 1) ORDER BY m.created_at DESC LIMIT ? OFFSET ?");
-            $stmt->execute([$fid, $limit, $offset]);
+            if (!$fid) {
+                $moas = [];
+                $total = 0;
+            } else {
+            $visibleMoaWhere = "m.project_id IN (SELECT project_id FROM project_assignments WHERE faculty_id = ? AND is_active = 1)
+                OR p.program_id IN (SELECT program_id FROM program_assignments WHERE faculty_id = ? AND is_active = 1)";
+            $stmt = db()->prepare("SELECT m.*, p.title as project_title, pa.name as partner_name FROM moas m LEFT JOIN projects p ON m.project_id = p.id LEFT JOIN partner_agencies pa ON m.partner_agency_id = pa.id WHERE ({$visibleMoaWhere}){$searchWhere} ORDER BY m.created_at DESC LIMIT ? OFFSET ?");
+            $stmt->execute(array_merge([$fid, $fid], $searchParams, [$limit, $offset]));
             $moas = $stmt->fetchAll();
-            $cstmt = db()->prepare("SELECT COUNT(*) as c FROM moas WHERE project_id IN (SELECT project_id FROM project_assignments WHERE faculty_id = ? AND is_active = 1)");
-            $cstmt->execute([$fid]);
+            $cstmt = db()->prepare("SELECT COUNT(*) as c FROM moas m LEFT JOIN projects p ON m.project_id = p.id LEFT JOIN partner_agencies pa ON m.partner_agency_id = pa.id WHERE ({$visibleMoaWhere}){$searchWhere}");
+            $cstmt->execute(array_merge([$fid, $fid], $searchParams));
             $total = $cstmt->fetch()['c'];
+            }
         }
         $totalPages = ceil($total / $limit);
 

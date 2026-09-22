@@ -47,7 +47,7 @@
 </div>
 
 <script>
-const siteUrl = '<?= SITE_URL ?>';
+const siteUrl = <?= json_encode(SITE_URL) ?>;
 const activityTypes = <?= json_encode(db()->query("SELECT id, name FROM activity_types WHERE is_active = 1")->fetchAll()) ?>;
 
 function refreshActivitiesTable() {

@@ -46,7 +46,7 @@
 </div>
 
 <script>
-const siteUrl = '<?= SITE_URL ?>';
+const siteUrl = <?= json_encode(SITE_URL) ?>;
 
 function refreshComponentsTable() {
     fetch(`${siteUrl}/index.php?module=components`)

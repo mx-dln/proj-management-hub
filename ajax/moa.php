@@ -7,6 +7,28 @@ $action = $_GET['action'] ?? '';
 $user = currentUser();
 
 switch ($action) {
+    case 'file':
+        $id = intval($_GET['id'] ?? 0);
+        $stmt = db()->prepare("SELECT * FROM moas WHERE id = ?");
+        $stmt->execute([$id]);
+        $moa = $stmt->fetch();
+        if (!$moa || empty($moa['attachment'])) jsonResponse(['success' => false, 'message' => 'File not found'], 404);
+        Permissions::requirePermission(Permissions::isAdmin() || Permissions::isViewer() || Permissions::canAccessProject($moa['project_id']));
+        if (isset($_GET['download']) && !Permissions::canManageMoa()) jsonResponse(['success' => false, 'message' => 'Download is restricted for this account.'], 403);
+        $base = realpath(UPLOAD_PATH);
+        $file = realpath(UPLOAD_PATH . $moa['attachment']);
+        if (!$base || !$file || !str_starts_with($file, $base . DIRECTORY_SEPARATOR) || !is_file($file)) jsonResponse(['success' => false, 'message' => 'File not found'], 404);
+        $name = basename($moa['attachment']);
+        $mime = (new finfo(FILEINFO_MIME_TYPE))->file($file);
+        $inline = in_array($mime, ['application/pdf', 'image/jpeg', 'image/png', 'text/plain'], true) && !isset($_GET['download']);
+        header('Content-Type: ' . ($inline ? $mime : 'application/octet-stream'));
+        header('Content-Disposition: ' . ($inline ? 'inline' : 'attachment') . "; filename=\"moa-file\"; filename*=UTF-8''" . rawurlencode($name));
+        header('Content-Length: ' . filesize($file));
+        header('X-Content-Type-Options: nosniff');
+        session_write_close();
+        if ($_SERVER['REQUEST_METHOD'] !== 'HEAD') readfile($file);
+        break;
+
     case 'create':
         Permissions::requirePermission(Permissions::canManageMoa());
         $data = [
@@ -60,6 +82,7 @@ switch ($action) {
             $stmt->execute([$id]);
             $data = $stmt->fetch();
             if (!$data) jsonResponse(['success' => false, 'message' => 'Not found'], 404);
+            Permissions::requirePermission(Permissions::isAdmin() || Permissions::isViewer() || Permissions::canAccessProject($data['project_id']));
             jsonResponse($data);
         } catch (Exception $e) {
             jsonResponse(['success' => false, 'message' => 'Error: ' . $e->getMessage()], 500);

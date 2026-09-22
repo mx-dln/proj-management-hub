@@ -65,7 +65,7 @@
 </div>
 
 <script>
-const siteUrl = window.location.origin;
+const siteUrl = <?= json_encode(SITE_URL) ?>;
 
 function openProposalSubmit() {
     const sl = getSlideOver({ size: 'lg' });

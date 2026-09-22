@@ -8,7 +8,7 @@ $primaryItems = [
     ['icon' => 'fas fa-diagram-project', 'label' => 'Project Management', 'module' => 'projects', 'roles' => ['admin','faculty','viewer']],
     ['icon' => 'fas fa-file-alt', 'label' => 'Proposals', 'module' => 'proposals', 'roles' => ['admin','faculty']],
     ['icon' => 'fas fa-file-signature', 'label' => 'Designation', 'module' => 'designations', 'roles' => ['admin','faculty','viewer']],
-    ['icon' => 'fas fa-handshake', 'label' => 'MOA', 'module' => 'moa', 'roles' => ['admin','viewer']],
+    ['icon' => 'fas fa-handshake', 'label' => 'MOA', 'module' => 'moa', 'roles' => ['admin','faculty','viewer']],
     ['icon' => 'fas fa-clipboard-check', 'label' => 'Accomplishments', 'module' => 'reports', 'roles' => ['admin','faculty','viewer']],
     ['icon' => 'fas fa-award', 'label' => 'Certificates', 'module' => 'certificates', 'roles' => ['admin','faculty','viewer']],
 ];

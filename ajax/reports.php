@@ -7,6 +7,27 @@ $action = $_GET['action'] ?? '';
 $user = currentUser();
 
 switch ($action) {
+    case 'file':
+        $id = intval($_GET['id'] ?? 0);
+        $stmt = db()->prepare("SELECT * FROM accomplishment_reports WHERE id = ?");
+        $stmt->execute([$id]);
+        $report = $stmt->fetch();
+        if (!$report || empty($report['attachment'])) jsonResponse(['success' => false, 'message' => 'File not found'], 404);
+        Permissions::requirePermission(Permissions::isAdmin() || Permissions::isViewer() || Permissions::canCreateReport($report['project_id']));
+        $base = realpath(UPLOAD_PATH);
+        $file = realpath(UPLOAD_PATH . $report['attachment']);
+        if (!$base || !$file || !str_starts_with($file, $base . DIRECTORY_SEPARATOR) || !is_file($file)) jsonResponse(['success' => false, 'message' => 'File not found'], 404);
+        $name = basename($report['attachment']);
+        $mime = (new finfo(FILEINFO_MIME_TYPE))->file($file);
+        $inline = in_array($mime, ['application/pdf', 'image/jpeg', 'image/png', 'text/plain'], true) && !isset($_GET['download']);
+        header('Content-Type: ' . ($inline ? $mime : 'application/octet-stream'));
+        header('Content-Disposition: ' . ($inline ? 'inline' : 'attachment') . "; filename=\"report-file\"; filename*=UTF-8''" . rawurlencode($name));
+        header('Content-Length: ' . filesize($file));
+        header('X-Content-Type-Options: nosniff');
+        session_write_close();
+        if ($_SERVER['REQUEST_METHOD'] !== 'HEAD') readfile($file);
+        break;
+
     case 'create':
         $projectId = intval($_POST['project_id'] ?? 0);
         Permissions::requirePermission(Permissions::canCreateReport($projectId));
@@ -97,6 +118,7 @@ switch ($action) {
             $stmt->execute([$id]);
             $data = $stmt->fetch();
             if (!$data) jsonResponse(['success' => false, 'message' => 'Not found'], 404);
+            Permissions::requirePermission(Permissions::isAdmin() || Permissions::isViewer() || Permissions::canCreateReport($data['project_id']));
             jsonResponse($data);
         } catch (Exception $e) {
             jsonResponse(['success' => false, 'message' => 'Error: ' . $e->getMessage()], 500);

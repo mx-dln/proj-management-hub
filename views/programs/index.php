@@ -58,7 +58,7 @@
 </div>
 
 <script>
-const siteUrl = '<?= SITE_URL ?>';
+const siteUrl = <?= json_encode(SITE_URL) ?>;
 
 function refreshProgramsTable() {
     const params = new URLSearchParams(window.location.search);

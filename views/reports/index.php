@@ -1,5 +1,19 @@
 <?php
-$projectsForReports = db()->query("SELECT id, title FROM projects WHERE deleted_at IS NULL ORDER BY title")->fetchAll();
+if (Permissions::isAdmin()) {
+    $projectsForReports = db()->query("SELECT id, title FROM projects WHERE deleted_at IS NULL ORDER BY title")->fetchAll();
+} elseif (Permissions::isFaculty()) {
+    $facultyId = Permissions::getFacultyId();
+    if ($facultyId) {
+        $projectsStmt = db()->prepare("SELECT DISTINCT p.id, p.title FROM projects p WHERE p.deleted_at IS NULL AND (p.id IN (SELECT project_id FROM project_assignments WHERE faculty_id = ? AND is_active = 1) OR p.program_id IN (SELECT program_id FROM program_assignments WHERE faculty_id = ? AND is_active = 1)) ORDER BY p.title");
+        $projectsStmt->execute([$facultyId, $facultyId]);
+        $projectsForReports = $projectsStmt->fetchAll();
+    } else {
+        $projectsForReports = [];
+    }
+} else {
+    $projectsForReports = [];
+}
+$canUploadReport = Permissions::isAdmin() || (Permissions::isFaculty() && !empty($projectsForReports));
 $reportsByQuarter = [];
 foreach ($reports as $report) {
     $reportsByQuarter[$report['period_quarter'] ?: 'Q1'][] = $report;
@@ -22,7 +36,8 @@ foreach ($reports as $report) {
                 <?php endif; ?>
                 <div class="quarter-actions">
                     <?php if($latest): ?><button onclick="viewReport(<?= (int)$latest['id'] ?>, this)" class="btn-ghost"><i class="fas fa-eye mr-1"></i> View</button><?php endif; ?>
-                    <button onclick="openReportUpload('<?= $quarter ?>')" class="btn-primary"><i class="fas fa-upload mr-1"></i> Upload</button>
+                    <?php if($latest && !empty($latest['attachment'])): ?><button onclick="printReport(<?= (int)$latest['id'] ?>)" class="btn-ghost"><i class="fas fa-print mr-1"></i> Print</button><?php endif; ?>
+                    <?php if($canUploadReport): ?><button onclick="openReportUpload('<?= $quarter ?>')" class="btn-primary"><i class="fas fa-upload mr-1"></i> Upload</button><?php endif; ?>
                 </div>
             </section>
         <?php endforeach; ?>
@@ -35,7 +50,10 @@ foreach ($reports as $report) {
             <td><span class="table-title"><?= e($r['title']) ?></span></td>
             <td><?= e($r['project_title'] ?? '-') ?></td>
             <td><?= getStatusBadge($r['status']) ?></td>
-            <td><button onclick="viewReport(<?= (int)$r['id'] ?>, this)" class="action-btn"><i class="fas fa-eye"></i></button></td>
+            <td>
+                <button onclick="viewReport(<?= (int)$r['id'] ?>, this)" class="action-btn" title="View" aria-label="View"><i class="fas fa-eye"></i></button>
+                <?php if(!empty($r['attachment'])): ?><button onclick="printReport(<?= (int)$r['id'] ?>)" class="action-btn" title="Print" aria-label="Print"><i class="fas fa-print"></i></button><?php endif; ?>
+            </td>
         </tr><?php endforeach; ?>
         <?php if(empty($reports)): ?><tr><td colspan="5" class="text-center text-[#6B7280] py-8">No accomplishment files yet</td></tr><?php endif; ?>
         </tbody></table></div>
@@ -49,8 +67,8 @@ foreach ($reports as $report) {
 @media(max-width:1000px){.quarter-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:640px){.quarter-grid{grid-template-columns:1fr}}
 </style>
 <script>
-const siteUrl = window.location.origin;
-const reportProjects = <?= json_encode(array_map(fn($p) => ['value'=>$p['id'],'label'=>$p['title']], $projectsForReports)) ?>;
+const siteUrl = <?= json_encode(SITE_URL) ?>;
+const reportProjects = <?= json_encode(array_map(fn($p) => ['value'=>$p['id'],'label'=>$p['title']], $projectsForReports), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 function openReportUpload(q){
     const sl = getSlideOver({size:'md'});
     const formHtml = `<div class="form-section"><div class="form-grid">
@@ -70,11 +88,17 @@ function openReportUpload(q){
 }
 async function viewReport(id, btn){
     const data = await fetchWithLoading(`${siteUrl}/ajax/reports.php?action=get&id=${id}`, btn);
-    getSlideOver({size:'md'}).openView(data.title, data.report_number, viewSectionHtml('Accomplishment File', [
+    const fileActions = data.attachment ? `<div class="flex flex-wrap gap-2 mb-4"><a href="${siteUrl}/ajax/reports.php?action=file&id=${Number(data.id)}" class="btn-ghost" target="_blank" rel="noopener"><i class="fas fa-eye" aria-hidden="true"></i> Open</a><button type="button" onclick="printReport(${Number(data.id)})" class="btn-ghost"><i class="fas fa-print" aria-hidden="true"></i> Print</button><a href="${siteUrl}/ajax/reports.php?action=file&id=${Number(data.id)}&download=1" class="btn-primary"><i class="fas fa-download" aria-hidden="true"></i> Download</a></div>` : '';
+    getSlideOver({size:'md'}).openView(data.title, data.report_number, fileActions + viewSectionHtml('Accomplishment File', [
         viewFieldHtml('Quarter', escapeHtml(data.period_quarter || '-')),
         viewFieldHtml('Project', escapeHtml(data.project_title || '-')),
         viewFieldHtml('Status', getStatusBadge(data.status)),
         viewFieldHtml('Summary', escapeHtml(data.summary || '-'))
     ]), {size:'md'});
+}
+function printReport(id){
+    const win = window.open(`${siteUrl}/ajax/reports.php?action=file&id=${Number(id)}`, '_blank', 'noopener');
+    if (!win) { showToast('Allow pop-ups to print this file.', 'error'); return; }
+    win.addEventListener('load', () => win.print(), { once: true });
 }
 </script>

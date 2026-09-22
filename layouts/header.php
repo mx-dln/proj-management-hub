@@ -7,6 +7,7 @@
     <title><?= e(getSetting('system_name', SITE_NAME)) ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
+        window.APP_BASE_URL = <?= json_encode(SITE_URL) ?>;
         tailwind.config = {
             darkMode: 'class',
             theme: { extend: { colors: {

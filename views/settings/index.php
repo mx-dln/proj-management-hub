@@ -45,7 +45,7 @@ $_SESSION['settings_csrf'] ??= bin2hex(random_bytes(32));
 </div>
 
 <script>
-const siteUrl=window.location.origin;
+const siteUrl = <?= json_encode(SITE_URL) ?>;
 function showSettingsTab(t, button){document.querySelectorAll('.settings-content').forEach(e=>e.classList.add('hidden'));document.querySelectorAll('.settings-tab').forEach(e=>{e.classList.remove('border-[#0F643A]','text-[#86EFAC]');e.classList.add('border-transparent','text-[#9CA3AF]')});document.getElementById('settings-'+t).classList.remove('hidden');button.classList.add('border-[#0F643A]','text-[#86EFAC]');button.classList.remove('border-transparent','text-[#9CA3AF]');if(t==='mail')document.dispatchEvent(new Event('mail-settings-open'))}
 document.addEventListener('DOMContentLoaded',function(){const f=document.getElementById('generalForm');if(f)submitForm(f,siteUrl+'/ajax/settings.php?action=save_general',function(){setTimeout(()=>location.reload(),1000)})});
 </script>

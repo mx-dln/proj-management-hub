@@ -79,7 +79,7 @@
 </style>
 
 <script>
-const siteUrl = '<?= SITE_URL ?>';
+const siteUrl = <?= json_encode(SITE_URL) ?>;
 const programsList = <?= json_encode($programs) ?>;
 document.getElementById('inlineProjectForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();

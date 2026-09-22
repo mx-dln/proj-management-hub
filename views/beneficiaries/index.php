@@ -27,7 +27,7 @@
 </div>
 
 <script>
-const siteUrl = '<?= SITE_URL ?>';
+const siteUrl = <?= json_encode(SITE_URL) ?>;
 
 function refreshBeneficiariesTable() {
     fetch(`${siteUrl}/index.php?module=beneficiaries`)

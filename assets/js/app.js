@@ -1,6 +1,12 @@
 // ISU-Cauayan ETS Hub - Core JavaScript v2
 
-const SITE_URL = window.location.origin;
+const SITE_URL = window.APP_BASE_URL || window.location.origin;
+
+function appUrl(path = '') {
+    if (!path) return SITE_URL;
+    if (/^https?:\/\//i.test(path)) return path;
+    return SITE_URL + '/' + String(path).replace(/^\/+/, '');
+}
 
 // ============================================
 // SIDEBAR
@@ -102,7 +108,7 @@ function loadNotifications() {
                 return;
             }
             list.innerHTML = data.map(n => `
-                <a href="${n.action_url || SITE_URL + '/index.php?module=notifications'}" class="block px-4 py-3 hover:bg-[#324152] border-b border-[#374151] transition-colors">
+                <a href="${n.action_url ? appUrl(n.action_url) : appUrl('/index.php?module=notifications')}" class="block px-4 py-3 hover:bg-[#324152] border-b border-[#374151] transition-colors">
                     <p class="text-sm font-medium text-[#F9FAFB]">${escapeHtml(n.title)}</p>
                     <p class="text-xs text-[#6B7280] mt-1 line-clamp-2">${escapeHtml(n.message)}</p>
                     <p class="text-[10px] text-[#4B5563] mt-1">${timeAgo(n.created_at)}</p>

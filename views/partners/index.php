@@ -29,7 +29,7 @@
 </div>
 
 <script>
-const siteUrl = '<?= SITE_URL ?>';
+const siteUrl = <?= json_encode(SITE_URL) ?>;
 
 function refreshPartnersTable() {
     fetch(`${siteUrl}/index.php?module=partners`)

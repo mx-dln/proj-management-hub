@@ -72,7 +72,9 @@ class DocumentModel {
         $id = (int)($input['entity_id'] ?? 0);
         if (!self::entityExists($type, $id)) throw new RuntimeException('Select an existing record.', 422);
         if (!Permissions::canUploadDocument($type, $id)) throw new RuntimeException('You cannot upload to this record.', 403);
-        $category = ($input['scope'] ?? '') === 'designations' ? self::designationCategory() : (int)($input['category_id'] ?? 0);
+        $isDesignation = ($input['scope'] ?? '') === 'designations';
+        if ($isDesignation && !Permissions::isAdmin()) throw new RuntimeException('You cannot upload designation files.', 403);
+        $category = $isDesignation ? self::designationCategory() : (int)($input['category_id'] ?? 0);
         $stmt = db()->prepare('SELECT id FROM document_categories WHERE id = ? AND is_active = 1');
         $stmt->execute([$category]);
         if (!$stmt->fetchColumn()) throw new RuntimeException('Select an active document category.', 422);

@@ -87,10 +87,19 @@ async function viewDocument(id, button) {
         const fields = [viewFieldHtml('Category', escapeHtml(data.category_name || 'Uncategorized')), viewFieldHtml('Related Record', escapeHtml(data.entity_type)), viewFieldHtml('Created', escapeHtml(data.created_at))];
         if (data.uploader_name) fields.push(viewFieldHtml('Uploaded by', escapeHtml(data.uploader_name)));
         if (data.file_size !== null) fields.push(viewFieldHtml('Size', documentSize(Number(data.file_size))));
-        const attachment = data.has_file ? `<div class="flex flex-wrap gap-2 mb-4"><a href="${fileUrl}" class="btn-ghost" target="_blank" rel="noopener"><i class="fas fa-external-link-alt" aria-hidden="true"></i> Open</a><a href="${fileUrl}&download=1" class="btn-primary"><i class="fas fa-download" aria-hidden="true"></i> Download</a></div>${data.previewable ? `<iframe src="${fileUrl}" title="File preview" class="w-full border-0 rounded mb-4 bg-white" style="height:50vh"></iframe>` : ''}` : '<p class="text-sm text-[#9CA3AF] mb-4">Attachment unavailable.</p>';
+        const attachment = data.has_file ? `<div class="flex flex-wrap gap-2 mb-4"><a href="${fileUrl}" class="btn-ghost" target="_blank" rel="noopener"><i class="fas fa-external-link-alt" aria-hidden="true"></i> Open</a><button type="button" onclick="printDocument(${Number(data.id)})" class="btn-ghost"><i class="fas fa-print" aria-hidden="true"></i> Print</button><a href="${fileUrl}&download=1" class="btn-primary"><i class="fas fa-download" aria-hidden="true"></i> Download</a></div>${data.previewable ? `<iframe src="${fileUrl}" title="File preview" class="w-full border-0 rounded mb-4 bg-white" style="height:50vh"></iframe>` : ''}` : '<p class="text-sm text-[#9CA3AF] mb-4">Attachment unavailable.</p>';
         sl.openView(escapeHtml(data.title), escapeHtml(data.file_name), attachment + viewSectionHtml('File Details', fields), { size: 'lg' });
     } catch (error) {
         showToast(error.message || 'Failed to load file.', 'error');
         sl.close(true);
     }
+}
+
+function printDocument(id) {
+    const win = window.open(`${SITE_URL}/ajax/documents.php?action=file&id=${Number(id)}`, '_blank', 'noopener');
+    if (!win) {
+        showToast('Allow pop-ups to print this file.', 'error');
+        return;
+    }
+    win.addEventListener('load', () => win.print(), { once: true });
 }

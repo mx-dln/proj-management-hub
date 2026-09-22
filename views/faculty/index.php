@@ -37,7 +37,7 @@
 </div>
 
 <script>
-const siteUrl = '<?= SITE_URL ?>';
+const siteUrl = <?= json_encode(SITE_URL) ?>;
 
 async function viewFaculty(id, btn) {
     const sl = getSlideOver({ size: 'md', title: 'Faculty Profile', subtitle: 'Loading...' });

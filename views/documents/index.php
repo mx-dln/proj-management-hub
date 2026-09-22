@@ -18,8 +18,14 @@
             <div class="designation-row <?= $latest ? 'has-file' : '' ?>" <?= $latest ? 'onclick="viewDocument(' . (int)$latest['id'] . ', this)" tabindex="0" role="button"' : '' ?>>
                 <div class="designation-name"><button type="button" class="designation-caret" <?= $latest ? 'onclick="event.stopPropagation(); viewDocument(' . (int)$latest['id'] . ', this)" aria-label="View file"' : 'disabled aria-label="No file uploaded yet"' ?>><i class="fas fa-caret-right"></i></button><span><?= e($targetLabel) ?></span><small><?= $latest ? e($latest['title'] . ' · ' . $latest['file_name']) : e(ucfirst($targetType) . ' · no uploaded file yet') ?></small></div>
                 <div class="designation-actions">
-                    <?php if ($latest): ?><button onclick="event.stopPropagation(); viewDocument(<?= (int)$latest['id'] ?>, this)" class="btn-ghost">View</button><?php else: ?><button class="btn-ghost" disabled>View</button><?php endif; ?>
-                    <button onclick="event.stopPropagation(); openDocumentUpload('<?= e($targetType) ?>', <?= $targetId ?>)" class="btn-primary"><i class="fas fa-upload mr-1"></i> Upload</button>
+                    <?php if ($latest): ?>
+                        <button onclick="event.stopPropagation(); viewDocument(<?= (int)$latest['id'] ?>, this)" class="btn-ghost">View</button>
+                        <button onclick="event.stopPropagation(); printDocument(<?= (int)$latest['id'] ?>)" class="btn-ghost"><i class="fas fa-print mr-1"></i> Print</button>
+                        <a href="<?= SITE_URL ?>/ajax/documents.php?action=file&amp;id=<?= (int)$latest['id'] ?>&amp;download=1" onclick="event.stopPropagation()" class="btn-primary"><i class="fas fa-download mr-1"></i> Download</a>
+                    <?php else: ?>
+                        <button class="btn-ghost" disabled>View</button>
+                        <?php if ($canUpload): ?><button onclick="event.stopPropagation(); openDocumentUpload('<?= e($targetType) ?>', <?= $targetId ?>)" class="btn-primary"><i class="fas fa-upload mr-1"></i> Upload</button><?php endif; ?>
+                    <?php endif; ?>
                 </div>
             </div>
         <?php endforeach; ?>
