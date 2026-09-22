@@ -1,19 +1,10 @@
 <?php
 if (Permissions::isAdmin()) {
     $projectsForReports = db()->query("SELECT id, title FROM projects WHERE deleted_at IS NULL ORDER BY title")->fetchAll();
-} elseif (Permissions::isFaculty()) {
-    $facultyId = Permissions::getFacultyId();
-    if ($facultyId) {
-        $projectsStmt = db()->prepare("SELECT DISTINCT p.id, p.title FROM projects p WHERE p.deleted_at IS NULL AND (p.id IN (SELECT project_id FROM project_assignments WHERE faculty_id = ? AND is_active = 1) OR p.program_id IN (SELECT program_id FROM program_assignments WHERE faculty_id = ? AND is_active = 1)) ORDER BY p.title");
-        $projectsStmt->execute([$facultyId, $facultyId]);
-        $projectsForReports = $projectsStmt->fetchAll();
-    } else {
-        $projectsForReports = [];
-    }
 } else {
     $projectsForReports = [];
 }
-$canUploadReport = Permissions::isAdmin() || (Permissions::isFaculty() && !empty($projectsForReports));
+$canUploadReport = Permissions::isAdmin();
 $reportsByQuarter = [];
 foreach ($reports as $report) {
     $reportsByQuarter[$report['period_quarter'] ?: 'Q1'][] = $report;

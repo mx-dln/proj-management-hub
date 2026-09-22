@@ -210,8 +210,7 @@ class Permissions {
     // ============================================
 
     public static function canCreateReport($projectId) {
-        if (self::isAdmin()) return true;
-        return self::isFaculty() && (self::isProjectLeader($projectId) || self::isAssignedToProject($projectId));
+        return self::isAdmin();
     }
 
     public static function canApproveReport() { return self::isAdmin(); }
