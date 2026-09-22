@@ -63,6 +63,7 @@ function uploadFile($file, $directory, $allowedTypes = []) {
 
 function formatCurrency($amount) { return '₱' . number_format($amount, 2); }
 function formatDate($date, $format = DATE_FORMAT) { return empty($date) ? '-' : date($format, strtotime($date)); }
+function formatDateTime($datetime, $format = DATETIME_FORMAT) { return empty($datetime) ? '-' : date($format, strtotime($datetime)); }
 
 function timeAgo($datetime) {
     if (empty($datetime)) return '-';

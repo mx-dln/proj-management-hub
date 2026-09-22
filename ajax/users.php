@@ -46,18 +46,43 @@ switch ($action) {
         break;
 
     case 'update':
-        $input = json_decode(file_get_contents('php://input'), true);
+        $input = json_decode(file_get_contents('php://input'), true) ?: $_POST;
         $id = intval($input['id'] ?? 0);
         Permissions::requirePermission(Permissions::canManageUsers());
         try {
             $fields = []; $params = [];
+            if (isset($input['username'])) { $fields[] = "username = ?"; $params[] = sanitize($input['username']); }
             if (isset($input['email'])) { $fields[] = "email = ?"; $params[] = sanitize($input['email']); }
             if (isset($input['role'])) { $fields[] = "role = ?"; $params[] = sanitize($input['role']); }
             if (isset($input['is_active'])) { $fields[] = "is_active = ?"; $params[] = intval($input['is_active']); }
             if (!empty($input['password'])) { $fields[] = "password = ?"; $params[] = password_hash($input['password'], PASSWORD_DEFAULT); }
             if (!empty($fields)) { $params[] = $id; db()->prepare("UPDATE users SET " . implode(', ', $fields) . " WHERE id = ?")->execute($params); }
+            db()->prepare("UPDATE faculty_profiles SET employee_id = ?, first_name = ?, last_name = ?, middle_name = ?, department_id = ?, position = ?, contact_number = ?, email = ? WHERE user_id = ?")
+                ->execute([
+                    sanitize($input['employee_id'] ?? ''),
+                    sanitize($input['first_name'] ?? ''),
+                    sanitize($input['last_name'] ?? ''),
+                    sanitize($input['middle_name'] ?? ''),
+                    intval($input['department_id'] ?? 0) ?: null,
+                    sanitize($input['position'] ?? ''),
+                    sanitize($input['contact_number'] ?? ''),
+                    sanitize($input['email'] ?? ''),
+                    $id,
+                ]);
             auditLog('edit', 'user', $id, 'Updated user');
             jsonResponse(['success' => true, 'message' => 'User updated']);
+        } catch (Exception $e) { jsonResponse(['success' => false, 'message' => 'Failed'], 500); }
+        break;
+
+    case 'delete':
+        $input = json_decode(file_get_contents('php://input'), true);
+        $id = intval($input['id'] ?? 0);
+        Permissions::requirePermission(Permissions::canManageUsers());
+        if ($id === (int)($_SESSION['user_id'] ?? 0)) jsonResponse(['success' => false, 'message' => 'You cannot delete your own account.'], 400);
+        try {
+            db()->prepare("UPDATE users SET deleted_at = NOW(), is_active = 0 WHERE id = ?")->execute([$id]);
+            auditLog('delete', 'user', $id, 'Deleted user');
+            jsonResponse(['success' => true, 'message' => 'User deleted']);
         } catch (Exception $e) { jsonResponse(['success' => false, 'message' => 'Failed'], 500); }
         break;
 
