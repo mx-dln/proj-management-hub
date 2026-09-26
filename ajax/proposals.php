@@ -6,6 +6,67 @@ requireLogin();
 $action = $_GET['action'] ?? '';
 $user = currentUser();
 
+function ensureProposalCommentsTable() {
+    static $ready = false;
+    if ($ready) return;
+    db()->exec("
+        CREATE TABLE IF NOT EXISTS proposal_comments (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            proposal_id INT NOT NULL,
+            user_id INT NOT NULL,
+            comment TEXT NOT NULL,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            KEY idx_proposal_comments_proposal (proposal_id),
+            KEY idx_proposal_comments_user (user_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+    $ready = true;
+}
+
+function ensureProposalBudgetCommentsTable() {
+    static $ready = false;
+    if ($ready) return;
+    db()->exec("
+        CREATE TABLE IF NOT EXISTS proposal_budget_comments (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            proposal_id INT NOT NULL,
+            user_id INT NOT NULL,
+            comment TEXT NOT NULL,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            KEY idx_proposal_budget_comments_proposal (proposal_id),
+            KEY idx_proposal_budget_comments_user (user_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+    $ready = true;
+}
+
+function canAccessProposalRow(array $proposal, array $user) {
+    if (($user['role'] ?? '') === 'admin') return true;
+    if ((int)$proposal['submitted_by'] === (int)$user['id']) return true;
+    if (($user['role'] ?? '') !== 'faculty' || empty($_SESSION['faculty_id']) || empty($proposal['project_id'])) return false;
+    $access = db()->prepare("SELECT 1 FROM project_assignments WHERE project_id = ? AND faculty_id = ? AND is_active = 1 LIMIT 1");
+    $access->execute([(int)$proposal['project_id'], (int)$_SESSION['faculty_id']]);
+    return (bool)$access->fetchColumn();
+}
+
+function loadProposalForAccess($id, array $user) {
+    $stmt = db()->prepare("SELECT * FROM proposals WHERE id = ?");
+    $stmt->execute([(int)$id]);
+    $proposal = $stmt->fetch();
+    if (!$proposal) jsonResponse(['success' => false, 'message' => 'Proposal not found'], 404);
+    Permissions::requirePermission(canAccessProposalRow($proposal, $user));
+    return $proposal;
+}
+
+function processProposalMailQueue(): void {
+    try {
+        require_once __DIR__ . '/../includes/EmailQueue.php';
+        (new EmailQueue(db()))->process(5);
+    } catch (Throwable $e) {
+        error_log('Proposal email delivery was queued but could not be processed immediately.');
+    }
+}
+
 switch ($action) {
     case 'file':
         $id = intval($_GET['id'] ?? 0);
@@ -42,6 +103,24 @@ switch ($action) {
 
         $title = sanitize($_POST['title'] ?? '');
         if (empty($title)) jsonResponse(['success' => false, 'message' => 'Title is required'], 400);
+        $requiredFields = [
+            'description' => 'Description',
+            'college' => 'College',
+            'campus' => 'Campus',
+            'start_date' => 'Start date',
+            'end_date' => 'End date',
+            'budget' => 'Budget',
+            'funding_source' => 'Funding source',
+            'objectives' => 'Objectives',
+            'beneficiaries' => 'Beneficiaries',
+            'location' => 'Location',
+        ];
+        foreach ($requiredFields as $field => $label) {
+            if (trim((string)($_POST[$field] ?? '')) === '') {
+                jsonResponse(['success' => false, 'message' => $label . ' is required'], 400);
+            }
+        }
+        if (floatval($_POST['budget'] ?? 0) <= 0) jsonResponse(['success' => false, 'message' => 'Budget must be greater than zero'], 400);
         if (empty($_FILES['attachment']['tmp_name'])) jsonResponse(['success' => false, 'message' => 'Proposal file is required'], 400);
         $upload = uploadFile($_FILES['attachment'], 'proposals', ['pdf','doc','docx']);
         if (!$upload['success']) jsonResponse(['success' => false, 'message' => $upload['error'] ?? 'Upload failed'], 400);
@@ -217,6 +296,7 @@ switch ($action) {
             
             $notifType = $action === 'approved' ? 'success' : ($action === 'returned' ? 'warning' : 'error');
             createNotification($p['submitted_by'], 'Proposal ' . ucfirst($action), "Your proposal '{$p['title']}' has been {$action}.", $notifType, 'proposal', $id, '/index.php?module=proposals');
+            processProposalMailQueue();
             
             // If approved and it's a program proposal, create a program
             if ($action === 'approved' && $isProgramProposal) {
@@ -262,14 +342,77 @@ switch ($action) {
         } catch (Exception $e) { jsonResponse(['success' => false, 'message' => 'Failed: ' . $e->getMessage()], 500); }
         break;
 
+    case 'add_comment':
+        ensureProposalCommentsTable();
+        $input = json_decode(file_get_contents('php://input'), true) ?: [];
+        $id = intval($input['id'] ?? 0);
+        $comment = sanitize($input['comment'] ?? '');
+        if (!$id) jsonResponse(['success' => false, 'message' => 'Invalid proposal'], 400);
+        if ($comment === '') jsonResponse(['success' => false, 'message' => 'Comment is required'], 400);
+        $proposal = loadProposalForAccess($id, $user);
+        try {
+            db()->prepare("INSERT INTO proposal_comments (proposal_id, user_id, comment) VALUES (?, ?, ?)")
+                ->execute([$id, $user['id'], $comment]);
+
+            if (($user['role'] ?? '') === 'admin' && (int)$proposal['submitted_by'] !== (int)$user['id']) {
+                createNotification($proposal['submitted_by'], 'New Proposal Comment', "A comment was added to '{$proposal['title']}'.", 'info', 'proposal', $id, '/index.php?module=proposals');
+                processProposalMailQueue();
+            } elseif (($user['role'] ?? '') === 'faculty') {
+                $admins = db()->query("SELECT id FROM users WHERE role = 'admin' AND deleted_at IS NULL AND is_active = 1")->fetchAll();
+                foreach ($admins as $a) {
+                    createNotification($a['id'], 'New Proposal Comment', "Faculty added a comment to '{$proposal['title']}'.", 'info', 'proposal', $id, '/index.php?module=proposals');
+                }
+                processProposalMailQueue();
+            }
+
+            auditLog('comment', 'proposal', $id, 'Added proposal comment');
+            jsonResponse(['success' => true, 'message' => 'Comment added']);
+        } catch (Exception $e) {
+            jsonResponse(['success' => false, 'message' => 'Failed: ' . $e->getMessage()], 500);
+        }
+        break;
+
+    case 'add_budget_comment':
+        ensureProposalBudgetCommentsTable();
+        $input = json_decode(file_get_contents('php://input'), true) ?: [];
+        $id = intval($input['id'] ?? 0);
+        $comment = sanitize($input['comment'] ?? '');
+        if (!$id) jsonResponse(['success' => false, 'message' => 'Invalid proposal'], 400);
+        if ($comment === '') jsonResponse(['success' => false, 'message' => 'Budget comment is required'], 400);
+        $proposal = loadProposalForAccess($id, $user);
+        try {
+            db()->prepare("INSERT INTO proposal_budget_comments (proposal_id, user_id, comment) VALUES (?, ?, ?)")
+                ->execute([$id, $user['id'], $comment]);
+
+            if (($user['role'] ?? '') === 'admin' && (int)$proposal['submitted_by'] !== (int)$user['id']) {
+                createNotification($proposal['submitted_by'], 'New Budget Comment', "A budget comment was added to '{$proposal['title']}'.", 'info', 'proposal', $id, '/index.php?module=proposals');
+                processProposalMailQueue();
+            } elseif (($user['role'] ?? '') === 'faculty') {
+                $admins = db()->query("SELECT id FROM users WHERE role = 'admin' AND deleted_at IS NULL AND is_active = 1")->fetchAll();
+                foreach ($admins as $a) {
+                    createNotification($a['id'], 'New Budget Comment', "Faculty added a budget comment to '{$proposal['title']}'.", 'info', 'proposal', $id, '/index.php?module=proposals');
+                }
+                processProposalMailQueue();
+            }
+
+            auditLog('comment', 'proposal', $id, 'Added proposal budget comment');
+            jsonResponse(['success' => true, 'message' => 'Budget comment added']);
+        } catch (Exception $e) {
+            jsonResponse(['success' => false, 'message' => 'Failed: ' . $e->getMessage()], 500);
+        }
+        break;
+
     case 'get':
         try {
+            ensureProposalCommentsTable();
+            ensureProposalBudgetCommentsTable();
             $id = intval($_GET['id'] ?? 0);
             if (!$id) jsonResponse(['success' => false, 'message' => 'Invalid ID'], 400);
             $stmt = db()->prepare("SELECT pr.*, p.title as project_title, CONCAT(fp.first_name, ' ', fp.last_name) as submitter_name FROM proposals pr LEFT JOIN projects p ON pr.project_id = p.id LEFT JOIN faculty_profiles fp ON pr.submitted_by = fp.user_id WHERE pr.id = ?");
             $stmt->execute([$id]);
             $data = $stmt->fetch();
             if (!$data) jsonResponse(['success' => false, 'message' => 'Not found'], 404);
+            Permissions::requirePermission(canAccessProposalRow($data, $user));
             if (empty($data['project_title']) && empty($data['project_id'])) {
                 $data['project_title'] = $data['title'];
             }
@@ -295,6 +438,28 @@ switch ($action) {
             ");
             $history->execute([$id, $id]);
             $data['history'] = $history->fetchAll();
+
+            $comments = db()->prepare("
+                SELECT pc.*, u.username, u.role, CONCAT(fp.first_name, ' ', fp.last_name) as faculty_name
+                FROM proposal_comments pc
+                JOIN users u ON pc.user_id = u.id
+                LEFT JOIN faculty_profiles fp ON fp.user_id = u.id
+                WHERE pc.proposal_id = ?
+                ORDER BY pc.created_at ASC
+            ");
+            $comments->execute([$id]);
+            $data['comments'] = $comments->fetchAll();
+
+            $budgetComments = db()->prepare("
+                SELECT pbc.*, u.username, u.role, CONCAT(fp.first_name, ' ', fp.last_name) as faculty_name
+                FROM proposal_budget_comments pbc
+                JOIN users u ON pbc.user_id = u.id
+                LEFT JOIN faculty_profiles fp ON fp.user_id = u.id
+                WHERE pbc.proposal_id = ?
+                ORDER BY pbc.created_at ASC
+            ");
+            $budgetComments->execute([$id]);
+            $data['budget_comments'] = $budgetComments->fetchAll();
             
             jsonResponse($data);
         } catch (Exception $e) {

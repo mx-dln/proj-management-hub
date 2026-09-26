@@ -39,9 +39,9 @@
                                     <?php endif; ?>
                                 <?php endif; ?>
                                 <?php if ($_SESSION['role'] === 'admin' && in_array($p['status'], ['submitted','under_review'])): ?>
-                                    <button onclick="reviewProposal(<?= $p['id'] ?>, 'approved')" class="action-btn action-btn-success" title="Approve"><i class="fas fa-check text-sm"></i></button>
+                                    <button onclick="reviewProposal(<?= $p['id'] ?>, 'approved', this)" class="action-btn action-btn-success" title="Approve"><i class="fas fa-check text-sm"></i></button>
                                     <button onclick="showReturnModal(<?= $p['id'] ?>)" class="action-btn" title="Return"><i class="fas fa-undo text-sm"></i></button>
-                                    <button onclick="reviewProposal(<?= $p['id'] ?>, 'rejected')" class="action-btn action-btn-danger" title="Reject"><i class="fas fa-times text-sm"></i></button>
+                                    <button onclick="reviewProposal(<?= $p['id'] ?>, 'rejected', this)" class="action-btn action-btn-danger" title="Reject"><i class="fas fa-times text-sm"></i></button>
                                 <?php endif; ?>
                             </div>
                         </td>
@@ -121,11 +121,24 @@ function submitProposal(id) {
     });
 }
 
-function reviewProposal(id, action) {
+function reviewProposal(id, action, btn = null) {
     const label = action === 'approved' ? 'Approve' : 'Reject';
-    showConfirm(label, label + ' this proposal?', () => {
-        ajax(`${siteUrl}/ajax/proposals.php?action=review`, { id, action, remarks: '' })
-            .then(data => { if (data.success) { showToast(data.message); setTimeout(() => location.reload(), 1000); } else showToast(data.message, 'error'); });
+    showConfirm(label, label + ' this proposal?', async () => {
+        const actionButtons = btn ? btn.closest('td')?.querySelectorAll('button') : [];
+        actionButtons?.forEach(button => { button.disabled = true; button.classList.add('opacity-70', 'cursor-not-allowed'); });
+        setButtonLoading(btn, true);
+        showLoading();
+        try {
+            const data = await ajax(`${siteUrl}/ajax/proposals.php?action=review`, { id, action, remarks: '' });
+            if (!data.success) throw new Error(data.message || `${label} failed`);
+            showToast(data.message || `Proposal ${action}`);
+            setTimeout(() => location.reload(), 700);
+        } catch (error) {
+            showToast(error.message || `${label} failed`, 'error');
+            setButtonLoading(btn, false);
+            actionButtons?.forEach(button => { button.disabled = false; button.classList.remove('opacity-70', 'cursor-not-allowed'); });
+            hideLoading();
+        }
     }, label);
 }
 
@@ -150,7 +163,7 @@ async function openProposalRevision(id, btn) {
 }
 
 async function viewProposal(id, btn) {
-    const sl = getSlideOver({ size: 'md', title: 'Proposal Details', subtitle: 'Loading...' });
+    const sl = getSlideOver({ size: 'lg', title: 'Proposal Details', subtitle: 'Loading...' });
     try {
         const data = await fetchWithLoading(`${siteUrl}/ajax/proposals.php?action=get&id=${id}`, btn);
         sl.setTitle(data.title);
@@ -202,6 +215,7 @@ async function viewProposal(id, btn) {
                     viewFieldHtml('Location', escapeHtml(meta.location || '-')),
                     viewFieldHtml('Beneficiaries', escapeHtml(meta.beneficiaries || '-')),
                 ]);
+                content += proposalBudgetCommentsHtml(data);
                 if (meta.description) {
                     content += `<div class="form-section"><h4 class="form-section-title">Description</h4><p class="text-sm text-[#D1D5DB]">${escapeHtml(meta.description)}</p></div>`;
                 }
@@ -221,7 +235,104 @@ async function viewProposal(id, btn) {
             }
         }
 
-        sl.openView(data.title, data.proposal_number, content, { size: 'md' });
+        content += proposalCommentsHtml(data);
+        sl.openView(data.title, data.proposal_number, content, { size: 'lg' });
+        bindProposalCommentForm(id, sl);
+        bindProposalBudgetCommentForm(id, sl);
     } catch (err) { console.error('Error:', err); showToast(err.message || 'Failed to load', 'error'); sl.close(true); }
+}
+
+function proposalBudgetCommentsHtml(data) {
+    const comments = Array.isArray(data.budget_comments) ? data.budget_comments : [];
+    const rows = comments.length ? comments.map(comment => {
+        const displayName = (comment.faculty_name || '').trim() || comment.username || '-';
+        const role = comment.role ? comment.role.charAt(0).toUpperCase() + comment.role.slice(1) : '';
+        return `<div class="border border-[#374151] rounded-lg p-3 bg-[#111827]">
+            <div class="flex items-center justify-between gap-3">
+                <div>
+                    <strong class="text-sm text-[#F9FAFB]">${escapeHtml(displayName)}</strong>
+                    <span class="text-xs text-[#6B7280] ml-2">${escapeHtml(role)}</span>
+                </div>
+                <span class="text-xs text-[#6B7280]">${formatDate(comment.created_at)}</span>
+            </div>
+            <p class="text-sm text-[#D1D5DB] mt-2 whitespace-pre-wrap">${escapeHtml(comment.comment || '')}</p>
+        </div>`;
+    }).join('') : `<div class="text-sm text-[#6B7280] border border-dashed border-[#374151] rounded-lg p-4 text-center">No budget comments yet</div>`;
+
+    return `<div class="form-section">
+        <h4 class="form-section-title">Budget Comments / Remarks</h4>
+        <div class="space-y-2 mb-3">${rows}</div>
+        <form id="proposalBudgetCommentForm" class="space-y-3">
+            <textarea name="comment" rows="3" class="form-input" required placeholder="Add budget remarks or comments..."></textarea>
+            <div class="flex justify-end">
+                <button type="submit" class="btn-primary"><i class="fas fa-comment-dollar mr-1"></i> Add Budget Comment</button>
+            </div>
+        </form>
+    </div>`;
+}
+
+function proposalCommentsHtml(data) {
+    const comments = Array.isArray(data.comments) ? data.comments : [];
+    const rows = comments.length ? comments.map(comment => {
+        const displayName = (comment.faculty_name || '').trim() || comment.username || '-';
+        const role = comment.role ? comment.role.charAt(0).toUpperCase() + comment.role.slice(1) : '';
+        return `<div class="border border-[#374151] rounded-lg p-3 bg-[#111827]">
+            <div class="flex items-center justify-between gap-3">
+                <div>
+                    <strong class="text-sm text-[#F9FAFB]">${escapeHtml(displayName)}</strong>
+                    <span class="text-xs text-[#6B7280] ml-2">${escapeHtml(role)}</span>
+                </div>
+                <span class="text-xs text-[#6B7280]">${formatDate(comment.created_at)}</span>
+            </div>
+            <p class="text-sm text-[#D1D5DB] mt-2 whitespace-pre-wrap">${escapeHtml(comment.comment || '')}</p>
+        </div>`;
+    }).join('') : `<div class="text-sm text-[#6B7280] border border-dashed border-[#374151] rounded-lg p-4 text-center">No comments yet</div>`;
+
+    return `<div class="form-section">
+        <h4 class="form-section-title">Remarks & Comments</h4>
+        <div class="space-y-2 mb-3">${rows}</div>
+        <form id="proposalCommentForm" class="space-y-3">
+            <textarea name="comment" rows="3" class="form-input" required placeholder="Add remarks or comments..."></textarea>
+            <div class="flex justify-end">
+                <button type="submit" class="btn-primary"><i class="fas fa-comment mr-1"></i> Add Comment</button>
+            </div>
+        </form>
+    </div>`;
+}
+
+function bindProposalCommentForm(id, sl) {
+    const form = document.getElementById('proposalCommentForm');
+    if (!form) return;
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const comment = e.target.comment.value.trim();
+        if (!comment) return;
+        const result = await ajax(`${siteUrl}/ajax/proposals.php?action=add_comment`, { id, comment });
+        if (!result.success) {
+            showToast(result.message || 'Failed to add comment', 'error');
+            return;
+        }
+        showToast(result.message || 'Comment added');
+        sl.close(true);
+        viewProposal(id, null);
+    });
+}
+
+function bindProposalBudgetCommentForm(id, sl) {
+    const form = document.getElementById('proposalBudgetCommentForm');
+    if (!form) return;
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const comment = e.target.comment.value.trim();
+        if (!comment) return;
+        const result = await ajax(`${siteUrl}/ajax/proposals.php?action=add_budget_comment`, { id, comment });
+        if (!result.success) {
+            showToast(result.message || 'Failed to add budget comment', 'error');
+            return;
+        }
+        showToast(result.message || 'Budget comment added');
+        sl.close(true);
+        viewProposal(id, null);
+    });
 }
 </script>

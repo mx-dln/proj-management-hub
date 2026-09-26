@@ -1,3 +1,11 @@
+<?php
+if (!class_exists('AssignmentVisibility')) {
+    require_once __DIR__ . '/../../includes/AssignmentVisibility.php';
+}
+$componentProjectOptions = Permissions::isAdmin()
+    ? db()->query("SELECT id, project_code, title FROM projects WHERE deleted_at IS NULL ORDER BY title")->fetchAll()
+    : AssignmentVisibility::getVisibleProjects('', '', '', 500, 0)['data'];
+?>
 <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
     <div><h1 class="text-2xl font-bold text-[#F9FAFB]">Components</h1><p class="text-[#9CA3AF] text-sm mt-1">Project components and study areas</p></div>
     <?php if (Permissions::canCreateComponent()): ?>
@@ -65,7 +73,7 @@ function openCreateComponent() {
         <div class="form-section">
             <h4 class="form-section-title">Component Information</h4>
             <div class="form-grid">
-                ${fieldHtml({ name: 'project_id', label: 'Parent Project', type: 'select', required: true, fullWidth: true, options: <?= json_encode(array_map(fn($p) => ['value'=>$p['id'],'label'=>$p['project_code'].' - '.$p['title']], db()->query("SELECT id, project_code, title FROM projects WHERE deleted_at IS NULL ORDER BY title")->fetchAll())) ?> })}
+                ${fieldHtml({ name: 'project_id', label: 'Parent Project', type: 'select', required: true, fullWidth: true, options: <?= json_encode(array_map(fn($p) => ['value'=>$p['id'],'label'=>$p['project_code'].' - '.$p['title']], $componentProjectOptions)) ?> })}
                 ${fieldHtml({ name: 'title', label: 'Component Title', required: true, fullWidth: true })}
                 ${fieldHtml({ name: 'description', label: 'Description', type: 'textarea', fullWidth: true, rows: 3 })}
                 ${fieldHtml({ name: 'start_date', label: 'Start Date', type: 'date' })}

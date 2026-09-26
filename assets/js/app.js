@@ -350,6 +350,103 @@ function openUserManual() {
                 </div>
             </div>
 
+            <!-- New Feature Navigation -->
+            <div class="form-section">
+                <h4 class="form-section-title"><i class="fas fa-route mr-2 text-[#86EFAC]"></i>New Feature Navigation</h4>
+                <div class="space-y-3 text-sm text-[#D1D5DB]">
+                    <div class="p-3 rounded-lg bg-[#111827] border border-[#374151]">
+                        <p class="font-medium text-[#F9FAFB] mb-1">Dashboard</p>
+                        <ul class="list-disc list-inside space-y-1 ml-2 text-xs">
+                            <li>Go to <strong>Dashboard</strong> to view total requests, project totals, activities, participants, notifications, and storage usage.</li>
+                            <li>Click dashboard cards such as <strong>Activities</strong>, <strong>Participants</strong>, <strong>Programs</strong>, or <strong>Projects</strong> to open the matching page.</li>
+                        </ul>
+                    </div>
+
+                    <div class="p-3 rounded-lg bg-[#111827] border border-[#374151]">
+                        <p class="font-medium text-[#F9FAFB] mb-1">Project Management</p>
+                        <ul class="list-disc list-inside space-y-1 ml-2 text-xs">
+                            <li>Open <strong>Project Management</strong> from the sidebar, then use the tabs: <strong>Programs</strong>, <strong>Projects</strong>, <strong>Components</strong>, <strong>Activities</strong>, and <strong>Files</strong>.</li>
+                            <li>Faculty can create and update records within their assigned scope.</li>
+                            <li>Admin can view and assign faculty using the <strong>Assign</strong> action.</li>
+                        </ul>
+                    </div>
+
+                    <div class="p-3 rounded-lg bg-[#111827] border border-[#374151]">
+                        <p class="font-medium text-[#F9FAFB] mb-1">Activities and Participants</p>
+                        <ul class="list-disc list-inside space-y-1 ml-2 text-xs">
+                            <li>Go to <strong>Project Management → Activities</strong>.</li>
+                            <li>Click the <strong>Participants</strong> icon on an activity row to list participants.</li>
+                            <li>Faculty assigned to the activity scope can click <strong>Add Participant</strong> and record beneficiary group, address, attendance, and contact details.</li>
+                            <li>Admin can view participant lists but cannot add participants from the faculty workflow.</li>
+                        </ul>
+                    </div>
+
+                    <div class="p-3 rounded-lg bg-[#111827] border border-[#374151]">
+                        <p class="font-medium text-[#F9FAFB] mb-1">Partners and Beneficiaries</p>
+                        <ul class="list-disc list-inside space-y-1 ml-2 text-xs">
+                            <li>Go to <strong>Partners</strong> to record partner agencies and send email messages to project partners.</li>
+                            <li>Go to <strong>Beneficiaries</strong> to record beneficiary groups and view the total number of linked beneficiaries or participants.</li>
+                        </ul>
+                    </div>
+
+                    <div class="p-3 rounded-lg bg-[#111827] border border-[#374151]">
+                        <p class="font-medium text-[#F9FAFB] mb-1">Documents, Designation, and MOA</p>
+                        <ul class="list-disc list-inside space-y-1 ml-2 text-xs">
+                            <li>Go to <strong>Documents</strong> to upload scanned files and other project documents.</li>
+                            <li>Go to <strong>Designation</strong> to view designation files. Faculty can view/print/download only; Admin can upload and manage files.</li>
+                            <li>Go to <strong>MOA</strong> to view Memorandum of Agreement records. Faculty has view/print access for visible records.</li>
+                        </ul>
+                    </div>
+
+                    <div class="p-3 rounded-lg bg-[#111827] border border-[#374151]">
+                        <p class="font-medium text-[#F9FAFB] mb-1">Faculty Timeline and User Information</p>
+                        <ul class="list-disc list-inside space-y-1 ml-2 text-xs">
+                            <li>Go to <strong>Faculty</strong> to view faculty profiles and activity timelines.</li>
+                            <li>Go to <strong>Users</strong> as Admin to add, edit, delete, and view basic user account information.</li>
+                            <li>Open a user record to review the submission history connected to that account.</li>
+                        </ul>
+                    </div>
+
+                    <div class="p-3 rounded-lg bg-[#111827] border border-[#374151]">
+                        <p class="font-medium text-[#F9FAFB] mb-1">Proposals, Remarks, and History</p>
+                        <ul class="list-disc list-inside space-y-1 ml-2 text-xs">
+                            <li>Go to <strong>Proposals</strong> to submit program/project proposals and view previous submissions.</li>
+                            <li>Admin reviews proposals from the same page and can approve, return, or reject with remarks.</li>
+                            <li>Use the proposal view to check general comments, budget comments, attached files, status, and submission history.</li>
+                            <li>Users receive system notifications and email notifications when proposals are approved or remarks are added.</li>
+                        </ul>
+                    </div>
+
+                    <div class="p-3 rounded-lg bg-[#111827] border border-[#374151]">
+                        <p class="font-medium text-[#F9FAFB] mb-1">Reports and Accomplishments</p>
+                        <ul class="list-disc list-inside space-y-1 ml-2 text-xs">
+                            <li>Go to <strong>Accomplishments</strong> to view quarterly and previous-year reports.</li>
+                            <li>Use year filters such as <strong>2021</strong>, <strong>2022</strong>, <strong>2023</strong>, and <strong>2024</strong>.</li>
+                            <li>Click <strong>Generate Template</strong> to build a report template containing proposal title, project leader/head, MOA, project report, activities, and partner-agency requirements.</li>
+                            <li>Faculty can view/print/download visible reports. Admin handles report upload and review.</li>
+                        </ul>
+                    </div>
+
+                    <div class="p-3 rounded-lg bg-[#111827] border border-[#374151]">
+                        <p class="font-medium text-[#F9FAFB] mb-1">Designation Management</p>
+                        <ul class="list-disc list-inside space-y-1 ml-2 text-xs">
+                            <li>Admin opens the <strong>Assign</strong> action on programs, projects, components, or activities to assign faculty designations.</li>
+                            <li>Use the assignment panel to update designation start/end dates and accomplishment notes.</li>
+                            <li>Faculty sees assigned designations from the dashboard notifications and Designation page.</li>
+                        </ul>
+                    </div>
+
+                    <div class="p-3 rounded-lg bg-[#111827] border border-[#374151]">
+                        <p class="font-medium text-[#F9FAFB] mb-1">Certificates and Attendance</p>
+                        <ul class="list-disc list-inside space-y-1 ml-2 text-xs">
+                            <li>Go to <strong>Certificates</strong> to view and print generated certificates.</li>
+                            <li>Admin can click <strong>Import Attendance</strong> to upload attendance CSV files.</li>
+                            <li>Admin can click <strong>Generate From Attendance</strong> to create certificates for present participants.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
             <!-- User Roles -->
             <div class="form-section">
                 <h4 class="form-section-title"><i class="fas fa-users mr-2 text-[#86EFAC]"></i>User Roles</h4>

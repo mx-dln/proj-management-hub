@@ -8,11 +8,12 @@
         <?php if (empty($beneficiaries)): ?>
             <div class="empty-state"><div class="empty-state-icon"><i class="fas fa-people-group"></i></div><h3 class="empty-state-title">No beneficiary groups found</h3><p class="empty-state-text">Add your first beneficiary group.</p></div>
         <?php else: ?>
-            <div class="overflow-x-auto"><table class="data-table"><thead><tr><th>Name</th><th>Type</th><th>Barangay</th><th>Municipality</th><th>Contact</th><th>Actions</th></tr></thead><tbody>
+            <div class="overflow-x-auto"><table class="data-table"><thead><tr><th>Name</th><th>Type</th><th>Recorded Beneficiaries</th><th>Barangay</th><th>Municipality</th><th>Contact</th><th>Actions</th></tr></thead><tbody>
                 <?php foreach ($beneficiaries as $i => $b): ?>
                     <tr class="animate-row" style="animation-delay:<?= $i * 0.05 ?>s">
                         <td data-label="Name"><span class="table-title"><?= e($b['name']) ?></span></td>
                         <td data-label="Type"><span class="badge badge-submitted"><?= ucfirst($b['group_type'] ?? '-') ?></span></td>
+                        <td data-label="Recorded Beneficiaries"><span class="text-[#F9FAFB] font-semibold"><?= number_format((int)($b['beneficiary_count'] ?? 0)) ?></span></td>
                         <td data-label="Barangay"><span class="text-[#D1D5DB]"><?= e($b['barangay'] ?? '-') ?></span></td>
                         <td data-label="Municipality"><span class="text-[#D1D5DB]"><?= e($b['municipality'] ?? '-') ?></span></td>
                         <td data-label="Contact"><span class="text-[#D1D5DB]"><?= e($b['contact_person'] ?? '-') ?></span></td>
@@ -69,6 +70,7 @@ async function viewBeneficiary(id, btn) {
         const content = viewSectionHtml('Group Information', [
             viewFieldHtml('Name', escapeHtml(data.name)),
             viewFieldHtml('Type', escapeHtml(data.group_type)),
+            viewFieldHtml('Recorded Beneficiaries', Number(data.beneficiary_count || 0).toLocaleString()),
             viewFieldHtml('Barangay', escapeHtml(data.barangay)),
             viewFieldHtml('Municipality', escapeHtml(data.municipality)),
             viewFieldHtml('Province', escapeHtml(data.province)),

@@ -8,10 +8,11 @@ $user = currentUser();
 
 switch ($action) {
     case 'create':
-        Permissions::requirePermission(Permissions::canCreateActivity());
+        $componentId = intval($_POST['component_id'] ?? 0);
+        Permissions::requirePermission(Permissions::canCreateActivityInComponent($componentId));
         $data = [
             'activity_code' => generateCode('ACT', 'extension_activities', 'activity_code'),
-            'component_id' => intval($_POST['component_id'] ?? 0),
+            'component_id' => $componentId,
             'activity_type_id' => intval($_POST['activity_type_id'] ?? 0) ?: null,
             'title' => sanitize($_POST['title'] ?? ''),
             'description' => sanitize($_POST['description'] ?? ''),
@@ -25,10 +26,15 @@ switch ($action) {
             'created_by' => $user['id'],
         ];
         if (empty($data['title'])) jsonResponse(['success' => false, 'message' => 'Title is required'], 400);
+        if (empty($data['component_id'])) jsonResponse(['success' => false, 'message' => 'Component is required'], 400);
         try {
             $sql = "INSERT INTO extension_activities (activity_code, component_id, activity_type_id, title, description, objectives, venue, start_datetime, end_datetime, target_participants, budget_allocation, status, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             db()->prepare($sql)->execute(array_values($data));
             $id = db()->lastInsertId();
+            if (($user['role'] ?? '') === 'faculty' && !empty($_SESSION['faculty_id'])) {
+                db()->prepare("INSERT INTO activity_assignments (activity_id, faculty_id, assignment_type, assigned_by) VALUES (?, ?, 'leader', ?) ON DUPLICATE KEY UPDATE is_active = 1, assignment_type = 'leader'")
+                    ->execute([$id, (int)$_SESSION['faculty_id'], $user['id']]);
+            }
             auditLog('create', 'activity', $id, 'Created activity: ' . $data['title']);
             jsonResponse(['success' => true, 'message' => 'Activity created', 'id' => $id]);
         } catch (Exception $e) { jsonResponse(['success' => false, 'message' => 'Failed'], 500); }
@@ -75,6 +81,7 @@ switch ($action) {
         Permissions::requirePermission(Permissions::canAddActivityParticipants($activityId));
         $data = [
             'activity_id' => $activityId,
+            'beneficiary_group_id' => intval($_POST['beneficiary_group_id'] ?? 0) ?: null,
             'name' => sanitize($_POST['name'] ?? ''),
             'age' => intval($_POST['age'] ?? 0) ?: null,
             'gender' => sanitize($_POST['gender'] ?? ''),
@@ -88,7 +95,7 @@ switch ($action) {
         if (empty($data['name'])) jsonResponse(['success' => false, 'message' => 'Name is required'], 400);
         try {
             $data['qr_code'] = 'QR-' . strtoupper(substr(uniqid(), -8));
-            $sql = "INSERT INTO activity_participants (activity_id, name, age, gender, barangay, municipality, province, organization, occupation, phone, qr_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            $sql = "INSERT INTO activity_participants (activity_id, beneficiary_group_id, name, age, gender, barangay, municipality, province, organization, occupation, phone, qr_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             db()->prepare($sql)->execute(array_values($data));
             $id = db()->lastInsertId();
             auditLog('create', 'participant', $id, 'Added participant: ' . $data['name']);
@@ -99,7 +106,13 @@ switch ($action) {
     case 'get_participants':
         $activityId = intval($_GET['id'] ?? 0);
         Permissions::requirePermission(Permissions::canAccessActivity($activityId));
-        $stmt = db()->prepare("SELECT * FROM activity_participants WHERE activity_id = ? ORDER BY name");
+        $stmt = db()->prepare("
+            SELECT ap.*, bg.name as beneficiary_group_name
+            FROM activity_participants ap
+            LEFT JOIN beneficiary_groups bg ON ap.beneficiary_group_id = bg.id
+            WHERE ap.activity_id = ?
+            ORDER BY ap.name
+        ");
         $stmt->execute([$activityId]);
         jsonResponse($stmt->fetchAll());
         break;

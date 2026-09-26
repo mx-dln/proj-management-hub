@@ -85,9 +85,9 @@
 
 <?php if ($totalPages > 1): ?><nav class="flex items-center justify-between mt-4" aria-label="Document pages"><span class="text-sm text-[#9CA3AF]">Page <?= $page ?> of <?= $totalPages ?></span><div class="flex gap-2"><?php foreach ([-1 => 'Previous', 1 => 'Next'] as $step => $label): $targetPage = $page + $step; if ($targetPage < 1 || $targetPage > $totalPages) continue; ?><a class="btn-ghost" aria-label="<?= $label ?> page" href="?<?= e(http_build_query(['module' => $documentModule, 'search' => $_GET['search'] ?? '', 'category' => $categoryId, 'page' => $targetPage])) ?>"><i class="fas fa-chevron-<?= $step < 0 ? 'left' : 'right' ?>" aria-hidden="true"></i></a><?php endforeach; ?></div></nav><?php endif; ?>
 <script id="document-config" type="application/json"><?= json_encode(['scope' => $documentModule, 'csrf' => $_SESSION['documents_csrf'], 'targets' => $uploadTargets, 'categories' => array_map(fn($c) => ['value' => $c['id'], 'label' => $c['name']], $categories), 'limit' => $uploadLimit, 'extensions' => DocumentModel::EXTENSIONS], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?></script>
-<script src="<?= SITE_URL ?>/assets/js/documents.js?v=20260921" defer></script>
+<script src="<?= SITE_URL ?>/assets/js/documents.js?v=20260926" defer></script>
 <?php endif; ?>
 <?php if ($isDesignation): ?>
 <script id="document-config" type="application/json"><?= json_encode(['scope' => $documentModule, 'csrf' => $_SESSION['documents_csrf'], 'targets' => $uploadTargets, 'categories' => array_map(fn($c) => ['value' => $c['id'], 'label' => $c['name']], $categories), 'limit' => $uploadLimit, 'extensions' => DocumentModel::EXTENSIONS], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?></script>
-<script src="<?= SITE_URL ?>/assets/js/documents.js?v=20260921" defer></script>
+<script src="<?= SITE_URL ?>/assets/js/documents.js?v=20260926" defer></script>
 <?php endif; ?>

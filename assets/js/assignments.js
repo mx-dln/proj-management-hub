@@ -130,7 +130,7 @@ class AssignmentManager {
                 </div>
                 
                 <p class="text-xs text-[#6B7280] mt-2">
-                    <span id="selectedCount"><?= count($members) ?></span> member(s) selected
+                    <span id="selectedCount">${members.length}</span> member(s) selected
                 </p>
             </div>
 
@@ -142,6 +142,16 @@ class AssignmentManager {
                 <div id="assignmentsSummary" class="space-y-2">
                     ${this.renderAssignmentsSummary(assignments)}
                 </div>
+            </div>
+
+            <div class="form-section">
+                <h4 class="form-section-title">
+                    <i class="fas fa-id-badge mr-2 text-[#86EFAC]"></i>Designation Dates & Accomplishments
+                </h4>
+                <div id="designationMetaList" class="space-y-3">
+                    ${this.renderDesignationMeta(assignments)}
+                </div>
+                ${assignments.length ? `<button type="button" class="btn-primary mt-3" onclick="assignmentManager.saveDesignationMeta('${entityType}', ${entityId})"><i class="fas fa-save mr-1"></i> Save Designation Details</button>` : ''}
             </div>
         `;
 
@@ -168,6 +178,31 @@ class AssignmentManager {
                 <span class="badge ${a.assignment_type === 'leader' ? 'badge-approved' : 'badge-submitted'}">
                     ${a.assignment_type === 'leader' ? 'Leader' : 'Member'}
                 </span>
+            </div>
+        `).join('');
+    }
+
+    renderDesignationMeta(assignments) {
+        if (assignments.length === 0) {
+            return '<p class="text-sm text-[#6B7280]">Assign faculty before recording designation accomplishments.</p>';
+        }
+
+        return assignments.map(a => `
+            <div class="designation-meta border border-[#374151] rounded-lg p-3 bg-[#111827]" data-faculty-id="${Number(a.faculty_id)}">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                    <strong class="text-sm text-[#F9FAFB]">${escapeHtml(a.first_name)} ${escapeHtml(a.last_name)}</strong>
+                    <span class="badge ${a.assignment_type === 'leader' ? 'badge-approved' : 'badge-submitted'}">${a.assignment_type === 'leader' ? 'Leader' : 'Member'}</span>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <label class="form-label">Designation Start<input type="date" name="designation_start_date" class="form-input" value="${escapeHtml((a.designation_start_date || '').substring(0, 10))}"></label>
+                    <label class="form-label">Designation End<input type="date" name="designation_end_date" class="form-input" value="${escapeHtml((a.designation_end_date || '').substring(0, 10))}"></label>
+                    <label class="form-label md:col-span-2">Completed Accomplishments<textarea name="accomplishment_notes" rows="2" class="form-input" placeholder="Record completed accomplishments for this designation">${escapeHtml(a.accomplishment_notes || '')}</textarea></label>
+                    <label class="flex items-center gap-2 text-sm text-[#D1D5DB] md:col-span-2">
+                        <input type="checkbox" name="completed" ${a.accomplishment_completed_at ? 'checked' : ''}>
+                        Mark accomplishments completed
+                        ${a.accomplishment_completed_at ? `<span class="text-xs text-[#6B7280]">(${formatDate(a.accomplishment_completed_at)})</span>` : ''}
+                    </label>
+                </div>
             </div>
         `).join('');
     }
@@ -234,6 +269,32 @@ class AssignmentManager {
             saveBtn.disabled = false;
             saveText.classList.remove('hidden');
             saveSpinner.classList.add('hidden');
+        }
+    }
+
+    async saveDesignationMeta(entityType, entityId) {
+        const items = Array.from(document.querySelectorAll('.designation-meta')).map(row => ({
+            faculty_id: parseInt(row.dataset.facultyId),
+            start_date: row.querySelector('[name="designation_start_date"]').value,
+            end_date: row.querySelector('[name="designation_end_date"]').value,
+            accomplishment_notes: row.querySelector('[name="accomplishment_notes"]').value,
+            completed: row.querySelector('[name="completed"]').checked
+        }));
+        showLoading();
+        try {
+            const response = await fetch(`${this.siteUrl}/ajax/assignments.php?action=save_meta`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ entity_type: entityType, entity_id: entityId, items })
+            });
+            const data = await response.json();
+            if (!response.ok || !data.success) throw new Error(data.message || 'Failed to save designation details');
+            showToast(data.message || 'Designation details saved');
+            this.loadAssignments(entityType, entityId);
+        } catch (err) {
+            showToast(err.message || 'Failed to save designation details', 'error');
+        } finally {
+            hideLoading();
         }
     }
 

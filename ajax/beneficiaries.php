@@ -47,7 +47,13 @@ switch ($action) {
         try {
             $id = intval($_GET['id'] ?? 0);
             if (!$id) jsonResponse(['success' => false, 'message' => 'Invalid ID'], 400);
-            $stmt = db()->prepare("SELECT * FROM beneficiary_groups WHERE id = ?");
+            $stmt = db()->prepare("
+                SELECT bg.*, COUNT(ap.id) as beneficiary_count
+                FROM beneficiary_groups bg
+                LEFT JOIN activity_participants ap ON ap.beneficiary_group_id = bg.id
+                WHERE bg.id = ?
+                GROUP BY bg.id
+            ");
             $stmt->execute([$id]);
             $data = $stmt->fetch();
             if (!$data) jsonResponse(['success' => false, 'message' => 'Not found'], 404);

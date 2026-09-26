@@ -7,6 +7,104 @@ $action = $_GET['action'] ?? '';
 $user = currentUser();
 
 switch ($action) {
+    case 'template':
+        Permissions::requirePermission(Permissions::canGenerateReports());
+        $projectId = intval($_GET['project_id'] ?? 0);
+        $year = intval($_GET['year'] ?? date('Y'));
+        $quarter = sanitize($_GET['quarter'] ?? 'Q1');
+        if (!$projectId || !in_array($quarter, ['Q1','Q2','Q3','Q4'], true)) jsonResponse(['success' => false, 'message' => 'Project, year, and quarter are required'], 400);
+        try {
+            $projectStmt = db()->prepare("
+                SELECT p.*, pr.title as program_title, pa.name as partner_name, bg.name as beneficiary_name,
+                    CONCAT(fp.first_name, ' ', fp.last_name) as leader_name
+                FROM projects p
+                LEFT JOIN programs pr ON p.program_id = pr.id
+                LEFT JOIN partner_agencies pa ON p.partner_agency_id = pa.id
+                LEFT JOIN beneficiary_groups bg ON p.beneficiary_group_id = bg.id
+                LEFT JOIN project_assignments pas ON pas.project_id = p.id AND pas.assignment_type = 'leader' AND pas.is_active = 1
+                LEFT JOIN faculty_profiles fp ON fp.id = pas.faculty_id
+                WHERE p.id = ? AND p.deleted_at IS NULL
+            ");
+            $projectStmt->execute([$projectId]);
+            $project = $projectStmt->fetch();
+            if (!$project) jsonResponse(['success' => false, 'message' => 'Project not found'], 404);
+
+            $proposalStmt = db()->prepare("SELECT * FROM proposals WHERE project_id = ? ORDER BY created_at DESC LIMIT 1");
+            $proposalStmt->execute([$projectId]);
+            $proposal = $proposalStmt->fetch();
+
+            $moaStmt = db()->prepare("SELECT m.*, pa.name as partner_name FROM moas m LEFT JOIN partner_agencies pa ON m.partner_agency_id = pa.id WHERE m.project_id = ? ORDER BY m.created_at DESC LIMIT 1");
+            $moaStmt->execute([$projectId]);
+            $moa = $moaStmt->fetch();
+
+            $activitiesStmt = db()->prepare("
+                SELECT ea.*, c.title as component_title, COUNT(ap.id) as participants,
+                    SUM(CASE WHEN ap.attendance_status = 'present' THEN 1 ELSE 0 END) as present_count
+                FROM extension_activities ea
+                LEFT JOIN components c ON ea.component_id = c.id
+                LEFT JOIN activity_participants ap ON ap.activity_id = ea.id
+                WHERE c.project_id = ? AND ea.deleted_at IS NULL
+                    AND YEAR(COALESCE(ea.start_datetime, ea.created_at)) = ?
+                    AND QUARTER(COALESCE(ea.start_datetime, ea.created_at)) = ?
+                GROUP BY ea.id
+                ORDER BY ea.start_datetime, ea.title
+            ");
+            $activitiesStmt->execute([$projectId, $year, (int)substr($quarter, 1)]);
+            $activities = $activitiesStmt->fetchAll();
+
+            $reportStmt = db()->prepare("SELECT * FROM accomplishment_reports WHERE project_id = ? AND period_year = ? AND period_quarter = ? ORDER BY created_at DESC LIMIT 1");
+            $reportStmt->execute([$projectId, $year, $quarter]);
+            $report = $reportStmt->fetch();
+
+            ob_start();
+            ?>
+            <div class="report-template">
+                <h2><?= e($quarter) ?> <?= e($year) ?> Accomplishment Report</h2>
+                <dl>
+                    <dt>Proposal Title</dt><dd><?= e($proposal['title'] ?? $project['title']) ?></dd>
+                    <dt>Project Leader / Head</dt><dd><?= e($project['leader_name'] ?: '-') ?></dd>
+                    <dt>Program</dt><dd><?= e($project['program_title'] ?? '-') ?></dd>
+                    <dt>Partner Agency</dt><dd><?= e($project['partner_name'] ?? '-') ?></dd>
+                    <dt>Beneficiaries</dt><dd><?= e($project['beneficiary_name'] ?? '-') ?></dd>
+                    <dt>MOA</dt><dd><?= e($moa ? (($moa['moa_number'] ?? '-') . ' · ' . ($moa['status'] ?? '-')) : 'No MOA recorded') ?></dd>
+                    <dt>Project Report</dt><dd><?= e($report['title'] ?? 'No uploaded/generated report yet') ?></dd>
+                </dl>
+                <h3>Project Summary</h3>
+                <p><?= nl2br(e($report['summary'] ?? $project['description'] ?? '-')) ?></p>
+                <h3>Activities and Related Information</h3>
+                <table>
+                    <thead><tr><th>Activity</th><th>Component</th><th>Date</th><th>Venue</th><th>Participants</th><th>Status</th></tr></thead>
+                    <tbody>
+                    <?php foreach ($activities as $activity): ?>
+                        <tr>
+                            <td><?= e($activity['title']) ?></td>
+                            <td><?= e($activity['component_title'] ?? '-') ?></td>
+                            <td><?= e(formatDate($activity['start_datetime'])) ?></td>
+                            <td><?= e($activity['venue'] ?? '-') ?></td>
+                            <td><?= (int)$activity['present_count'] ?> present / <?= (int)$activity['participants'] ?> listed</td>
+                            <td><?= e($activity['status']) ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                    <?php if (!$activities): ?><tr><td colspan="6">No activities recorded for this quarter.</td></tr><?php endif; ?>
+                    </tbody>
+                </table>
+                <h3>Partner Agency Requirements</h3>
+                <p><?= e($project['partner_name'] ? 'Include activity outputs, attendance, photos, certificates, MOA status, and signed report files required by ' . $project['partner_name'] . '.' : 'No partner agency recorded for this project.') ?></p>
+            </div>
+            <style>
+            .report-template{background:#fff;color:#111827;padding:24px;border-radius:8px;line-height:1.5}
+            .report-template h2{font-size:22px;font-weight:800;margin-bottom:16px}.report-template h3{font-size:16px;font-weight:800;margin-top:18px;margin-bottom:8px}
+            .report-template dl{display:grid;grid-template-columns:180px 1fr;gap:6px 12px}.report-template dt{font-weight:700}.report-template dd{margin:0}
+            .report-template table{width:100%;border-collapse:collapse;margin-top:8px}.report-template th,.report-template td{border:1px solid #d1d5db;padding:8px;text-align:left;font-size:12px}.report-template th{background:#f3f4f6}
+            @media print{body *{visibility:hidden}.report-template,.report-template *{visibility:visible}.report-template{position:absolute;left:0;top:0;width:100%;box-shadow:none}}
+            </style>
+            <?php
+            jsonResponse(['success' => true, 'html' => ob_get_clean()]);
+        } catch (Exception $e) {
+            jsonResponse(['success' => false, 'message' => 'Failed: ' . $e->getMessage()], 500);
+        }
+        break;
+
     case 'file':
         $id = intval($_GET['id'] ?? 0);
         $stmt = db()->prepare("SELECT * FROM accomplishment_reports WHERE id = ?");
@@ -44,6 +142,9 @@ switch ($action) {
             'status' => 'submitted',
         ];
         if (empty($data['title'])) jsonResponse(['success' => false, 'message' => 'Title is required'], 400);
+        if (!$data['project_id']) jsonResponse(['success' => false, 'message' => 'Project is required'], 400);
+        if ($data['report_type'] === 'quarterly' && empty($data['period_quarter'])) jsonResponse(['success' => false, 'message' => 'Quarter is required for quarterly reports'], 400);
+        if ($data['period_year'] < 2021 || $data['period_year'] > (int)date('Y') + 1) jsonResponse(['success' => false, 'message' => 'Enter a valid report year'], 400);
         try {
             $sql = "INSERT INTO accomplishment_reports (report_number, report_type, period_quarter, period_year, project_id, title, summary, submitted_by, date_submitted, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             db()->prepare($sql)->execute(array_values($data));

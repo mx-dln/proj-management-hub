@@ -67,6 +67,10 @@ class Permissions {
         return $stmt->fetch() !== false;
     }
 
+    public static function isProjectMember($projectId, $userId = null) {
+        return self::isAssignedToProject($projectId, $userId);
+    }
+
     public static function isAssignedToComponent($componentId, $userId = null) {
         $fid = self::getFacultyId($userId);
         if (!$fid) return false;
@@ -120,15 +124,18 @@ class Permissions {
     }
 
     // ============================================
-    // PROGRAM PERMISSIONS (Admin only)
+    // PROGRAM PERMISSIONS
     // ============================================
 
-    public static function canCreateProgram() { return self::isAdmin(); }
-    public static function canEditProgram($id) { return self::isAdmin(); }
+    public static function canCreateProgram() { return self::isAdmin() || self::isFaculty(); }
+    public static function canEditProgram($id) {
+        if (self::isAdmin()) return true;
+        return self::isFaculty() && self::isAssignedToProgram($id);
+    }
     public static function canDeleteProgram($id) { return self::isAdmin(); }
 
     // ============================================
-    // PROJECT PERMISSIONS (Admin only)
+    // PROJECT PERMISSIONS
     // ============================================
 
     public static function canCreateProject() { return self::isAdmin() || self::isFaculty(); }
@@ -151,22 +158,36 @@ class Permissions {
     public static function canDeleteProject($id) { return self::isAdmin(); }
 
     // ============================================
-    // COMPONENT PERMISSIONS (Admin only)
+    // COMPONENT PERMISSIONS
     // ============================================
 
-    public static function canCreateComponent() { return self::isAdmin(); }
-    public static function canEditComponent($id) { return self::isAdmin(); }
+    public static function canCreateComponent() { return self::isAdmin() || self::isFaculty(); }
+    public static function canCreateComponentInProject($projectId) {
+        if (self::isAdmin()) return true;
+        return self::isFaculty() && self::canAccessProject($projectId);
+    }
+    public static function canEditComponent($id) {
+        if (self::isAdmin()) return true;
+        return self::isFaculty() && self::canAccessComponent($id);
+    }
     public static function canDeleteComponent($id) { return self::isAdmin(); }
 
     // ============================================
-    // ACTIVITY PERMISSIONS (Admin only)
+    // ACTIVITY PERMISSIONS
     // ============================================
 
-    public static function canCreateActivity() { return self::isAdmin(); }
-    public static function canEditActivity($id) { return self::isAdmin(); }
+    public static function canCreateActivity() { return self::isAdmin() || self::isFaculty(); }
+    public static function canCreateActivityInComponent($componentId) {
+        if (self::isAdmin()) return true;
+        return self::isFaculty() && self::canAccessComponent($componentId);
+    }
+    public static function canEditActivity($id) {
+        if (self::isAdmin()) return true;
+        return self::isFaculty() && self::canAccessActivity($id);
+    }
     public static function canDeleteActivity($id) { return self::isAdmin(); }
     public static function canAddActivityParticipants($activityId) {
-        return self::isFaculty() && self::isAssignedToActivity($activityId);
+        return self::isFaculty() && self::canAccessActivity($activityId);
     }
 
     // ============================================

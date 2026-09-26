@@ -13,12 +13,28 @@ function openDocumentUpload(preselectedType = '', preselectedId = '') {
             <div><label class="form-label" for="document-target">Related Record</label><select id="document-target" name="target" class="form-select" required><option value="">Select...</option>${optionMarkup(documentConfig.targets)}</select></div>
             ${documentConfig.scope === 'designations' ? '' : `<div><label class="form-label" for="document-category">Category</label><select id="document-category" name="category_id" class="form-select" required><option value="">Select...</option>${optionMarkup(documentConfig.categories)}</select></div>`}
             <div><label class="form-label" for="document-file">File</label><input id="document-file" name="file" type="file" accept="${documentConfig.extensions.map(ext => '.' + ext).join(',')}" class="form-input" required><p class="text-xs text-[#9CA3AF] mt-2">Maximum file size: ${documentSize(documentConfig.limit)}</p></div>
+            <div class="border border-[#374151] rounded-lg p-3 bg-[#111827]">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div><p class="form-label mb-0">Scan Document</p><p class="text-xs text-[#9CA3AF] mt-1">Use the device camera to capture and upload a page as JPG.</p></div>
+                    <button type="button" id="document-scan-start" class="btn-ghost"><i class="fas fa-camera mr-1" aria-hidden="true"></i> Scan</button>
+                </div>
+                <div id="document-scan-panel" class="hidden mt-3 space-y-3">
+                    <video id="document-scan-video" class="w-full rounded bg-black" playsinline autoplay muted style="max-height:320px;object-fit:contain"></video>
+                    <canvas id="document-scan-canvas" class="hidden"></canvas>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" id="document-scan-capture" class="btn-primary"><i class="fas fa-circle-dot mr-1" aria-hidden="true"></i> Capture Page</button>
+                        <button type="button" id="document-scan-stop" class="btn-ghost">Cancel Scan</button>
+                    </div>
+                    <p id="document-scan-status" class="text-xs text-[#9CA3AF]" role="status"></p>
+                </div>
+            </div>
             <div><label class="form-label" for="document-description">Remarks</label><textarea id="document-description" name="description" class="form-input" rows="3"></textarea></div>
             <p id="document-upload-status" class="text-sm text-[#9CA3AF]" role="status" aria-live="polite"></p>
             <progress id="document-upload-progress" class="w-full hidden" max="100" value="0" aria-label="Upload progress"></progress>
         </div>`, { showSaveAnother: false });
     const form = sl.element.querySelector('form');
     const fileInput = form.elements.file;
+    bindDocumentScanner(form, fileInput);
     if (preselectedType && preselectedId) {
         form.elements.target.value = `${preselectedType}:${preselectedId}`;
     }
@@ -75,6 +91,65 @@ function openDocumentUpload(preselectedType = '', preselectedId = '') {
             window.removeEventListener('beforeunload', preventExit);
             sl.setLoading(false);
         }
+    });
+}
+
+function bindDocumentScanner(form, fileInput) {
+    const startButton = form.querySelector('#document-scan-start');
+    const stopButton = form.querySelector('#document-scan-stop');
+    const captureButton = form.querySelector('#document-scan-capture');
+    const panel = form.querySelector('#document-scan-panel');
+    const video = form.querySelector('#document-scan-video');
+    const canvas = form.querySelector('#document-scan-canvas');
+    const status = form.querySelector('#document-scan-status');
+    let stream = null;
+
+    const stopScan = () => {
+        if (stream) stream.getTracks().forEach(track => track.stop());
+        stream = null;
+        video.srcObject = null;
+        panel.classList.add('hidden');
+    };
+
+    startButton.addEventListener('click', async () => {
+        if (!navigator.mediaDevices?.getUserMedia) {
+            showToast('Camera scanning is not supported in this browser.', 'error');
+            return;
+        }
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+            video.srcObject = stream;
+            panel.classList.remove('hidden');
+            status.textContent = 'Position the document clearly, then capture.';
+        } catch (error) {
+            showToast('Camera access was blocked or unavailable.', 'error');
+        }
+    });
+
+    stopButton.addEventListener('click', stopScan);
+
+    captureButton.addEventListener('click', async () => {
+        if (!stream || !video.videoWidth) {
+            showToast('Camera is not ready yet.', 'error');
+            return;
+        }
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+        if (!blob) {
+            showToast('Could not capture the scanned page.', 'error');
+            return;
+        }
+        const fileName = `scan-${new Date().toISOString().replace(/[:.]/g, '-')}.jpg`;
+        const file = new File([blob], fileName, { type: 'image/jpeg' });
+        const transfer = new DataTransfer();
+        transfer.items.add(file);
+        fileInput.files = transfer.files;
+        if (!form.elements.title.value) form.elements.title.value = fileName;
+        status.textContent = `Captured ${fileName}. Save the form to upload it.`;
+        showToast('Scanned page captured.');
+        stopScan();
     });
 }
 

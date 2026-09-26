@@ -8,10 +8,11 @@ $user = currentUser();
 
 switch ($action) {
     case 'create':
-        Permissions::requirePermission(Permissions::canCreateComponent());
+        $projectId = intval($_POST['project_id'] ?? 0);
+        Permissions::requirePermission(Permissions::canCreateComponentInProject($projectId));
         $data = [
             'component_code' => generateCode('COMP', 'components', 'component_code'),
-            'project_id' => intval($_POST['project_id'] ?? 0),
+            'project_id' => $projectId,
             'title' => sanitize($_POST['title'] ?? ''),
             'description' => sanitize($_POST['description'] ?? ''),
             'start_date' => !empty($_POST['start_date']) ? $_POST['start_date'] : null,
@@ -26,6 +27,10 @@ switch ($action) {
             $sql = "INSERT INTO components (component_code, project_id, title, description, start_date, end_date, expected_outputs, status, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
             db()->prepare($sql)->execute(array_values($data));
             $id = db()->lastInsertId();
+            if (($user['role'] ?? '') === 'faculty' && !empty($_SESSION['faculty_id'])) {
+                db()->prepare("INSERT INTO component_assignments (component_id, faculty_id, assignment_type, assigned_by) VALUES (?, ?, 'leader', ?) ON DUPLICATE KEY UPDATE is_active = 1, assignment_type = 'leader'")
+                    ->execute([$id, (int)$_SESSION['faculty_id'], $user['id']]);
+            }
             auditLog('create', 'component', $id, 'Created component: ' . $data['title'], false, $data['project_id']);
             jsonResponse(['success' => true, 'message' => 'Component created', 'id' => $id]);
         } catch (Exception $e) { jsonResponse(['success' => false, 'message' => 'Failed'], 500); }

@@ -1,7 +1,11 @@
 <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
     <div><h1 class="text-2xl font-bold text-[#F9FAFB]">Certificates</h1><p class="text-[#9CA3AF] text-sm mt-1">View and print certificates</p></div>
     <?php if (Permissions::canGenerateCertificate()): ?>
-        <button onclick="openGenerateCertificate()" class="btn-primary"><i class="fas fa-plus mr-1"></i> Generate Certificate</button>
+        <div class="flex flex-wrap gap-2">
+            <button onclick="openAttendanceImport()" class="btn-ghost"><i class="fas fa-file-import mr-1"></i> Import Attendance</button>
+            <button onclick="openBatchCertificates()" class="btn-ghost"><i class="fas fa-award mr-1"></i> Generate From Attendance</button>
+            <button onclick="openGenerateCertificate()" class="btn-primary"><i class="fas fa-plus mr-1"></i> Generate Certificate</button>
+        </div>
     <?php endif; ?>
 </div>
 
@@ -63,6 +67,7 @@
 <script>
 const siteUrl = <?= json_encode(SITE_URL) ?>;
 const certificateLogoUrl = `${siteUrl}/assets/images/logo.png`;
+const certificateActivities = <?= json_encode(array_map(fn($a) => ['value'=>$a['id'],'label'=>$a['title']], db()->query("SELECT id, title FROM extension_activities WHERE deleted_at IS NULL ORDER BY title")->fetchAll()), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 
 function openGenerateCertificate() {
     const sl = getSlideOver({ size: 'md', title: 'Generate Certificate', subtitle: 'Create certificate' });
@@ -72,7 +77,7 @@ function openGenerateCertificate() {
             <div class="form-grid">
                 ${fieldHtml({ name: 'recipient_name', label: 'Recipient Name', required: true, fullWidth: true })}
                 ${fieldHtml({ name: 'recipient_type', label: 'Type', type: 'select', required: true, options: [{value:'participant',label:'Participant'},{value:'resource_speaker',label:'Resource Speaker'}] })}
-                ${fieldHtml({ name: 'activity_id', label: 'Activity', type: 'select', options: <?= json_encode(array_map(fn($a) => ['value'=>$a['id'],'label'=>$a['title']], db()->query("SELECT id, title FROM extension_activities WHERE deleted_at IS NULL ORDER BY title")->fetchAll())) ?> })}
+                ${fieldHtml({ name: 'activity_id', label: 'Activity', type: 'select', options: certificateActivities })}
                 ${fieldHtml({ name: 'date_issued', label: 'Date Issued', type: 'date', value: '<?= date('Y-m-d') ?>' })}
             </div>
         </div>`;
@@ -80,6 +85,35 @@ function openGenerateCertificate() {
     document.getElementById('slideoverForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         await submitSlideOverForm(sl, `${siteUrl}/ajax/certificates.php?action=create`, new FormData(e.target), () => location.reload());
+    });
+}
+
+function openAttendanceImport() {
+    const sl = getSlideOver({ size: 'md' });
+    const formHtml = `<div class="form-section"><div class="form-grid">
+        ${fieldHtml({ name: 'activity_id', label: 'Activity', type: 'select', required: true, options: certificateActivities, fullWidth: true })}
+        <label class="form-label full-width">CSV Attendance File
+            <input name="attendance_file" type="file" accept=".csv" class="form-input" required>
+        </label>
+        <p class="text-xs text-[#9CA3AF] full-width">CSV columns accepted: name, status, date, time_in, time_out. Status can be present or absent.</p>
+    </div></div>`;
+    sl.openForm('Import Attendance', 'Upload participant attendance CSV', formHtml, { showSaveAnother: false });
+    document.getElementById('slideoverForm').addEventListener('submit', async e => {
+        e.preventDefault();
+        await submitSlideOverForm(sl, `${siteUrl}/ajax/certificates.php?action=import_attendance`, new FormData(e.target), () => location.reload());
+    });
+}
+
+function openBatchCertificates() {
+    const sl = getSlideOver({ size: 'md' });
+    const formHtml = `<div class="form-section"><div class="form-grid">
+        ${fieldHtml({ name: 'activity_id', label: 'Activity', type: 'select', required: true, options: certificateActivities, fullWidth: true })}
+        <p class="text-sm text-[#D1D5DB] full-width">Certificates will be generated only for participants marked present and not yet issued.</p>
+    </div></div>`;
+    sl.openForm('Generate Certificates From Attendance', 'Create certificates for present participants', formHtml, { showSaveAnother: false });
+    document.getElementById('slideoverForm').addEventListener('submit', async e => {
+        e.preventDefault();
+        await submitSlideOverForm(sl, `${siteUrl}/ajax/certificates.php?action=batch_generate`, new FormData(e.target), () => location.reload());
     });
 }
 

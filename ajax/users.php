@@ -109,6 +109,61 @@ switch ($action) {
         $stmt->execute([$id]);
         $data = $stmt->fetch();
         if (!$data) jsonResponse(['success' => false, 'message' => 'Not found'], 404);
+        $history = db()->prepare("
+            SELECT
+                'proposal' as submission_type,
+                pr.id as submission_id,
+                pr.proposal_number as reference_number,
+                pr.title,
+                COALESCE(p.title, pr.title) as parent_title,
+                pr.status,
+                pr.date_submitted as submitted_at,
+                pr.created_at,
+                pr.updated_at,
+                pr.remarks,
+                pr.attachment,
+                pr.version,
+                (
+                    SELECT COUNT(*)
+                    FROM proposal_approvals pa
+                    WHERE pa.proposal_id = pr.id
+                ) as review_count,
+                (
+                    SELECT COUNT(*)
+                    FROM proposal_versions pv
+                    WHERE pv.proposal_id = pr.id
+                ) as version_count
+            FROM proposals pr
+            LEFT JOIN projects p ON pr.project_id = p.id
+            WHERE pr.submitted_by = ?
+            UNION ALL
+            SELECT
+                'report' as submission_type,
+                ar.id as submission_id,
+                ar.report_number as reference_number,
+                ar.title,
+                p.title as parent_title,
+                ar.status,
+                ar.date_submitted as submitted_at,
+                ar.created_at,
+                ar.updated_at,
+                ar.remarks,
+                ar.attachment,
+                NULL as version,
+                (
+                    SELECT COUNT(*)
+                    FROM report_approvals ra
+                    WHERE ra.report_id = ar.id
+                ) as review_count,
+                0 as version_count
+            FROM accomplishment_reports ar
+            LEFT JOIN projects p ON ar.project_id = p.id
+            WHERE ar.submitted_by = ?
+            ORDER BY created_at DESC
+            LIMIT 50
+        ");
+        $history->execute([$id, $id]);
+        $data['submission_history'] = $history->fetchAll();
         jsonResponse($data);
         break;
 

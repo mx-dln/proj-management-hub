@@ -6,6 +6,23 @@ requireLogin();
 $action = $_GET['action'] ?? '';
 $user = currentUser();
 
+function ensureAssignmentMetaColumns($table) {
+    foreach ([
+        'designation_start_date' => "ALTER TABLE {$table} ADD COLUMN designation_start_date DATE DEFAULT NULL",
+        'designation_end_date' => "ALTER TABLE {$table} ADD COLUMN designation_end_date DATE DEFAULT NULL",
+        'accomplishment_notes' => "ALTER TABLE {$table} ADD COLUMN accomplishment_notes TEXT DEFAULT NULL",
+        'accomplishment_completed_at' => "ALTER TABLE {$table} ADD COLUMN accomplishment_completed_at DATETIME DEFAULT NULL",
+    ] as $sql) {
+        try { db()->exec($sql); } catch (Throwable $e) {}
+    }
+}
+
+function requireValidAssignmentEntity($entityType) {
+    if (!in_array($entityType, ['program', 'project', 'component', 'activity'], true)) {
+        jsonResponse(['success' => false, 'message' => 'Invalid assignment type'], 400);
+    }
+}
+
 switch ($action) {
     case 'get':
         $entityType = sanitize($_GET['entity_type'] ?? '');
@@ -14,10 +31,12 @@ switch ($action) {
         if (!$entityType || !$entityId) {
             jsonResponse(['success' => false, 'message' => 'Invalid parameters'], 400);
         }
+        requireValidAssignmentEntity($entityType);
 
         // Get current assignments
         $assignmentTable = $entityType . '_assignments';
         $entityColumn = $entityType === 'activity' ? 'activity_id' : ($entityType . '_id');
+        ensureAssignmentMetaColumns($assignmentTable);
         
         $stmt = db()->prepare("
             SELECT a.*, fp.first_name, fp.last_name, fp.department_id, d.name as department_name, fp.email
@@ -41,6 +60,37 @@ switch ($action) {
         ]);
         break;
 
+    case 'save_meta':
+        $input = json_decode(file_get_contents('php://input'), true) ?: [];
+        $entityType = sanitize($input['entity_type'] ?? '');
+        $entityId = intval($input['entity_id'] ?? 0);
+        $items = is_array($input['items'] ?? null) ? $input['items'] : [];
+        if (!$entityType || !$entityId) jsonResponse(['success' => false, 'message' => 'Invalid parameters'], 400);
+        requireValidAssignmentEntity($entityType);
+        Permissions::requirePermission(Permissions::canAssignMembers());
+        $assignmentTable = $entityType . '_assignments';
+        $entityColumn = $entityType === 'activity' ? 'activity_id' : ($entityType . '_id');
+        ensureAssignmentMetaColumns($assignmentTable);
+        try {
+            $stmt = db()->prepare("UPDATE {$assignmentTable} SET designation_start_date = ?, designation_end_date = ?, accomplishment_notes = ?, accomplishment_completed_at = ? WHERE {$entityColumn} = ? AND faculty_id = ? AND is_active = 1");
+            foreach ($items as $item) {
+                $completed = !empty($item['completed']) ? date('Y-m-d H:i:s') : null;
+                $stmt->execute([
+                    !empty($item['start_date']) ? $item['start_date'] : null,
+                    !empty($item['end_date']) ? $item['end_date'] : null,
+                    sanitize($item['accomplishment_notes'] ?? ''),
+                    $completed,
+                    $entityId,
+                    intval($item['faculty_id'] ?? 0),
+                ]);
+            }
+            auditLog('edit', $entityType . '_designation', $entityId, 'Updated designation dates and accomplishments');
+            jsonResponse(['success' => true, 'message' => 'Designation details saved']);
+        } catch (Exception $e) {
+            jsonResponse(['success' => false, 'message' => 'Failed: ' . $e->getMessage()], 500);
+        }
+        break;
+
     case 'save':
         $input = json_decode(file_get_contents('php://input'), true);
         $entityType = sanitize($input['entity_type'] ?? '');
@@ -51,6 +101,7 @@ switch ($action) {
         if (!$entityType || !$entityId) {
             jsonResponse(['success' => false, 'message' => 'Invalid parameters'], 400);
         }
+        requireValidAssignmentEntity($entityType);
 
         // Check permission
         Permissions::requirePermission(Permissions::canAssignMembers());

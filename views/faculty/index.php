@@ -45,6 +45,19 @@ async function viewFaculty(id, btn) {
         const data = await fetchWithLoading(`${siteUrl}/ajax/faculty.php?action=get&id=${id}`, btn);
         sl.setTitle(`${data.first_name} ${data.last_name}`);
         sl.subtitle = data.employee_id;
+        const timelineRows = Array.isArray(data.timeline) && data.timeline.length ? data.timeline.map(item => `
+            <div class="faculty-timeline-item">
+                <div class="faculty-timeline-dot"></div>
+                <div class="faculty-timeline-card">
+                    <div class="flex items-center justify-between gap-3">
+                        <p class="text-sm font-semibold text-[#F9FAFB]">${escapeHtml(item.label || '-')}</p>
+                        <span class="text-xs text-[#6B7280]">${formatDate(item.created_at)}</span>
+                    </div>
+                    <p class="text-xs text-[#9CA3AF] mt-1">${escapeHtml(item.type || 'Activity')}</p>
+                    <p class="text-sm text-[#D1D5DB] mt-2">${escapeHtml(item.description || '-')}</p>
+                </div>
+            </div>
+        `).join('') : `<p class="text-sm text-[#6B7280] text-center py-6">No timeline records yet</p>`;
         const content = `
             <div class="flex items-center gap-4 mb-6 p-4 rounded-xl bg-[#111827] border border-[#374151]">
                 <div class="avatar" style="width:48px;height:48px;font-size:18px"><i class="fas fa-user"></i></div>
@@ -60,8 +73,21 @@ async function viewFaculty(id, btn) {
                 viewFieldHtml('Email', escapeHtml(data.email || data.user_email)),
                 viewFieldHtml('Contact', escapeHtml(data.contact_number)),
                 viewFieldHtml('Specialization', escapeHtml(data.specialization)),
-            ])}`;
-        sl.openView(`${data.first_name} ${data.last_name}`, data.employee_id, content, { size: 'md' });
+            ])}
+            <div class="form-section">
+                <h4 class="form-section-title">Faculty Activity Timeline</h4>
+                <div class="faculty-timeline">${timelineRows}</div>
+            </div>`;
+        sl.openView(`${data.first_name} ${data.last_name}`, data.employee_id, content, { size: 'lg' });
     } catch (err) { console.error('Error:', err); showToast(err.message || 'Failed to load', 'error'); sl.close(true); }
 }
 </script>
+
+<style>
+.faculty-timeline{display:flex;flex-direction:column;gap:12px}
+.faculty-timeline-item{display:grid;grid-template-columns:18px 1fr;gap:10px;position:relative}
+.faculty-timeline-item::before{content:"";position:absolute;left:8px;top:18px;bottom:-12px;width:1px;background:#374151}
+.faculty-timeline-item:last-child::before{display:none}
+.faculty-timeline-dot{width:10px;height:10px;border-radius:999px;background:#86EFAC;margin:7px 0 0 4px;box-shadow:0 0 0 3px rgba(15,100,58,.35)}
+.faculty-timeline-card{background:#111827;border:1px solid #374151;border-radius:8px;padding:12px}
+</style>

@@ -1,3 +1,11 @@
+<?php
+if (!class_exists('AssignmentVisibility')) {
+    require_once __DIR__ . '/../../includes/AssignmentVisibility.php';
+}
+$activityComponentOptions = Permissions::isAdmin()
+    ? db()->query("SELECT id, component_code, title FROM components WHERE deleted_at IS NULL ORDER BY title")->fetchAll()
+    : AssignmentVisibility::getVisibleComponents('', 500, 0)['data'];
+?>
 <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
     <div><h1 class="text-2xl font-bold text-[#F9FAFB]">Extension Activities</h1><p class="text-[#9CA3AF] text-sm mt-1">Seminars, trainings, workshops</p></div>
     <?php if (Permissions::canCreateActivity()): ?>
@@ -50,6 +58,7 @@
 <script>
 const siteUrl = <?= json_encode(SITE_URL) ?>;
 const activityTypes = <?= json_encode(db()->query("SELECT id, name FROM activity_types WHERE is_active = 1")->fetchAll()) ?>;
+const beneficiaryGroups = <?= json_encode(array_map(fn($b) => ['value' => $b['id'], 'label' => $b['name']], db()->query("SELECT id, name FROM beneficiary_groups WHERE is_active = 1 ORDER BY name")->fetchAll()), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 
 function refreshActivitiesTable() {
     fetch(`${siteUrl}/index.php?module=activities`)
@@ -69,7 +78,7 @@ function openCreateActivity() {
         <div class="form-section">
             <h4 class="form-section-title">Activity Information</h4>
             <div class="form-grid">
-                ${fieldHtml({ name: 'component_id', label: 'Parent Component', type: 'select', required: true, fullWidth: true, options: <?= json_encode(array_map(fn($c) => ['value'=>$c['id'],'label'=>$c['component_code'].' - '.$c['title']], db()->query("SELECT id, component_code, title FROM components WHERE deleted_at IS NULL ORDER BY title")->fetchAll())) ?> })}
+                ${fieldHtml({ name: 'component_id', label: 'Parent Component', type: 'select', required: true, fullWidth: true, options: <?= json_encode(array_map(fn($c) => ['value'=>$c['id'],'label'=>$c['component_code'].' - '.$c['title']], $activityComponentOptions)) ?> })}
                 ${fieldHtml({ name: 'title', label: 'Activity Title', required: true, fullWidth: true })}
                 ${fieldHtml({ name: 'activity_type_id', label: 'Type', type: 'select', options: typeOptions })}
                 ${fieldHtml({ name: 'venue', label: 'Venue', placeholder: 'Activity venue' })}
@@ -108,7 +117,7 @@ async function viewActivity(id, btn) {
         const participantRows = participants.length ? participants.map(p => `
             <tr>
                 <td>${escapeHtml(p.name || '-')}</td>
-                <td>${escapeHtml(p.organization || '-')}</td>
+                <td>${escapeHtml(p.beneficiary_group_name || p.organization || '-')}</td>
                 <td>${escapeHtml(p.municipality || '-')}</td>
                 <td>${escapeHtml(p.attendance_status || '-')}</td>
                 <td>${escapeHtml(p.certificate_status || '-')}</td>
@@ -119,7 +128,7 @@ async function viewActivity(id, btn) {
                 <h4 class="form-section-title mb-0">Participants (${participants.length})</h4>
                 ${data.can_add_participants ? `<button type="button" onclick='openAddParticipant(${Number(id)}, ${JSON.stringify(data.title || '')})' class="btn-primary"><i class="fas fa-plus mr-1"></i> Add</button>` : ''}
             </div>
-            <div class="overflow-x-auto"><table class="data-table"><thead><tr><th>Name</th><th>Organization</th><th>Municipality</th><th>Attendance</th><th>Certificate</th></tr></thead><tbody>${participantRows}</tbody></table></div>
+            <div class="overflow-x-auto"><table class="data-table"><thead><tr><th>Name</th><th>Beneficiary Group</th><th>Municipality</th><th>Attendance</th><th>Certificate</th></tr></thead><tbody>${participantRows}</tbody></table></div>
         </div>`;
         const content = viewSectionHtml('Activity Information', [
             viewFieldHtml('Code', `<span class="table-code">${escapeHtml(data.activity_code)}</span>`),
@@ -142,7 +151,7 @@ async function viewParticipants(id, title, btn) {
     const rows = participants.length ? participants.map(p => `
         <tr>
             <td><span class="table-title">${escapeHtml(p.name || '-')}</span><p class="text-xs text-[#6B7280]">${escapeHtml(p.phone || '')}</p></td>
-            <td>${escapeHtml(p.organization || '-')}</td>
+            <td>${escapeHtml(p.beneficiary_group_name || p.organization || '-')}</td>
             <td>${escapeHtml([p.barangay, p.municipality, p.province].filter(Boolean).join(', ') || '-')}</td>
             <td>${escapeHtml(p.attendance_status || '-')}</td>
             <td>${escapeHtml(p.certificate_status || '-')}</td>
@@ -151,7 +160,7 @@ async function viewParticipants(id, title, btn) {
     const addButton = activity.can_add_participants ? `<button type="button" onclick='openAddParticipant(${Number(id)}, ${JSON.stringify(title || '')})' class="btn-primary"><i class="fas fa-plus mr-1"></i> Add Participant</button>` : '';
     getSlideOver({size:'lg'}).openView('Participants', title || '', `<div class="form-section">
         <div class="flex justify-end mb-3">${addButton}</div>
-        <div class="overflow-x-auto"><table class="data-table"><thead><tr><th>Name</th><th>Organization</th><th>Address</th><th>Attendance</th><th>Certificate</th></tr></thead><tbody>${rows}</tbody></table></div>
+        <div class="overflow-x-auto"><table class="data-table"><thead><tr><th>Name</th><th>Beneficiary Group</th><th>Address</th><th>Attendance</th><th>Certificate</th></tr></thead><tbody>${rows}</tbody></table></div>
     </div>`, {size:'lg'});
 }
 
@@ -160,6 +169,7 @@ function openAddParticipant(activityId, title) {
     const formHtml = `<div class="form-section"><div class="form-grid">
         <input type="hidden" name="activity_id" value="${Number(activityId)}">
         ${fieldHtml({ name: 'name', label: 'Participant Name', required: true, fullWidth: true })}
+        ${fieldHtml({ name: 'beneficiary_group_id', label: 'Beneficiary Group', type: 'select', options: beneficiaryGroups, fullWidth: true })}
         ${fieldHtml({ name: 'age', label: 'Age', type: 'number' })}
         ${fieldHtml({ name: 'gender', label: 'Gender', type: 'select', options: [{value:'',label:'-'},{value:'male',label:'Male'},{value:'female',label:'Female'},{value:'other',label:'Other'}] })}
         ${fieldHtml({ name: 'organization', label: 'Organization' })}
@@ -206,4 +216,11 @@ async function editActivity(id, btn) {
         });
     } catch (err) { console.error('Error:', err); showToast(err.message || 'Failed to load', 'error'); sl.close(true); }
 }
+
+window.refreshActivitiesTable = refreshActivitiesTable;
+window.openCreateActivity = openCreateActivity;
+window.viewActivity = viewActivity;
+window.viewParticipants = viewParticipants;
+window.openAddParticipant = openAddParticipant;
+window.editActivity = editActivity;
 </script>

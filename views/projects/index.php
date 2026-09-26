@@ -5,7 +5,7 @@
             <p>(MGA PROJECTS)</p>
         </div>
         <?php if (Permissions::canCreateProject()): ?>
-            <button onclick="openCreateProject()" class="btn-primary"><i class="fas fa-plus mr-1"></i> New Program</button>
+            <button onclick="openCreateProject()" class="btn-primary"><i class="fas fa-plus mr-1"></i> New Project</button>
         <?php endif; ?>
     </div>
 
@@ -34,7 +34,7 @@
 
         <section class="sketch-form-panel">
             <div class="sketch-form-title">
-                <button onclick="openCreateProject()" class="btn-primary"><i class="fas fa-plus mr-1"></i> New Program</button>
+                <button onclick="openCreateProject()" class="btn-primary"><i class="fas fa-plus mr-1"></i> New Project</button>
             </div>
             <form id="inlineProjectForm" class="sketch-form">
                 <label>Project Title:<input name="title" required></label>

@@ -10,10 +10,45 @@ switch ($action) {
         try {
             $id = intval($_GET['id'] ?? 0);
             if (!$id) jsonResponse(['success' => false, 'message' => 'Invalid ID'], 400);
-            $stmt = db()->prepare("SELECT fp.*, d.name as department_name FROM faculty_profiles fp LEFT JOIN departments d ON fp.department_id = d.id WHERE fp.id = ?");
+            $stmt = db()->prepare("SELECT fp.*, u.email as user_email, u.username, d.name as department_name FROM faculty_profiles fp JOIN users u ON fp.user_id = u.id LEFT JOIN departments d ON fp.department_id = d.id WHERE fp.id = ?");
             $stmt->execute([$id]);
             $data = $stmt->fetch();
             if (!$data) jsonResponse(['success' => false, 'message' => 'Faculty not found'], 404);
+            $timeline = [];
+            $assignmentSources = [
+                ['program_assignments', 'program_id', 'programs', 'Program Assignment'],
+                ['project_assignments', 'project_id', 'projects', 'Project Assignment'],
+                ['component_assignments', 'component_id', 'components', 'Component Assignment'],
+                ['activity_assignments', 'activity_id', 'extension_activities', 'Activity Assignment'],
+            ];
+            foreach ($assignmentSources as [$assignmentTable, $entityColumn, $entityTable, $label]) {
+                $sql = "SELECT ? as timeline_type, a.assignment_type as action_label, e.title, a.assigned_at as created_at
+                        FROM {$assignmentTable} a
+                        JOIN {$entityTable} e ON e.id = a.{$entityColumn}
+                        WHERE a.faculty_id = ? AND a.is_active = 1";
+                $itemStmt = db()->prepare($sql);
+                $itemStmt->execute([$label, $id]);
+                foreach ($itemStmt->fetchAll() as $row) {
+                    $timeline[] = [
+                        'type' => $row['timeline_type'],
+                        'label' => ucfirst($row['action_label']) . ': ' . $row['title'],
+                        'description' => 'Assigned as ' . ucfirst($row['action_label']),
+                        'created_at' => $row['created_at'],
+                    ];
+                }
+            }
+            $auditStmt = db()->prepare("SELECT action, entity_type, description, created_at FROM audit_logs WHERE user_id = ? ORDER BY created_at DESC LIMIT 20");
+            $auditStmt->execute([(int)$data['user_id']]);
+            foreach ($auditStmt->fetchAll() as $row) {
+                $timeline[] = [
+                    'type' => ucfirst(str_replace('_', ' ', $row['entity_type'] ?: 'Activity')),
+                    'label' => ucfirst(str_replace('_', ' ', $row['action'])),
+                    'description' => $row['description'] ?: '-',
+                    'created_at' => $row['created_at'],
+                ];
+            }
+            usort($timeline, fn($a, $b) => strcmp($b['created_at'] ?? '', $a['created_at'] ?? ''));
+            $data['timeline'] = array_slice($timeline, 0, 20);
             jsonResponse($data);
         } catch (Exception $e) {
             jsonResponse(['success' => false, 'message' => 'Error: ' . $e->getMessage()], 500);

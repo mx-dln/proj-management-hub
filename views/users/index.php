@@ -92,14 +92,52 @@ window.openCreateUser = function openCreateUser() {
 
 window.viewUser = async function viewUser(id, btn) {
     const data = await fetchWithLoading(`${siteUrl}/ajax/users.php?action=get&id=${id}`, btn);
-    getSlideOver({size:'md'}).openView(data.username, data.email, viewSectionHtml('User Details', [
+    const details = viewSectionHtml('User Details', [
         viewFieldHtml('Name', escapeHtml(`${data.first_name || ''} ${data.last_name || ''}`.trim() || '-')),
         viewFieldHtml('Employee ID', escapeHtml(data.employee_id || '-')),
         viewFieldHtml('Department', escapeHtml(data.department_name || '-')),
         viewFieldHtml('Position', escapeHtml(data.position || '-')),
         viewFieldHtml('Role', escapeHtml(data.role || '-')),
         viewFieldHtml('Status', data.is_active == 1 ? 'Active' : 'Inactive')
-    ]), {size:'md'});
+    ]);
+    getSlideOver({size:'lg'}).openView(data.username, data.email, details + userSubmissionHistoryHtml(data.submission_history || []), {size:'lg'});
+}
+
+function userSubmissionHistoryHtml(history) {
+    const rows = history.length ? history.map(item => {
+        const typeLabel = item.submission_type === 'report' ? 'Report' : 'Proposal';
+        const fileLink = item.attachment
+            ? `<a href="${siteUrl}/ajax/${item.submission_type === 'report' ? 'reports' : 'proposals'}.php?action=file&id=${Number(item.submission_id)}" target="_blank" rel="noopener" class="btn-ghost text-xs"><i class="fas fa-file-alt mr-1"></i> File</a>`
+            : '';
+        const versionText = item.submission_type === 'proposal'
+            ? `<span>${Number(item.version_count || 0)} version${Number(item.version_count || 0) === 1 ? '' : 's'}</span>`
+            : '';
+        return `<div class="border border-[#374151] rounded-lg p-3 bg-[#111827]">
+            <div class="flex flex-col md:flex-row md:items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="badge badge-submitted">${typeLabel}</span>
+                        <span class="table-code">${escapeHtml(item.reference_number || '-')}</span>
+                        ${getStatusBadge(item.status || '')}
+                    </div>
+                    <p class="text-sm font-semibold text-[#F9FAFB] mt-2">${escapeHtml(item.title || '-')}</p>
+                    <p class="text-xs text-[#9CA3AF] mt-1">${escapeHtml(item.parent_title || '-')}</p>
+                </div>
+                <div class="flex flex-wrap items-center justify-end gap-2">${fileLink}</div>
+            </div>
+            <div class="flex flex-wrap gap-3 text-xs text-[#9CA3AF] mt-3">
+                <span>Submitted: ${formatDate(item.submitted_at)}</span>
+                <span>${Number(item.review_count || 0)} review action${Number(item.review_count || 0) === 1 ? '' : 's'}</span>
+                ${versionText}
+            </div>
+            ${item.remarks ? `<p class="text-xs text-[#D1D5DB] mt-2 whitespace-pre-wrap">${escapeHtml(item.remarks)}</p>` : ''}
+        </div>`;
+    }).join('') : `<div class="text-sm text-[#6B7280] border border-dashed border-[#374151] rounded-lg p-4 text-center">No submission history yet</div>`;
+
+    return `<div class="form-section">
+        <h4 class="form-section-title">Submission History</h4>
+        <div class="space-y-2">${rows}</div>
+    </div>`;
 }
 
 window.editUser = async function editUser(id, btn) {

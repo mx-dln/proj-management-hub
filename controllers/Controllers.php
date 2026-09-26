@@ -399,7 +399,14 @@ class PartnerController {
 
 class BeneficiaryController {
     public function index() {
-        $beneficiaries = db()->query("SELECT * FROM beneficiary_groups WHERE is_active = 1 ORDER BY name")->fetchAll();
+        $beneficiaries = db()->query("
+            SELECT bg.*, COUNT(ap.id) as beneficiary_count
+            FROM beneficiary_groups bg
+            LEFT JOIN activity_participants ap ON ap.beneficiary_group_id = bg.id
+            WHERE bg.is_active = 1
+            GROUP BY bg.id
+            ORDER BY bg.name
+        ")->fetchAll();
         require_once __DIR__ . '/../layouts/header.php';
         require_once __DIR__ . '/../views/beneficiaries/index.php';
         require_once __DIR__ . '/../layouts/footer.php';

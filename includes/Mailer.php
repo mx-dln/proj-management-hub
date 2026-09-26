@@ -129,7 +129,7 @@ class Mailer {
         // Only link to application pages; notification payloads cannot choose an external email link.
         $query = [];
         parse_str((string)parse_url($actionUrl, PHP_URL_QUERY), $query);
-        $modules = ['proposals', 'reports', 'programs', 'projects', 'components', 'activities', 'explorer', 'notifications'];
+        $modules = ['proposals', 'reports', 'programs', 'projects', 'components', 'activities', 'partners', 'explorer', 'notifications'];
         $module = is_string($query['module'] ?? null) && in_array($query['module'], $modules, true) ? $query['module'] : 'notifications';
         $url = rtrim($baseUrl, '/') . '/index.php?module=' . rawurlencode($module);
         $escape = fn($s) => htmlspecialchars($s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');

@@ -16,6 +16,7 @@ $reportYears = range((int)date('Y'), 2021);
 <div class="sketch-board">
     <div class="sketch-head">
         <div><h1>Accomplishment</h1><p>Quarterly project files and previous-year reports</p></div>
+        <button onclick="openReportTemplate()" class="btn-primary"><i class="fas fa-file-lines mr-1"></i> Generate Template</button>
     </div>
     <form method="GET" class="filter-bar m-4 flex flex-col md:flex-row gap-3">
         <input type="hidden" name="module" value="reports">
@@ -98,6 +99,25 @@ function openReportUpload(q){
         await submitSlideOverForm(sl, `${siteUrl}/ajax/reports.php?action=create`, new FormData(e.target), () => location.reload());
     });
 }
+
+function openReportTemplate(){
+    const sl = getSlideOver({size:'md'});
+    const formHtml = `<div class="form-section"><div class="form-grid">
+        ${fieldHtml({name:'project_id',label:'Project',type:'select',required:true,options:reportProjects,fullWidth:true})}
+        ${fieldHtml({name:'period_quarter',label:'Quarter',type:'select',value:'<?= e($selectedQuarter ?: 'Q1') ?>',options:['Q1','Q2','Q3','Q4'].map(x=>({value:x,label:x}))})}
+        ${fieldHtml({name:'period_year',label:'Year',type:'number',value:'<?= e($selectedYear ?: date('Y')) ?>'})}
+    </div></div>`;
+    sl.openForm('Generate Report Template', 'Build from project data', formHtml, {showSaveAnother:false});
+    document.getElementById('slideoverForm').addEventListener('submit', async e => {
+        e.preventDefault();
+        const data = new FormData(e.target);
+        const url = `${siteUrl}/ajax/reports.php?action=template&project_id=${encodeURIComponent(data.get('project_id'))}&quarter=${encodeURIComponent(data.get('period_quarter'))}&year=${encodeURIComponent(data.get('period_year'))}`;
+        const result = await fetchWithLoading(url);
+        if (!result.success) { showToast(result.message || 'Failed to generate template', 'error'); return; }
+        sl.openView('Generated Report Template', `${data.get('period_quarter')} ${data.get('period_year')}`, `<div class="flex justify-end mb-3 no-print"><button onclick="window.print()" class="btn-primary"><i class="fas fa-print mr-1"></i> Print</button></div>${result.html}`, {size:'lg'});
+    });
+}
+
 async function viewReport(id, btn){
     const data = await fetchWithLoading(`${siteUrl}/ajax/reports.php?action=get&id=${id}`, btn);
     const fileActions = data.attachment ? `<div class="flex flex-wrap gap-2 mb-4"><a href="${siteUrl}/ajax/reports.php?action=file&id=${Number(data.id)}" class="btn-ghost" target="_blank" rel="noopener"><i class="fas fa-eye" aria-hidden="true"></i> Open</a><button type="button" onclick="printReport(${Number(data.id)})" class="btn-ghost"><i class="fas fa-print" aria-hidden="true"></i> Print</button><a href="${siteUrl}/ajax/reports.php?action=file&id=${Number(data.id)}&download=1" class="btn-primary"><i class="fas fa-download" aria-hidden="true"></i> Download</a></div>` : '';

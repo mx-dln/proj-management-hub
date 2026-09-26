@@ -98,8 +98,11 @@ $driveUploadLimit = dashboardBytes($driveStats['effective_upload_limit_bytes'] ?
 .status-top{display:flex;justify-content:space-between;align-items:center;color:#D1D5DB;font-size:13px;margin-bottom:7px}
 .status-track{height:9px;background:#374151;border-radius:999px;overflow:hidden}
 .status-fill{height:100%;border-radius:999px;background:#0F643A}
-.insight-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.insight-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
 .insight-box{background:#111827;border:1px solid #374151;border-radius:8px;padding:14px}
+.insight-link{text-decoration:none;transition:border-color .18s ease, background .18s ease, transform .18s ease}
+.insight-link:hover{border-color:#0F643A;background:#172f25;transform:translateY(-1px)}
+.insight-link:focus-visible{outline:2px solid #86EFAC;outline-offset:3px}
 .insight-label{font-size:11px;text-transform:uppercase;color:#9CA3AF;font-weight:700;letter-spacing:.04em}
 .insight-value{font-size:20px;font-weight:800;color:#F9FAFB;margin-top:7px}
 .split-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px}
@@ -128,7 +131,7 @@ $driveUploadLimit = dashboardBytes($driveStats['effective_upload_limit_bytes'] ?
 .notification-title{font-size:13px;font-weight:800;color:#F9FAFB}
 .notification-message{font-size:12px;color:#D1D5DB;margin-top:3px}
 .notification-time{font-size:11px;color:#6B7280;margin-top:5px}
-@media (max-width:1200px){.kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.dash-grid,.split-grid,.drive-panel{grid-template-columns:1fr}}
+@media (max-width:1200px){.kpi-grid,.insight-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.dash-grid,.split-grid,.drive-panel{grid-template-columns:1fr}}
 @media (max-width:640px){.dashboard-head{align-items:flex-start;flex-direction:column}.kpi-grid,.insight-strip{grid-template-columns:1fr}.chart-frame{height:250px}.drive-storage-top{flex-direction:column}.drive-capacity{white-space:normal}}
 </style>
 
@@ -176,6 +179,10 @@ $driveUploadLimit = dashboardBytes($driveStats['effective_upload_limit_bytes'] ?
             <p class="insight-label">Pending Proposals</p>
             <p class="insight-value"><?= number_format((float)($stats['pending_proposals'] ?? $stats['my_pending_proposals'] ?? 0)) ?></p>
         </div>
+        <a class="insight-box insight-link" href="<?= SITE_URL ?>/index.php?module=proposals&amp;status=submitted" aria-label="Open total requests">
+            <p class="insight-label">Total Requests</p>
+            <p class="insight-value"><?= number_format((float)($stats['total_requests'] ?? $stats['my_total_requests'] ?? 0)) ?></p>
+        </a>
     </div>
 
     <?php if (!empty($notifications)): ?>

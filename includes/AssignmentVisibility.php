@@ -100,8 +100,9 @@ class AssignmentVisibility {
         
         if ($facultyId) {
             $where .= " AND (c.id IN (SELECT component_id FROM component_assignments WHERE faculty_id = ? AND is_active = 1)
+                        OR c.project_id IN (SELECT project_id FROM project_assignments WHERE faculty_id = ? AND is_active = 1)
                         OR c.id IN (SELECT DISTINCT ea.component_id FROM extension_activities ea JOIN activity_assignments aa ON ea.id = aa.activity_id WHERE aa.faculty_id = ? AND aa.is_active = 1))";
-            $params = array_merge([$facultyId, $facultyId], $params);
+            $params = array_merge([$facultyId, $facultyId, $facultyId], $params);
         }
         
         $countSql = "SELECT COUNT(*) as count FROM components c{$where}";
@@ -129,8 +130,10 @@ class AssignmentVisibility {
         if ($search) { $where .= " AND (ea.title LIKE ? OR ea.activity_code LIKE ?)"; $params[] = "%$search%"; $params[] = "%$search%"; }
         
         if ($facultyId) {
-            $where .= " AND ea.id IN (SELECT activity_id FROM activity_assignments WHERE faculty_id = ? AND is_active = 1)";
-            $params = array_merge([$facultyId], $params);
+            $where .= " AND (ea.id IN (SELECT activity_id FROM activity_assignments WHERE faculty_id = ? AND is_active = 1)
+                        OR ea.component_id IN (SELECT component_id FROM component_assignments WHERE faculty_id = ? AND is_active = 1)
+                        OR ea.component_id IN (SELECT c.id FROM components c JOIN project_assignments pa ON c.project_id = pa.project_id WHERE pa.faculty_id = ? AND pa.is_active = 1))";
+            $params = array_merge([$facultyId, $facultyId, $facultyId], $params);
         }
         
         $countSql = "SELECT COUNT(*) as count FROM extension_activities ea{$where}";
@@ -287,6 +290,11 @@ class AssignmentVisibility {
             $stats['completed'] = (int)db()->query("SELECT COUNT(*) as c FROM projects WHERE status = 'completed' AND deleted_at IS NULL")->fetch()['c'];
             $stats['pending_proposals'] = (int)db()->query("SELECT COUNT(*) as c FROM proposals WHERE status = 'submitted'")->fetch()['c'];
             $stats['pending_reports'] = (int)db()->query("SELECT COUNT(*) as c FROM accomplishment_reports WHERE status = 'submitted'")->fetch()['c'];
+            $stats['total_requests'] = (int)db()->query("
+                SELECT
+                    (SELECT COUNT(*) FROM proposals WHERE status IN ('submitted','under_review','returned')) +
+                    (SELECT COUNT(*) FROM accomplishment_reports WHERE status IN ('submitted','under_review','returned')) as c
+            ")->fetch()['c'];
             $stats['faculty'] = (int)db()->query("SELECT COUNT(*) as c FROM faculty_profiles")->fetch()['c'];
             $stats['partners'] = (int)db()->query("SELECT COUNT(*) as c FROM partner_agencies WHERE is_active = 1")->fetch()['c'];
             $stats['beneficiaries'] = (int)db()->query("SELECT COUNT(*) as c FROM beneficiary_groups WHERE is_active = 1")->fetch()['c'];
@@ -315,6 +323,14 @@ class AssignmentVisibility {
             $stmt = db()->prepare("SELECT COUNT(*) as c FROM accomplishment_reports WHERE submitted_by = ? AND status = 'submitted'");
             $stmt->execute([$_SESSION['user_id']]);
             $stats['my_pending_reports'] = (int)$stmt->fetch()['c'];
+
+            $stmt = db()->prepare("
+                SELECT
+                    (SELECT COUNT(*) FROM proposals WHERE submitted_by = ? AND status IN ('submitted','under_review','returned')) +
+                    (SELECT COUNT(*) FROM accomplishment_reports WHERE submitted_by = ? AND status IN ('submitted','under_review','returned')) as c
+            ");
+            $stmt->execute([$_SESSION['user_id'], $_SESSION['user_id']]);
+            $stats['my_total_requests'] = (int)$stmt->fetch()['c'];
         }
 
         return $stats;

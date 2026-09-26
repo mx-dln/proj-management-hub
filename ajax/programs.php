@@ -28,6 +28,10 @@ switch ($action) {
         if (empty($data['title'])) jsonResponse(['success' => false, 'message' => 'Title is required'], 400);
         try {
             $id = $model->create($data);
+            if (($user['role'] ?? '') === 'faculty' && !empty($_SESSION['faculty_id'])) {
+                db()->prepare("INSERT INTO program_assignments (program_id, faculty_id, assignment_type, assigned_by) VALUES (?, ?, 'leader', ?) ON DUPLICATE KEY UPDATE is_active = 1, assignment_type = 'leader'")
+                    ->execute([$id, (int)$_SESSION['faculty_id'], $user['id']]);
+            }
             auditLog('create', 'program', $id, 'Created program: ' . $data['title']);
             jsonResponse(['success' => true, 'message' => 'Program created', 'id' => $id]);
         } catch (Exception $e) { jsonResponse(['success' => false, 'message' => 'Failed'], 500); }

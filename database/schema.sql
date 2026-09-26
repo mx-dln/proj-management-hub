@@ -98,6 +98,10 @@ CREATE TABLE `program_assignments` (
   `assignment_type` enum('leader','member') NOT NULL DEFAULT 'member',
   `assigned_by` int(11) NOT NULL,
   `assigned_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `designation_start_date` date DEFAULT NULL,
+  `designation_end_date` date DEFAULT NULL,
+  `accomplishment_notes` text DEFAULT NULL,
+  `accomplishment_completed_at` datetime DEFAULT NULL,
   `is_active` tinyint(1) NOT NULL DEFAULT 1,
   PRIMARY KEY (`id`),
   UNIQUE KEY `prog_faculty` (`program_id`,`faculty_id`),
@@ -187,6 +191,10 @@ CREATE TABLE `project_assignments` (
   `assignment_type` enum('leader','member') NOT NULL DEFAULT 'member',
   `assigned_by` int(11) NOT NULL,
   `assigned_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `designation_start_date` date DEFAULT NULL,
+  `designation_end_date` date DEFAULT NULL,
+  `accomplishment_notes` text DEFAULT NULL,
+  `accomplishment_completed_at` datetime DEFAULT NULL,
   `is_active` tinyint(1) NOT NULL DEFAULT 1,
   PRIMARY KEY (`id`),
   UNIQUE KEY `proj_faculty` (`project_id`,`faculty_id`),
@@ -226,6 +234,10 @@ CREATE TABLE `component_assignments` (
   `assignment_type` enum('leader','member') NOT NULL DEFAULT 'member',
   `assigned_by` int(11) NOT NULL,
   `assigned_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `designation_start_date` date DEFAULT NULL,
+  `designation_end_date` date DEFAULT NULL,
+  `accomplishment_notes` text DEFAULT NULL,
+  `accomplishment_completed_at` datetime DEFAULT NULL,
   `is_active` tinyint(1) NOT NULL DEFAULT 1,
   PRIMARY KEY (`id`),
   UNIQUE KEY `comp_faculty` (`component_id`,`faculty_id`),
@@ -278,6 +290,10 @@ CREATE TABLE `activity_assignments` (
   `assignment_type` enum('leader','member') NOT NULL DEFAULT 'member',
   `assigned_by` int(11) NOT NULL,
   `assigned_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `designation_start_date` date DEFAULT NULL,
+  `designation_end_date` date DEFAULT NULL,
+  `accomplishment_notes` text DEFAULT NULL,
+  `accomplishment_completed_at` datetime DEFAULT NULL,
   `is_active` tinyint(1) NOT NULL DEFAULT 1,
   PRIMARY KEY (`id`),
   UNIQUE KEY `act_faculty` (`activity_id`,`faculty_id`),
@@ -444,6 +460,32 @@ CREATE TABLE `proposal_approvals` (
   CONSTRAINT `fk_pa_proposal` FOREIGN KEY (`proposal_id`) REFERENCES `proposals` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE `proposal_comments` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `proposal_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `comment` text NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_proposal_comments_proposal` (`proposal_id`),
+  KEY `idx_proposal_comments_user` (`user_id`),
+  CONSTRAINT `fk_pc_proposal` FOREIGN KEY (`proposal_id`) REFERENCES `proposals` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_pc_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `proposal_budget_comments` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `proposal_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `comment` text NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_proposal_budget_comments_proposal` (`proposal_id`),
+  KEY `idx_proposal_budget_comments_user` (`user_id`),
+  CONSTRAINT `fk_pbc_proposal` FOREIGN KEY (`proposal_id`) REFERENCES `proposals` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_pbc_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ============================================================
 -- DOCUMENTS
 -- ============================================================
@@ -604,6 +646,23 @@ CREATE TABLE `notifications` (
   PRIMARY KEY (`id`),
   KEY `fk_notif_user` (`user_id`),
   CONSTRAINT `fk_notif_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `email_queue` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `notification_id` int(11) NOT NULL,
+  `category` varchar(30) NOT NULL,
+  `status` enum('pending','sending','sent','failed','cancelled') NOT NULL DEFAULT 'pending',
+  `attempts` tinyint unsigned NOT NULL DEFAULT 0,
+  `available_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `last_error` varchar(300) DEFAULT NULL,
+  `sent_at` datetime DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_email_notification` (`notification_id`),
+  KEY `idx_email_delivery` (`status`, `available_at`),
+  CONSTRAINT `fk_email_notification` FOREIGN KEY (`notification_id`) REFERENCES `notifications` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `audit_logs` (

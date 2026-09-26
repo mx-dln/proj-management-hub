@@ -18,6 +18,7 @@
                         <td data-label="Actions">
                             <div class="flex items-center justify-end gap-1">
                                 <button onclick="viewPartner(<?= $p['id'] ?>, this)" class="action-btn" data-loading title="View"><i class="fas fa-eye text-sm"></i></button>
+                                <button onclick="openPartnerEmail(<?= $p['id'] ?>, this)" class="action-btn" data-loading title="Send Email"><i class="fas fa-envelope text-sm"></i></button>
                                 <button onclick="editPartner(<?= $p['id'] ?>, this)" class="action-btn" data-loading title="Edit"><i class="fas fa-edit text-sm"></i></button>
                             </div>
                         </td>
@@ -77,6 +78,27 @@ async function viewPartner(id, btn) {
         ]);
         sl.openView(data.name, '', content, { size: 'md', onEdit: () => editPartner(id) });
     } catch (err) { console.error('Error:', err); showToast(err.message || 'Failed to load', 'error'); sl.close(true); }
+}
+
+async function openPartnerEmail(id, btn) {
+    const data = await fetchWithLoading(`${siteUrl}/ajax/partners.php?action=get&id=${id}`, btn);
+    if (!data.email) {
+        showToast('This partner has no email address.', 'error');
+        return;
+    }
+    const sl = getSlideOver({ size: 'md' });
+    const formHtml = `<div class="form-section"><div class="form-grid">
+        <input type="hidden" name="id" value="${Number(id)}">
+        ${fieldHtml({ name: 'recipient', label: 'Recipient', value: `${data.name || ''} <${data.email || ''}>`, fullWidth: true, disabled: true })}
+        ${fieldHtml({ name: 'subject', label: 'Subject', required: true, fullWidth: true, maxlength: 180, value: 'Project Coordination Update' })}
+        ${fieldHtml({ name: 'message', label: 'Message', type: 'textarea', rows: 7, required: true, fullWidth: true, placeholder: 'Write the message for the partner agency...' })}
+    </div></div>`;
+    sl.openForm('Send Email', data.name || 'Partner Agency', formHtml, { showSaveAnother: false, size: 'md' });
+    const form = document.getElementById('slideoverForm');
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await submitSlideOverForm(sl, `${siteUrl}/ajax/partners.php?action=send_email`, new FormData(form), () => showToast('Email sent to partner.'));
+    });
 }
 
 async function editPartner(id, btn) {

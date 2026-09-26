@@ -15,7 +15,29 @@ class EmailQueue {
         $this->mailer ??= new Mailer($db);
     }
 
+    private function ensureTable(): void {
+        $this->db->exec("
+            CREATE TABLE IF NOT EXISTS email_queue (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                notification_id INT NOT NULL,
+                category VARCHAR(30) NOT NULL,
+                status ENUM('pending', 'sending', 'sent', 'failed', 'cancelled') NOT NULL DEFAULT 'pending',
+                attempts TINYINT UNSIGNED NOT NULL DEFAULT 0,
+                available_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                last_error VARCHAR(300) DEFAULT NULL,
+                sent_at DATETIME DEFAULT NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                UNIQUE KEY uq_email_notification (notification_id),
+                KEY idx_email_delivery (status, available_at),
+                CONSTRAINT fk_email_notification FOREIGN KEY (notification_id) REFERENCES notifications (id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        ");
+    }
+
     public function enqueue(int $notificationId, ?string $entityType): bool {
+        $this->ensureTable();
         $category = self::CATEGORIES[$entityType ?? ''] ?? null;
         if ($category === null) return false;
         $config = $this->mailer->settings();
@@ -29,6 +51,7 @@ class EmailQueue {
     }
 
     public function status(): array {
+        $this->ensureTable();
         $result = ['available' => true, 'pending' => 0, 'sending' => 0, 'sent' => 0, 'failed' => 0, 'cancelled' => 0, 'recent' => []];
         try {
             foreach ($this->db->query('SELECT status, COUNT(*) AS total FROM email_queue GROUP BY status') as $row) $result[$row['status']] = (int)$row['total'];
@@ -42,10 +65,12 @@ class EmailQueue {
     }
 
     public function retryFailed(): int {
+        $this->ensureTable();
         return $this->db->exec("UPDATE email_queue SET status = 'pending', attempts = 0, last_error = NULL, available_at = NOW() WHERE status = 'failed'");
     }
 
     public function process(int $limit = 25): array {
+        $this->ensureTable();
         if ($this->db->inTransaction()) throw new RuntimeException('Mail delivery must run outside a database transaction.');
         $result = ['sent' => 0, 'retrying' => 0, 'failed' => 0, 'cancelled' => 0, 'paused' => false, 'busy' => false];
         $config = $this->mailer->settings();

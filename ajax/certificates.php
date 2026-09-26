@@ -7,6 +7,51 @@ $action = $_GET['action'] ?? '';
 $user = currentUser();
 
 switch ($action) {
+    case 'import_attendance':
+        Permissions::requirePermission(Permissions::canGenerateCertificate());
+        $activityId = intval($_POST['activity_id'] ?? 0);
+        if (!$activityId) jsonResponse(['success' => false, 'message' => 'Activity is required'], 400);
+        if (empty($_FILES['attendance_file']['tmp_name'])) jsonResponse(['success' => false, 'message' => 'CSV attendance file is required'], 400);
+        $handle = fopen($_FILES['attendance_file']['tmp_name'], 'r');
+        if (!$handle) jsonResponse(['success' => false, 'message' => 'Could not read CSV file'], 400);
+        $header = fgetcsv($handle);
+        if (!$header) jsonResponse(['success' => false, 'message' => 'CSV file is empty'], 400);
+        $keys = array_map(fn($h) => strtolower(trim((string)$h)), $header);
+        $imported = 0;
+        $created = 0;
+        while (($row = fgetcsv($handle)) !== false) {
+            $data = array_combine($keys, array_pad($row, count($keys), '')) ?: [];
+            $name = sanitize($data['name'] ?? $data['participant'] ?? $data['participant_name'] ?? '');
+            if ($name === '') continue;
+            $status = strtolower(sanitize($data['status'] ?? $data['attendance'] ?? 'present'));
+            if (!in_array($status, ['present','absent','registered'], true)) $status = 'present';
+            $participant = db()->prepare("SELECT id FROM activity_participants WHERE activity_id = ? AND LOWER(name) = LOWER(?) LIMIT 1");
+            $participant->execute([$activityId, $name]);
+            $participantId = $participant->fetchColumn();
+            if (!$participantId) {
+                db()->prepare("INSERT INTO activity_participants (activity_id, name, attendance_status, qr_code) VALUES (?, ?, ?, ?)")
+                    ->execute([$activityId, $name, $status, 'QR-' . strtoupper(substr(uniqid(), -8))]);
+                $participantId = db()->lastInsertId();
+                $created++;
+            } else {
+                db()->prepare("UPDATE activity_participants SET attendance_status = ? WHERE id = ?")->execute([$status, $participantId]);
+            }
+            db()->prepare("INSERT INTO activity_attendance (activity_id, participant_id, session_date, time_in, time_out, status) VALUES (?, ?, ?, ?, ?, ?)")
+                ->execute([
+                    $activityId,
+                    $participantId,
+                    !empty($data['date']) ? $data['date'] : date('Y-m-d'),
+                    !empty($data['time_in']) ? $data['time_in'] : null,
+                    !empty($data['time_out']) ? $data['time_out'] : null,
+                    $status === 'registered' ? 'present' : $status,
+                ]);
+            $imported++;
+        }
+        fclose($handle);
+        auditLog('import', 'attendance', $activityId, "Imported {$imported} attendance rows");
+        jsonResponse(['success' => true, 'message' => "Imported {$imported} attendance rows. Created {$created} new participants."]);
+        break;
+
     case 'create':
         Permissions::requirePermission(Permissions::canGenerateCertificate());
         $data = [
@@ -34,7 +79,7 @@ switch ($action) {
         $activityId = intval($_POST['activity_id'] ?? 0);
         if (!$activityId) jsonResponse(['success' => false, 'message' => 'Activity is required'], 400);
         
-        $participants = db()->prepare("SELECT * FROM activity_participants WHERE activity_id = ? AND certificate_status = 'not_issued'");
+        $participants = db()->prepare("SELECT * FROM activity_participants WHERE activity_id = ? AND attendance_status = 'present' AND certificate_status = 'not_issued'");
         $participants->execute([$activityId]);
         $participants = $participants->fetchAll();
         
