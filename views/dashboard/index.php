@@ -36,16 +36,17 @@ $statusTotal = array_sum(array_column($projectStatus, 'total')) ?: 1;
 $kpis = $_SESSION['role'] === 'faculty'
     ? [
         ['label' => 'My Programs', 'value' => $stats['my_programs'] ?? 0, 'meta' => 'Assigned scope', 'icon' => 'fa-layer-group', 'tone' => 'green'],
-        ['label' => 'My Projects', 'value' => $stats['my_projects'] ?? 0, 'meta' => $completionRate . '% completed', 'icon' => 'fa-folder-open', 'tone' => 'blue'],
-        ['label' => 'My Activities', 'value' => $stats['my_activities'] ?? 0, 'meta' => 'Current workload', 'icon' => 'fa-calendar-check', 'tone' => 'amber'],
-        ['label' => 'Participants', 'value' => $participantTotal, 'meta' => 'Linked records', 'icon' => 'fa-user-check', 'tone' => 'rose'],
+        ['label' => 'My Projects', 'value' => $stats['my_projects'] ?? 0, 'meta' => $completionRate . '% completed', 'icon' => 'fa-folder-open', 'tone' => 'blue', 'href' => SITE_URL . '/index.php?module=projects'],
+        ['label' => 'My Activities', 'value' => $stats['my_activities'] ?? 0, 'meta' => 'Current workload', 'icon' => 'fa-calendar-check', 'tone' => 'amber', 'href' => SITE_URL . '/index.php?module=activities'],
+        ['label' => 'Participants', 'value' => $participantTotal, 'meta' => 'Linked records', 'icon' => 'fa-user-check', 'tone' => 'rose', 'href' => SITE_URL . '/index.php?module=activities'],
     ]
     : [
-        ['label' => 'Programs', 'value' => $stats['programs'] ?? 0, 'meta' => 'Active portfolio', 'icon' => 'fa-layer-group', 'tone' => 'green'],
-        ['label' => 'Projects', 'value' => $stats['projects'] ?? 0, 'meta' => $completionRate . '% completed', 'icon' => 'fa-folder-open', 'tone' => 'blue'],
-        ['label' => 'Activities', 'value' => $stats['activities'] ?? 0, 'meta' => 'This year tracked', 'icon' => 'fa-calendar-check', 'tone' => 'amber'],
-        ['label' => 'Participants', 'value' => $participantTotal, 'meta' => 'Beneficiary reach', 'icon' => 'fa-user-check', 'tone' => 'rose'],
+        ['label' => 'Programs', 'value' => $stats['programs'] ?? 0, 'meta' => 'Active portfolio', 'icon' => 'fa-layer-group', 'tone' => 'green', 'href' => SITE_URL . '/index.php?module=programs'],
+        ['label' => 'Projects', 'value' => $stats['projects'] ?? 0, 'meta' => $completionRate . '% completed', 'icon' => 'fa-folder-open', 'tone' => 'blue', 'href' => SITE_URL . '/index.php?module=projects'],
+        ['label' => 'Activities', 'value' => $stats['activities'] ?? 0, 'meta' => 'This year tracked', 'icon' => 'fa-calendar-check', 'tone' => 'amber', 'href' => SITE_URL . '/index.php?module=activities'],
+        ['label' => 'Participants', 'value' => $participantTotal, 'meta' => 'Beneficiary reach', 'icon' => 'fa-user-check', 'tone' => 'rose', 'href' => SITE_URL . '/index.php?module=activities'],
     ];
+$kpis[0]['href'] ??= SITE_URL . '/index.php?module=programs';
 
 $toneClasses = [
     'green' => ['icon' => 'background:#0F643A;color:#ECFDF5', 'bar' => '#0F643A'],
@@ -78,7 +79,9 @@ $driveUploadLimit = dashboardBytes($driveStats['effective_upload_limit_bytes'] ?
 .dashboard-subtitle{color:#9CA3AF;font-size:14px;margin-top:6px}
 .kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
 .kpi-card,.dash-panel{background:#1F2937;border:1px solid #374151;border-radius:8px;box-shadow:0 8px 22px rgba(0,0,0,.18)}
-.kpi-card{padding:16px;display:flex;align-items:center;justify-content:space-between;gap:14px}
+.kpi-card{padding:16px;display:flex;align-items:center;justify-content:space-between;gap:14px;text-decoration:none;transition:border-color .18s ease, transform .18s ease, background .18s ease}
+.kpi-card:hover{border-color:#0F643A;background:#243244;transform:translateY(-1px)}
+.kpi-card:focus-visible{outline:2px solid #86EFAC;outline-offset:3px}
 .kpi-label{font-size:11px;text-transform:uppercase;color:#9CA3AF;font-weight:700;letter-spacing:.04em}
 .kpi-value{font-size:30px;line-height:1;font-weight:800;color:#F9FAFB;margin-top:8px}
 .kpi-meta{font-size:12px;color:#9CA3AF;margin-top:8px}
@@ -149,14 +152,14 @@ $driveUploadLimit = dashboardBytes($driveStats['effective_upload_limit_bytes'] ?
 
     <div class="kpi-grid">
         <?php foreach ($kpis as $card): $tone = $toneClasses[$card['tone']]; ?>
-            <div class="kpi-card">
+            <a class="kpi-card" href="<?= e($card['href']) ?>" aria-label="Open <?= e($card['label']) ?>">
                 <div>
                     <p class="kpi-label"><?= e($card['label']) ?></p>
                     <p class="kpi-value"><?= e(number_format((float)$card['value'])) ?></p>
                     <p class="kpi-meta"><?= e($card['meta']) ?></p>
                 </div>
                 <div class="kpi-icon" style="<?= $tone['icon'] ?>"><i class="fas <?= e($card['icon']) ?>"></i></div>
-            </div>
+            </a>
         <?php endforeach; ?>
     </div>
 
