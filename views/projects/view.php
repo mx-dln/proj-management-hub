@@ -23,7 +23,7 @@
     </div></div>
     <div class="card"><div class="card-header"><h3 class="text-lg font-semibold text-[#F9FAFB]">Components</h3></div><div class="card-body">
         <?php if(empty($components)): ?><p class="text-[#6B7280] text-sm">No components yet</p>
-        <?php else: ?><div class="space-y-2"><?php foreach($components as $c): ?><div class="flex items-center gap-3 p-3 rounded-lg bg-[#111827] border border-[#374151]"><div class="w-10 h-10 bg-[#14532D] rounded-lg flex items-center justify-center"><i class="fas fa-puzzle-piece text-[#86EFAC]"></i></div><div class="flex-1"><p class="text-sm font-medium text-[#F9FAFB]"><?= e($c['title']) ?></p><p class="text-xs text-[#6B7280]"><?= e($c['component_code']) ?></p></div><?= getStatusBadge($c['status']) ?></a></div><?php endforeach; ?></div><?php endif; ?>
+        <?php else: ?><div class="space-y-2"><?php foreach($components as $c): ?><a href="<?= SITE_URL ?>/index.php?module=components&search=<?= urlencode($c['component_code']) ?>" class="flex items-center gap-3 p-3 rounded-lg bg-[#111827] border border-[#374151] hover:border-[#0F643A] transition-colors"><div class="w-10 h-10 bg-[#14532D] rounded-lg flex items-center justify-center"><i class="fas fa-puzzle-piece text-[#86EFAC]"></i></div><div class="flex-1"><p class="text-sm font-medium text-[#F9FAFB]"><?= e($c['title']) ?></p><p class="text-xs text-[#6B7280]"><?= e($c['component_code']) ?></p></div><?= getStatusBadge($c['status']) ?></a><?php endforeach; ?></div><?php endif; ?>
     </div></div>
 </div>
 
@@ -43,6 +43,14 @@ foreach ($projectReports ?? [] as $report) {
         <h2>Project Files and Records</h2>
         <p>Proposal, project files, MOA, accomplishments, certificates, and yearly Drive folders for this project.</p>
     </div>
+
+    <section class="project-section">
+        <div class="section-title"><h3>Activities</h3><a href="<?= SITE_URL ?>/index.php?module=activities&search=<?= urlencode($project['title']) ?>" class="btn-ghost">Open Activities</a></div>
+        <div class="overflow-x-auto"><table class="data-table"><thead><tr><th>Activity</th><th>Actions</th></tr></thead><tbody>
+            <?php foreach(($projectActivities ?? []) as $activity): ?><tr><td><span class="table-title"><?= e($activity['title']) ?></span></td><td><a class="btn-ghost" href="<?= SITE_URL ?>/index.php?module=activities&search=<?= urlencode($activity['title']) ?>">View Activity</a></td></tr><?php endforeach; ?>
+            <?php if(empty($projectActivities)): ?><tr><td colspan="2" class="text-center text-[#6B7280] py-6">No activities yet. Create activities from the Activities page after adding components.</td></tr><?php endif; ?>
+        </tbody></table></div>
+    </section>
 
     <section class="project-section">
         <div class="section-title"><h3>Proposals</h3><a href="<?= SITE_URL ?>/index.php?module=proposals&search=<?= urlencode($project['title']) ?>" class="btn-ghost">Open Module</a></div>

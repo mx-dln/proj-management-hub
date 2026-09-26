@@ -5,7 +5,13 @@ $notifCount = getUnreadNotificationCount($user['id']);
 $projectPages = ['projects', 'programs', 'components', 'activities', 'project-files'];
 $primaryItems = [
     ['icon' => 'fas fa-chart-pie', 'label' => 'Dashboard', 'module' => 'dashboard', 'roles' => ['admin','faculty','viewer']],
-    ['icon' => 'fas fa-diagram-project', 'label' => 'Project Management', 'module' => 'projects', 'roles' => ['admin','faculty','viewer']],
+    ['icon' => 'fas fa-diagram-project', 'label' => 'Project Management', 'module' => 'projects', 'roles' => ['admin','faculty','viewer'], 'children' => [
+        ['icon' => 'fas fa-layer-group', 'label' => 'Programs', 'module' => 'programs'],
+        ['icon' => 'fas fa-folder-open', 'label' => 'Projects', 'module' => 'projects'],
+        ['icon' => 'fas fa-puzzle-piece', 'label' => 'Components', 'module' => 'components'],
+        ['icon' => 'fas fa-calendar-check', 'label' => 'Activities', 'module' => 'activities'],
+        ['icon' => 'fas fa-folder-tree', 'label' => 'Files', 'module' => 'project-files'],
+    ]],
     ['icon' => 'fas fa-file-alt', 'label' => 'Proposals', 'module' => 'proposals', 'roles' => ['admin','faculty']],
     ['icon' => 'fas fa-file-signature', 'label' => 'Designation', 'module' => 'designations', 'roles' => ['admin','faculty','viewer']],
     ['icon' => 'fas fa-handshake', 'label' => 'MOA', 'module' => 'moa', 'roles' => ['admin','faculty','viewer']],
@@ -74,6 +80,15 @@ foreach ($navGroups as $groupKey => $group) {
                 <a href="<?= SITE_URL ?>/index.php?module=<?= $item['module'] ?>" class="sidebar-item <?= $isActive ? 'active' : '' ?>" <?= $isActive ? 'aria-current="page"' : '' ?> aria-label="<?= e($item['label']) ?>">
                     <i class="<?= $item['icon'] ?>" aria-hidden="true"></i><span><?= e($item['label']) ?></span>
                 </a>
+                <?php if (!empty($item['children']) && $isActive): ?>
+                    <div class="ml-5 mt-1 mb-2 border-l border-[#1E7A4B] pl-2">
+                        <?php foreach ($item['children'] as $child): ?>
+                            <a href="<?= SITE_URL ?>/index.php?module=<?= e($child['module']) ?>" class="sidebar-item <?= $currentPage === $child['module'] ? 'active' : '' ?> text-sm" aria-label="<?= e($child['label']) ?>">
+                                <i class="<?= e($child['icon']) ?>" aria-hidden="true"></i><span><?= e($child['label']) ?></span>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
             <?php endforeach; ?>
         </div>
         <?php foreach ($navGroups as $groupKey => $group): ?>

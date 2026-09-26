@@ -9,6 +9,10 @@
         <?php endif; ?>
     </div>
 
+    <div class="px-4 pt-4">
+        <?php require __DIR__ . '/navigation.php'; ?>
+    </div>
+
     <div class="sketch-project-layout">
         <aside class="sketch-list">
             <form method="GET" class="sketch-search">
