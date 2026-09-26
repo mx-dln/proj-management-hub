@@ -31,6 +31,7 @@
                         <td data-label="Actions">
                             <div class="flex items-center justify-end gap-1">
                                 <button onclick="viewActivity(<?= $a['id'] ?>, this)" class="action-btn" data-loading title="View"><i class="fas fa-eye text-sm"></i></button>
+                                <button onclick='viewParticipants(<?= (int)$a['id'] ?>, <?= json_encode($a['title']) ?>, this)' class="action-btn" data-loading title="Participants"><i class="fas fa-user-check text-sm"></i></button>
                                 <?php if (Permissions::canEditActivity($a['id'])): ?>
                                     <button onclick="editActivity(<?= $a['id'] ?>, this)" class="action-btn" data-loading title="Edit"><i class="fas fa-edit text-sm"></i></button>
                                 <?php endif; ?>
@@ -49,6 +50,7 @@
 <script>
 const siteUrl = <?= json_encode(SITE_URL) ?>;
 const activityTypes = <?= json_encode(db()->query("SELECT id, name FROM activity_types WHERE is_active = 1")->fetchAll()) ?>;
+const canManageParticipants = <?= json_encode(Permissions::isAdmin()) ?>;
 
 function refreshActivitiesTable() {
     fetch(`${siteUrl}/index.php?module=activities`)
@@ -103,6 +105,23 @@ async function viewActivity(id, btn) {
         const data = await fetchWithLoading(`${siteUrl}/ajax/activities.php?action=get&id=${id}`, btn);
         sl.setTitle(data.title);
         sl.subtitle = data.activity_code;
+        const participants = await fetchWithLoading(`${siteUrl}/ajax/activities.php?action=get_participants&id=${id}`);
+        const participantRows = participants.length ? participants.map(p => `
+            <tr>
+                <td>${escapeHtml(p.name || '-')}</td>
+                <td>${escapeHtml(p.organization || '-')}</td>
+                <td>${escapeHtml(p.municipality || '-')}</td>
+                <td>${escapeHtml(p.attendance_status || '-')}</td>
+                <td>${escapeHtml(p.certificate_status || '-')}</td>
+            </tr>
+        `).join('') : `<tr><td colspan="5" class="text-center text-[#6B7280] py-4">No participants listed yet</td></tr>`;
+        const participantSection = `<div class="form-section">
+            <div class="flex items-center justify-between gap-3 mb-3">
+                <h4 class="form-section-title mb-0">Participants (${participants.length})</h4>
+                ${canManageParticipants ? `<button type="button" onclick='openAddParticipant(${Number(id)}, ${JSON.stringify(data.title || '')})' class="btn-primary"><i class="fas fa-plus mr-1"></i> Add</button>` : ''}
+            </div>
+            <div class="overflow-x-auto"><table class="data-table"><thead><tr><th>Name</th><th>Organization</th><th>Municipality</th><th>Attendance</th><th>Certificate</th></tr></thead><tbody>${participantRows}</tbody></table></div>
+        </div>`;
         const content = viewSectionHtml('Activity Information', [
             viewFieldHtml('Code', `<span class="table-code">${escapeHtml(data.activity_code)}</span>`),
             viewFieldHtml('Status', getStatusBadge(data.status)),
@@ -113,9 +132,49 @@ async function viewActivity(id, btn) {
             viewFieldHtml('End', data.end_datetime ? new Date(data.end_datetime).toLocaleString() : '-'),
             viewFieldHtml('Target Participants', data.target_participants || '-'),
             viewFieldHtml('Budget', formatCurrency(data.budget_allocation)),
-        ]) + (data.description ? viewSectionHtml('Description', [`<div class="full-width"><p class="text-sm text-[#D1D5DB]">${escapeHtml(data.description)}</p></div>`]) : '');
+        ]) + participantSection + (data.description ? viewSectionHtml('Description', [`<div class="full-width"><p class="text-sm text-[#D1D5DB]">${escapeHtml(data.description)}</p></div>`]) : '');
         sl.openView(data.title, data.activity_code, content, { size: 'lg', onEdit: () => editActivity(id, null) });
     } catch (err) { console.error('Error:', err); showToast(err.message || 'Failed to load', 'error'); sl.close(true); }
+}
+
+async function viewParticipants(id, title, btn) {
+    const participants = await fetchWithLoading(`${siteUrl}/ajax/activities.php?action=get_participants&id=${id}`, btn);
+    const rows = participants.length ? participants.map(p => `
+        <tr>
+            <td><span class="table-title">${escapeHtml(p.name || '-')}</span><p class="text-xs text-[#6B7280]">${escapeHtml(p.phone || '')}</p></td>
+            <td>${escapeHtml(p.organization || '-')}</td>
+            <td>${escapeHtml([p.barangay, p.municipality, p.province].filter(Boolean).join(', ') || '-')}</td>
+            <td>${escapeHtml(p.attendance_status || '-')}</td>
+            <td>${escapeHtml(p.certificate_status || '-')}</td>
+        </tr>
+    `).join('') : `<tr><td colspan="5" class="text-center text-[#6B7280] py-6">No participants listed yet</td></tr>`;
+    const addButton = canManageParticipants ? `<button type="button" onclick='openAddParticipant(${Number(id)}, ${JSON.stringify(title || '')})' class="btn-primary"><i class="fas fa-plus mr-1"></i> Add Participant</button>` : '';
+    getSlideOver({size:'lg'}).openView('Participants', title || '', `<div class="form-section">
+        <div class="flex justify-end mb-3">${addButton}</div>
+        <div class="overflow-x-auto"><table class="data-table"><thead><tr><th>Name</th><th>Organization</th><th>Address</th><th>Attendance</th><th>Certificate</th></tr></thead><tbody>${rows}</tbody></table></div>
+    </div>`, {size:'lg'});
+}
+
+function openAddParticipant(activityId, title) {
+    if (!canManageParticipants) return;
+    const sl = getSlideOver({ size: 'md' });
+    const formHtml = `<div class="form-section"><div class="form-grid">
+        <input type="hidden" name="activity_id" value="${Number(activityId)}">
+        ${fieldHtml({ name: 'name', label: 'Participant Name', required: true, fullWidth: true })}
+        ${fieldHtml({ name: 'age', label: 'Age', type: 'number' })}
+        ${fieldHtml({ name: 'gender', label: 'Gender', type: 'select', options: [{value:'',label:'-'},{value:'male',label:'Male'},{value:'female',label:'Female'},{value:'other',label:'Other'}] })}
+        ${fieldHtml({ name: 'organization', label: 'Organization' })}
+        ${fieldHtml({ name: 'occupation', label: 'Occupation' })}
+        ${fieldHtml({ name: 'phone', label: 'Phone' })}
+        ${fieldHtml({ name: 'barangay', label: 'Barangay' })}
+        ${fieldHtml({ name: 'municipality', label: 'Municipality' })}
+        ${fieldHtml({ name: 'province', label: 'Province' })}
+    </div></div>`;
+    sl.openForm('Add Participant', title || '', formHtml, { showSaveAnother: true, size: 'md' });
+    document.getElementById('slideoverForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await submitSlideOverForm(sl, `${siteUrl}/ajax/activities.php?action=add_participant`, new FormData(e.target), () => viewParticipants(activityId, title, null));
+    });
 }
 
 async function editActivity(id, btn) {

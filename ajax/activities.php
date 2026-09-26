@@ -96,6 +96,7 @@ switch ($action) {
 
     case 'get_participants':
         $activityId = intval($_GET['id'] ?? 0);
+        Permissions::requirePermission(Permissions::canAccessActivity($activityId));
         $stmt = db()->prepare("SELECT * FROM activity_participants WHERE activity_id = ? ORDER BY name");
         $stmt->execute([$activityId]);
         jsonResponse($stmt->fetchAll());
