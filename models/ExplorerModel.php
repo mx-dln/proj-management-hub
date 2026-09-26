@@ -144,6 +144,11 @@ class ExplorerModel {
         elseif ($unit === 'k') $number *= 1024;
         return (int)$number;
     }
+    private function diskBytes($function, $path) {
+        if (!function_exists($function)) return null;
+        $bytes = @$function($path);
+        return ($bytes === false || $bytes === null) ? null : (int)$bytes;
+    }
     public function storageStats() {
         $files = 0; $folders = 0; $used = 0;
         foreach ($this->all() as $n) {
@@ -154,17 +159,17 @@ class ExplorerModel {
         $uploadMax = $this->iniBytes(ini_get('upload_max_filesize'));
         $postMax = $this->iniBytes(ini_get('post_max_size'));
         $memory = $this->iniBytes(ini_get('memory_limit'));
-        $diskTotal = @disk_total_space(UPLOAD_PATH) ?: 0;
-        $diskFree = @disk_free_space(UPLOAD_PATH) ?: 0;
-        $limits = array_filter([self::APP_UPLOAD_LIMIT, $uploadMax, $postMax, $diskFree ?: null], fn($v) => $v !== null && $v > 0);
+        $diskTotal = $this->diskBytes('disk_total_space', UPLOAD_PATH);
+        $diskFree = $this->diskBytes('disk_free_space', UPLOAD_PATH);
+        $limits = array_filter([self::APP_UPLOAD_LIMIT, $uploadMax, $postMax, $diskFree], fn($v) => $v !== null && $v > 0);
         $effective = min($limits);
         return [
             'files'=>$files,
             'folders'=>$folders,
             'used_bytes'=>$used,
-            'disk_total_bytes'=>(int)$diskTotal,
-            'disk_free_bytes'=>(int)$diskFree,
-            'disk_used_bytes'=>$diskTotal ? (int)max(0,$diskTotal-$diskFree) : 0,
+            'disk_total_bytes'=>$diskTotal ?? 0,
+            'disk_free_bytes'=>$diskFree ?? 0,
+            'disk_used_bytes'=>($diskTotal && $diskFree !== null) ? (int)max(0,$diskTotal-$diskFree) : 0,
             'app_upload_limit_bytes'=>self::APP_UPLOAD_LIMIT,
             'upload_max_bytes'=>$uploadMax,
             'post_max_bytes'=>$postMax,
@@ -224,8 +229,8 @@ class ExplorerModel {
                     if (!$file || $file['error']!==UPLOAD_ERR_OK || !is_uploaded_file($file['tmp_name'])) throw new RuntimeException('Upload failed or exceeds the server limit',400);
                     $size=filesize($file['tmp_name']);
                     if ($size>self::APP_UPLOAD_LIMIT) throw new RuntimeException('Files must be '.$this->formatBytes(self::APP_UPLOAD_LIMIT).' or smaller',400);
-                    $free = @disk_free_space(UPLOAD_PATH);
-                    if ($free !== false && $size > $free) throw new RuntimeException('This upload is larger than the available hosting storage',507);
+                    $free = $this->diskBytes('disk_free_space', UPLOAD_PATH);
+                    if ($free !== null && $size > $free) throw new RuntimeException('This upload is larger than the available hosting storage',507);
                     $ext=strtolower(pathinfo($name,PATHINFO_EXTENSION));
                     $allowed=['pdf','doc','docx','xls','xlsx','ppt','pptx','jpg','jpeg','png','gif','webp','mp4','webm','mov','mp3','wav','zip','txt','csv'];
                     if (!in_array($ext,$allowed,true)) throw new RuntimeException('This file format is not supported',400);
