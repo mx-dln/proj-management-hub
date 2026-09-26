@@ -32,7 +32,11 @@
                             <div class="flex items-center justify-end gap-1">
                                 <button onclick="viewProposal(<?= $p['id'] ?>, this)" class="action-btn" data-loading title="View"><i class="fas fa-eye text-sm"></i></button>
                                 <?php if ($_SESSION['role'] === 'faculty' && $p['submitted_by'] == $_SESSION['user_id'] && in_array($p['status'], ['draft','returned'])): ?>
-                                    <button onclick="submitProposal(<?= $p['id'] ?>)" class="action-btn action-btn-success" title="Submit"><i class="fas fa-paper-plane text-sm"></i></button>
+                                    <?php if ($p['status'] === 'returned'): ?>
+                                        <button onclick="openProposalRevision(<?= $p['id'] ?>, this)" class="action-btn action-btn-success" title="Revise and Submit"><i class="fas fa-file-upload text-sm"></i></button>
+                                    <?php else: ?>
+                                        <button onclick="submitProposal(<?= $p['id'] ?>)" class="action-btn action-btn-success" title="Submit"><i class="fas fa-paper-plane text-sm"></i></button>
+                                    <?php endif; ?>
                                 <?php endif; ?>
                                 <?php if ($_SESSION['role'] === 'admin' && in_array($p['status'], ['submitted','under_review'])): ?>
                                     <button onclick="reviewProposal(<?= $p['id'] ?>, 'approved')" class="action-btn action-btn-success" title="Approve"><i class="fas fa-check text-sm"></i></button>
@@ -84,8 +88,8 @@ function openProposalSubmit() {
                 ${fieldHtml({ name: 'location', label: 'Location' })}
                 ${fieldHtml({ name: 'beneficiaries', label: 'Beneficiaries' })}
                 ${fieldHtml({ name: 'objectives', label: 'Objectives', type: 'textarea', rows: 3, fullWidth: true })}
-                <label class="form-label full-width">Proposal File
-                    <input name="attachment" type="file" accept=".pdf,.doc,.docx" class="form-input">
+                <label class="form-label full-width">Proposal File *
+                    <input name="attachment" type="file" accept=".pdf,.doc,.docx" class="form-input" required>
                 </label>
             </div>
         </div>`;
@@ -128,6 +132,23 @@ function reviewProposal(id, action) {
 function showReturnModal(id) { document.getElementById('returnId').value = id; document.getElementById('returnModal').classList.remove('hidden'); }
 function closeReturnModal() { document.getElementById('returnModal').classList.add('hidden'); }
 
+async function openProposalRevision(id, btn) {
+    const data = await fetchWithLoading(`${siteUrl}/ajax/proposals.php?action=get&id=${id}`, btn);
+    const sl = getSlideOver({ size: 'md' });
+    const formHtml = `<div class="form-section"><div class="form-grid">
+        <input type="hidden" name="id" value="${Number(id)}">
+        ${fieldHtml({ name: 'remarks', label: 'Revision Remarks / Comments', type: 'textarea', rows: 4, fullWidth: true, required: true, placeholder: 'Describe what you changed before resubmitting.' })}
+        <label class="form-label full-width">Revised Proposal File *
+            <input name="attachment" type="file" accept=".pdf,.doc,.docx" class="form-input" required>
+        </label>
+    </div></div>`;
+    sl.openForm('Revise Proposal', data.proposal_number || '', formHtml, { showSaveAnother: false, size: 'md' });
+    document.getElementById('slideoverForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await submitSlideOverForm(sl, `${siteUrl}/ajax/proposals.php?action=revise`, new FormData(e.target), () => location.reload());
+    });
+}
+
 async function viewProposal(id, btn) {
     const sl = getSlideOver({ size: 'md', title: 'Proposal Details', subtitle: 'Loading...' });
     try {
@@ -148,6 +169,21 @@ async function viewProposal(id, btn) {
                 <a href="${fileUrl}" target="_blank" rel="noopener" class="btn-ghost"><i class="fas fa-external-link-alt mr-1"></i> Open</a>
                 <a href="${fileUrl}&download=1" class="btn-primary"><i class="fas fa-download mr-1"></i> Download</a>
             </div></div>`;
+        }
+        if (Array.isArray(data.history) && data.history.length) {
+            const historyRows = data.history.map(item => {
+                const label = item.item_type === 'version' ? `Version ${escapeHtml(item.version || '')}` : escapeHtml((item.action || '').replace('_', ' '));
+                const note = item.remarks ? `<p class="text-xs text-[#9CA3AF] mt-1">${escapeHtml(item.remarks)}</p>` : '';
+                return `<div class="border border-[#374151] rounded-lg p-3 bg-[#111827]">
+                    <div class="flex items-center justify-between gap-3">
+                        <strong class="text-sm text-[#F9FAFB]">${label}</strong>
+                        <span class="text-xs text-[#6B7280]">${formatDate(item.created_at)}</span>
+                    </div>
+                    <p class="text-xs text-[#D1D5DB] mt-1">${escapeHtml(item.actor_name || '-')}</p>
+                    ${note}
+                </div>`;
+            }).join('');
+            content += `<div class="form-section"><h4 class="form-section-title">Submission History</h4><div class="space-y-2">${historyRows}</div></div>`;
         }
 
         // Parse remarks - might be JSON for program proposals

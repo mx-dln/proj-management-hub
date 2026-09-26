@@ -119,6 +119,12 @@ $driveUploadLimit = dashboardBytes($driveStats['effective_upload_limit_bytes'] ?
 .drive-fill{height:100%;background:#0F643A;border-radius:999px}
 .drive-card{background:#111827;border:1px solid #374151;border-radius:8px;padding:14px;display:flex;justify-content:space-between;gap:12px;align-items:center}
 .drive-card i{width:38px;height:38px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:#14532D;color:#BBF7D0}
+.notification-list{display:flex;flex-direction:column;gap:10px}
+.notification-item{display:flex;gap:12px;align-items:flex-start;background:#111827;border:1px solid #374151;border-radius:8px;padding:12px;text-decoration:none}
+.notification-item i{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:#1D4ED8;color:#DBEAFE;flex:none}
+.notification-title{font-size:13px;font-weight:800;color:#F9FAFB}
+.notification-message{font-size:12px;color:#D1D5DB;margin-top:3px}
+.notification-time{font-size:11px;color:#6B7280;margin-top:5px}
 @media (max-width:1200px){.kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.dash-grid,.split-grid,.drive-panel{grid-template-columns:1fr}}
 @media (max-width:640px){.dashboard-head{align-items:flex-start;flex-direction:column}.kpi-grid,.insight-strip{grid-template-columns:1fr}.chart-frame{height:250px}.drive-storage-top{flex-direction:column}.drive-capacity{white-space:normal}}
 </style>
@@ -168,6 +174,27 @@ $driveUploadLimit = dashboardBytes($driveStats['effective_upload_limit_bytes'] ?
             <p class="insight-value"><?= number_format((float)($stats['pending_proposals'] ?? $stats['my_pending_proposals'] ?? 0)) ?></p>
         </div>
     </div>
+
+    <?php if (!empty($notifications)): ?>
+    <section class="dash-panel">
+        <div class="dash-panel-head">
+            <h2 class="dash-panel-title">Notifications</h2>
+            <a class="dash-panel-note" href="index.php?module=notifications">View all</a>
+        </div>
+        <div class="dash-panel-body notification-list">
+            <?php foreach ($notifications as $notification): ?>
+                <a class="notification-item" href="<?= e(!empty($notification['action_url']) ? SITE_URL . $notification['action_url'] : SITE_URL . '/index.php?module=notifications') ?>">
+                    <i class="fas fa-bell"></i>
+                    <div>
+                        <p class="notification-title"><?= e($notification['title']) ?></p>
+                        <p class="notification-message"><?= e($notification['message']) ?></p>
+                        <p class="notification-time"><?= e(timeAgo($notification['created_at'])) ?></p>
+                    </div>
+                </a>
+            <?php endforeach; ?>
+        </div>
+    </section>
+    <?php endif; ?>
 
     <section class="dash-panel">
         <div class="dash-panel-head">

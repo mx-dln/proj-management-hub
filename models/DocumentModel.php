@@ -106,6 +106,35 @@ class DocumentModel {
         }
         $documentId = (int)db()->lastInsertId();
         auditLog('create', 'document', $documentId, 'Uploaded document: ' . $title);
+        if ($isDesignation) {
+            self::notifyDesignationRecipients($type, $id, $title, $documentId);
+        }
         return $documentId;
+    }
+
+    private static function notifyDesignationRecipients($type, $id, $title, $documentId) {
+        $assignmentTable = $type === 'activity' ? 'activity_assignments' : $type . '_assignments';
+        $entityColumn = $type === 'activity' ? 'activity_id' : $type . '_id';
+        if (!in_array($type, array_keys(self::ENTITY_TABLES), true)) return;
+
+        $stmt = db()->prepare("
+            SELECT DISTINCT fp.user_id
+            FROM {$assignmentTable} a
+            JOIN faculty_profiles fp ON a.faculty_id = fp.id
+            JOIN users u ON fp.user_id = u.id
+            WHERE a.{$entityColumn} = ? AND a.is_active = 1 AND u.is_active = 1 AND u.deleted_at IS NULL
+        ");
+        $stmt->execute([$id]);
+        foreach ($stmt->fetchAll() as $recipient) {
+            createNotification(
+                (int)$recipient['user_id'],
+                'New Designation',
+                "A designation file was assigned to you: {$title}",
+                'info',
+                'document',
+                $documentId,
+                '/index.php?module=designations'
+            );
+        }
     }
 }

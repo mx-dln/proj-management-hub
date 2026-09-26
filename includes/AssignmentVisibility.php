@@ -182,7 +182,7 @@ class AssignmentVisibility {
     // ============================================
     // REPORTS
     // ============================================
-    public static function getVisibleReports($search = '', $type = '', $limit = 50, $offset = 0) {
+    public static function getVisibleReports($search = '', $type = '', $year = '', $quarter = '', $limit = 50, $offset = 0) {
         $facultyId = self::isFaculty() ? self::getFacultyId() : null;
         
         $where = " WHERE 1=1";
@@ -190,6 +190,8 @@ class AssignmentVisibility {
         
         if ($search) { $where .= " AND (ar.title LIKE ? OR ar.report_number LIKE ?)"; $params[] = "%$search%"; $params[] = "%$search%"; }
         if ($type) { $where .= " AND ar.report_type = ?"; $params[] = $type; }
+        if ($year) { $where .= " AND ar.period_year = ?"; $params[] = (int)$year; }
+        if ($quarter) { $where .= " AND ar.period_quarter = ?"; $params[] = $quarter; }
         
         if ($facultyId) {
             $where .= " AND ar.project_id IN (SELECT project_id FROM project_assignments WHERE faculty_id = ? AND is_active = 1)";
@@ -201,7 +203,7 @@ class AssignmentVisibility {
         $stmt->execute($params);
         $total = (int)$stmt->fetch()['count'];
         
-        $sql = "SELECT ar.*, p.title as project_title, CONCAT(fp.first_name, ' ', fp.last_name) as submitter_name FROM accomplishment_reports ar JOIN projects p ON ar.project_id = p.id LEFT JOIN faculty_profiles fp ON ar.submitted_by = fp.user_id{$where} ORDER BY ar.created_at DESC LIMIT ? OFFSET ?";
+        $sql = "SELECT ar.*, p.title as project_title, CONCAT(fp.first_name, ' ', fp.last_name) as submitter_name FROM accomplishment_reports ar JOIN projects p ON ar.project_id = p.id LEFT JOIN faculty_profiles fp ON ar.submitted_by = fp.user_id{$where} ORDER BY ar.period_year DESC, FIELD(ar.period_quarter, 'Q4','Q3','Q2','Q1'), ar.created_at DESC LIMIT ? OFFSET ?";
         $params[] = $limit; $params[] = $offset;
         $stmt = db()->prepare($sql);
         $stmt->execute($params);

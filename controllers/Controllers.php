@@ -302,7 +302,7 @@ class ReportController {
         $limit = ITEMS_PER_PAGE;
         $offset = ($page - 1) * $limit;
 
-        $result = AssignmentVisibility::getVisibleReports($_GET['search'] ?? '', $_GET['type'] ?? '', $limit, $offset);
+        $result = AssignmentVisibility::getVisibleReports($_GET['search'] ?? '', $_GET['type'] ?? '', $_GET['year'] ?? '', $_GET['quarter'] ?? '', $limit, $offset);
         $reports = $result['data'];
         $totalPages = ceil($result['total'] / $limit);
 

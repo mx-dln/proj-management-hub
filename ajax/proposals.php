@@ -42,6 +42,9 @@ switch ($action) {
 
         $title = sanitize($_POST['title'] ?? '');
         if (empty($title)) jsonResponse(['success' => false, 'message' => 'Title is required'], 400);
+        if (empty($_FILES['attachment']['tmp_name'])) jsonResponse(['success' => false, 'message' => 'Proposal file is required'], 400);
+        $upload = uploadFile($_FILES['attachment'], 'proposals', ['pdf','doc','docx']);
+        if (!$upload['success']) jsonResponse(['success' => false, 'message' => $upload['error'] ?? 'Upload failed'], 400);
 
         // Create a proposal with no project_id (it's a program proposal)
         $data = [
@@ -67,16 +70,14 @@ switch ($action) {
         ];
 
         try {
-            $sql = "INSERT INTO proposals (proposal_number, project_id, title, submitted_by, date_submitted, status, remarks) VALUES (?, ?, ?, ?, ?, ?, ?)";
+            $sql = "INSERT INTO proposals (proposal_number, project_id, title, submitted_by, date_submitted, status, remarks, attachment) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
             db()->prepare($sql)->execute([
                 $data['proposal_number'], $data['project_id'], $data['title'],
-                $data['submitted_by'], $data['date_submitted'], $data['status'], $data['remarks']
+                $data['submitted_by'], $data['date_submitted'], $data['status'], $data['remarks'], $upload['file_path']
             ]);
             $id = db()->lastInsertId();
-            if (!empty($_FILES['attachment']['tmp_name'])) {
-                $result = uploadFile($_FILES['attachment'], 'proposals', ['pdf','doc','docx']);
-                if ($result['success']) db()->prepare("UPDATE proposals SET attachment = ? WHERE id = ?")->execute([$result['file_path'], $id]);
-            }
+            db()->prepare("INSERT INTO proposal_versions (proposal_id, version, attachment, remarks, uploaded_by) VALUES (?, 1, ?, ?, ?)")
+                ->execute([$id, $upload['file_path'], 'Initial submission', $user['id']]);
 
             // Notify admins
             $admins = db()->query("SELECT id FROM users WHERE role = 'admin' AND deleted_at IS NULL")->fetchAll();
@@ -144,6 +145,47 @@ switch ($action) {
             auditLog('edit', 'proposal', $id, 'Submitted proposal');
             jsonResponse(['success' => true, 'message' => 'Proposal submitted']);
         } catch (Exception $e) { jsonResponse(['success' => false, 'message' => 'Failed'], 500); }
+        break;
+
+    case 'revise':
+        if ($user['role'] !== 'faculty') jsonResponse(['success' => false, 'message' => 'Only faculty can revise proposals'], 403);
+        $id = intval($_POST['id'] ?? 0);
+        $remarks = sanitize($_POST['remarks'] ?? '');
+        if (!$id) jsonResponse(['success' => false, 'message' => 'Invalid proposal'], 400);
+        if (empty($_FILES['attachment']['tmp_name'])) jsonResponse(['success' => false, 'message' => 'Revised proposal file is required'], 400);
+
+        $proposal = db()->prepare("SELECT * FROM proposals WHERE id = ?");
+        $proposal->execute([$id]);
+        $p = $proposal->fetch();
+        if (!$p) jsonResponse(['success' => false, 'message' => 'Proposal not found'], 404);
+        if ((int)$p['submitted_by'] !== (int)$user['id'] || $p['status'] !== 'returned') {
+            jsonResponse(['success' => false, 'message' => 'Only the owner can revise a returned proposal'], 403);
+        }
+
+        $result = uploadFile($_FILES['attachment'], 'proposals', ['pdf','doc','docx']);
+        if (!$result['success']) jsonResponse(['success' => false, 'message' => $result['error'] ?? 'Upload failed'], 400);
+
+        try {
+            $nextVersion = (int)$p['version'] + 1;
+            db()->beginTransaction();
+            db()->prepare("UPDATE proposals SET attachment = ?, version = ?, status = 'submitted', date_submitted = CURDATE(), reviewed_by = NULL, reviewed_at = NULL WHERE id = ?")
+                ->execute([$result['file_path'], $nextVersion, $id]);
+            db()->prepare("INSERT INTO proposal_versions (proposal_id, version, attachment, remarks, uploaded_by) VALUES (?, ?, ?, ?, ?)")
+                ->execute([$id, $nextVersion, $result['file_path'], $remarks ?: 'Revised submission', $user['id']]);
+            db()->prepare("INSERT INTO proposal_approvals (proposal_id, approver_id, action, remarks) VALUES (?, ?, 'submitted', ?)")
+                ->execute([$id, $user['id'], $remarks ?: 'Revised and resubmitted']);
+
+            $admins = db()->query("SELECT id FROM users WHERE role = 'admin' AND deleted_at IS NULL AND is_active = 1")->fetchAll();
+            foreach ($admins as $a) {
+                createNotification($a['id'], 'Proposal Resubmitted', "A revised proposal '{$p['title']}' is ready for review.", 'info', 'proposal', $id, '/index.php?module=proposals');
+            }
+            db()->commit();
+            auditLog('edit', 'proposal', $id, 'Revised and resubmitted proposal');
+            jsonResponse(['success' => true, 'message' => 'Proposal revised and submitted']);
+        } catch (Exception $e) {
+            db()->rollback();
+            jsonResponse(['success' => false, 'message' => 'Failed: ' . $e->getMessage()], 500);
+        }
         break;
 
     case 'review':
@@ -238,6 +280,21 @@ switch ($action) {
                 $data['proposal_meta'] = $meta;
                 $data['is_program_proposal'] = ($meta['type'] === 'program_proposal');
             }
+
+            $history = db()->prepare("
+                SELECT 'review' as item_type, pa.action, pa.remarks, pa.performed_at as created_at, u.username as actor_name, NULL as version, NULL as attachment
+                FROM proposal_approvals pa
+                LEFT JOIN users u ON pa.approver_id = u.id
+                WHERE pa.proposal_id = ?
+                UNION ALL
+                SELECT 'version' as item_type, 'uploaded' as action, pv.remarks, pv.created_at, u.username as actor_name, pv.version, pv.attachment
+                FROM proposal_versions pv
+                LEFT JOIN users u ON pv.uploaded_by = u.id
+                WHERE pv.proposal_id = ?
+                ORDER BY created_at DESC
+            ");
+            $history->execute([$id, $id]);
+            $data['history'] = $history->fetchAll();
             
             jsonResponse($data);
         } catch (Exception $e) {
