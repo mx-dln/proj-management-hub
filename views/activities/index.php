@@ -50,7 +50,6 @@
 <script>
 const siteUrl = <?= json_encode(SITE_URL) ?>;
 const activityTypes = <?= json_encode(db()->query("SELECT id, name FROM activity_types WHERE is_active = 1")->fetchAll()) ?>;
-const canManageParticipants = <?= json_encode(Permissions::isAdmin()) ?>;
 
 function refreshActivitiesTable() {
     fetch(`${siteUrl}/index.php?module=activities`)
@@ -118,7 +117,7 @@ async function viewActivity(id, btn) {
         const participantSection = `<div class="form-section">
             <div class="flex items-center justify-between gap-3 mb-3">
                 <h4 class="form-section-title mb-0">Participants (${participants.length})</h4>
-                ${canManageParticipants ? `<button type="button" onclick='openAddParticipant(${Number(id)}, ${JSON.stringify(data.title || '')})' class="btn-primary"><i class="fas fa-plus mr-1"></i> Add</button>` : ''}
+                ${data.can_add_participants ? `<button type="button" onclick='openAddParticipant(${Number(id)}, ${JSON.stringify(data.title || '')})' class="btn-primary"><i class="fas fa-plus mr-1"></i> Add</button>` : ''}
             </div>
             <div class="overflow-x-auto"><table class="data-table"><thead><tr><th>Name</th><th>Organization</th><th>Municipality</th><th>Attendance</th><th>Certificate</th></tr></thead><tbody>${participantRows}</tbody></table></div>
         </div>`;
@@ -138,6 +137,7 @@ async function viewActivity(id, btn) {
 }
 
 async function viewParticipants(id, title, btn) {
+    const activity = await fetch(`${siteUrl}/ajax/activities.php?action=get&id=${id}`).then(r => r.json());
     const participants = await fetchWithLoading(`${siteUrl}/ajax/activities.php?action=get_participants&id=${id}`, btn);
     const rows = participants.length ? participants.map(p => `
         <tr>
@@ -148,7 +148,7 @@ async function viewParticipants(id, title, btn) {
             <td>${escapeHtml(p.certificate_status || '-')}</td>
         </tr>
     `).join('') : `<tr><td colspan="5" class="text-center text-[#6B7280] py-6">No participants listed yet</td></tr>`;
-    const addButton = canManageParticipants ? `<button type="button" onclick='openAddParticipant(${Number(id)}, ${JSON.stringify(title || '')})' class="btn-primary"><i class="fas fa-plus mr-1"></i> Add Participant</button>` : '';
+    const addButton = activity.can_add_participants ? `<button type="button" onclick='openAddParticipant(${Number(id)}, ${JSON.stringify(title || '')})' class="btn-primary"><i class="fas fa-plus mr-1"></i> Add Participant</button>` : '';
     getSlideOver({size:'lg'}).openView('Participants', title || '', `<div class="form-section">
         <div class="flex justify-end mb-3">${addButton}</div>
         <div class="overflow-x-auto"><table class="data-table"><thead><tr><th>Name</th><th>Organization</th><th>Address</th><th>Attendance</th><th>Certificate</th></tr></thead><tbody>${rows}</tbody></table></div>
@@ -156,7 +156,6 @@ async function viewParticipants(id, title, btn) {
 }
 
 function openAddParticipant(activityId, title) {
-    if (!canManageParticipants) return;
     const sl = getSlideOver({ size: 'md' });
     const formHtml = `<div class="form-section"><div class="form-grid">
         <input type="hidden" name="activity_id" value="${Number(activityId)}">

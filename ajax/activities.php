@@ -42,6 +42,7 @@ switch ($action) {
             $stmt->execute([$id]);
             $data = $stmt->fetch();
             if (!$data) jsonResponse(['success' => false, 'message' => 'Not found'], 404);
+            $data['can_add_participants'] = Permissions::canAddActivityParticipants($id);
             jsonResponse($data);
         } catch (Exception $e) {
             jsonResponse(['success' => false, 'message' => 'Error: ' . $e->getMessage()], 500);
@@ -70,9 +71,10 @@ switch ($action) {
         break;
 
     case 'add_participant':
-        Permissions::requirePermission(Permissions::isAdmin());
+        $activityId = intval($_POST['activity_id'] ?? 0);
+        Permissions::requirePermission(Permissions::canAddActivityParticipants($activityId));
         $data = [
-            'activity_id' => intval($_POST['activity_id'] ?? 0),
+            'activity_id' => $activityId,
             'name' => sanitize($_POST['name'] ?? ''),
             'age' => intval($_POST['age'] ?? 0) ?: null,
             'gender' => sanitize($_POST['gender'] ?? ''),

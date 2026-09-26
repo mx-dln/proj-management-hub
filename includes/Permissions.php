@@ -165,6 +165,9 @@ class Permissions {
     public static function canCreateActivity() { return self::isAdmin(); }
     public static function canEditActivity($id) { return self::isAdmin(); }
     public static function canDeleteActivity($id) { return self::isAdmin(); }
+    public static function canAddActivityParticipants($activityId) {
+        return self::isFaculty() && self::isAssignedToActivity($activityId);
+    }
 
     // ============================================
     // ASSIGNMENT PERMISSIONS (Admin only)
