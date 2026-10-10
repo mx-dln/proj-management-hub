@@ -72,28 +72,22 @@
 const siteUrl = <?= json_encode(SITE_URL) ?>;
 
 function openProposalSubmit() {
-    const sl = getSlideOver({ size: 'lg' });
+    const sl = getSlideOver({ size: 'md' });
     const formHtml = `
         <div class="form-section">
-            <h4 class="form-section-title">Proposal Information</h4>
+            <h4 class="form-section-title">Scanned Proposal Submission</h4>
             <div class="form-grid">
-                ${fieldHtml({ name: 'title', label: 'Project / Proposal Title', required: true, fullWidth: true })}
-                ${fieldHtml({ name: 'description', label: 'Description', type: 'textarea', rows: 3, fullWidth: true })}
-                ${fieldHtml({ name: 'college', label: 'College' })}
-                ${fieldHtml({ name: 'campus', label: 'Campus', value: 'Cauayan Campus' })}
-                ${fieldHtml({ name: 'start_date', label: 'Start Date', type: 'date' })}
-                ${fieldHtml({ name: 'end_date', label: 'End Date', type: 'date' })}
-                ${fieldHtml({ name: 'budget', label: 'Budget', type: 'number', placeholder: '0.00' })}
-                ${fieldHtml({ name: 'funding_source', label: 'Funding Source' })}
-                ${fieldHtml({ name: 'location', label: 'Location' })}
-                ${fieldHtml({ name: 'beneficiaries', label: 'Beneficiaries' })}
-                ${fieldHtml({ name: 'objectives', label: 'Objectives', type: 'textarea', rows: 3, fullWidth: true })}
-                <label class="form-label full-width">Proposal File *
-                    <input name="attachment" type="file" accept=".pdf,.doc,.docx" class="form-input" required>
+                ${fieldHtml({ name: 'title', label: 'Proposal Title', required: true, fullWidth: true })}
+                ${fieldHtml({ name: 'project_program', label: 'Project / Program', required: true, fullWidth: true })}
+                ${fieldHtml({ name: 'project_leader', label: 'Project Leader / Head', required: true, fullWidth: true })}
+                ${fieldHtml({ name: 'date_submitted', label: 'Date Submitted', type: 'date', value: new Date().toISOString().slice(0, 10), required: true, fullWidth: true })}
+                <label class="form-label full-width">Scanned Proposal File *
+                    <input name="attachment" type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" class="form-input" required>
                 </label>
+                <p class="full-width text-xs text-[#9CA3AF]">Upload the scanned/signed proposal document. Other details will be reviewed from the file by Admin.</p>
             </div>
         </div>`;
-    sl.openForm('Add Proposal', 'Send proposal to admin for review', formHtml, { showSaveAnother: false, size: 'lg' });
+    sl.openForm('Add Proposal', 'Upload scanned proposal for admin review', formHtml, { showSaveAnother: false, size: 'md' });
     document.getElementById('slideoverForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         await submitSlideOverForm(sl, `${siteUrl}/ajax/proposals.php?action=create_program_proposal`, new FormData(e.target), () => location.reload());
@@ -151,8 +145,8 @@ async function openProposalRevision(id, btn) {
     const formHtml = `<div class="form-section"><div class="form-grid">
         <input type="hidden" name="id" value="${Number(id)}">
         ${fieldHtml({ name: 'remarks', label: 'Revision Remarks / Comments', type: 'textarea', rows: 4, fullWidth: true, required: true, placeholder: 'Describe what you changed before resubmitting.' })}
-        <label class="form-label full-width">Revised Proposal File *
-            <input name="attachment" type="file" accept=".pdf,.doc,.docx" class="form-input" required>
+        <label class="form-label full-width">Revised Scanned Proposal File *
+            <input name="attachment" type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" class="form-input" required>
         </label>
     </div></div>`;
     sl.openForm('Revise Proposal', data.proposal_number || '', formHtml, { showSaveAnother: false, size: 'md' });
@@ -204,17 +198,21 @@ async function viewProposal(id, btn) {
         try {
             const meta = JSON.parse(data.remarks);
             if (meta && meta.type === 'program_proposal') {
-                // Program proposal - show structured data
-                content += viewSectionHtml('Program Details', [
-                    viewFieldHtml('College', escapeHtml(meta.college || '-')),
-                    viewFieldHtml('Campus', escapeHtml(meta.campus || '-')),
-                    viewFieldHtml('Budget', formatCurrency(meta.budget)),
-                    viewFieldHtml('Funding Source', escapeHtml(meta.funding_source || '-')),
-                    viewFieldHtml('Start Date', formatDate(meta.start_date)),
-                    viewFieldHtml('End Date', formatDate(meta.end_date)),
-                    viewFieldHtml('Location', escapeHtml(meta.location || '-')),
-                    viewFieldHtml('Beneficiaries', escapeHtml(meta.beneficiaries || '-')),
-                ]);
+                const detailFields = [
+                    viewFieldHtml('Project / Program', escapeHtml(meta.project_program || data.project_title || '-')),
+                    viewFieldHtml('Project Leader / Head', escapeHtml(meta.project_leader || '-')),
+                    viewFieldHtml('Submission Type', escapeHtml(meta.submission_mode || 'Scanned proposal upload')),
+                    viewFieldHtml('Date Submitted', formatDate(meta.date_submitted || data.date_submitted)),
+                ];
+                if (meta.college) detailFields.push(viewFieldHtml('College', escapeHtml(meta.college)));
+                if (meta.campus) detailFields.push(viewFieldHtml('Campus', escapeHtml(meta.campus)));
+                if (meta.budget) detailFields.push(viewFieldHtml('Budget', formatCurrency(meta.budget)));
+                if (meta.funding_source) detailFields.push(viewFieldHtml('Funding Source', escapeHtml(meta.funding_source)));
+                if (meta.start_date) detailFields.push(viewFieldHtml('Start Date', formatDate(meta.start_date)));
+                if (meta.end_date) detailFields.push(viewFieldHtml('End Date', formatDate(meta.end_date)));
+                if (meta.location) detailFields.push(viewFieldHtml('Location', escapeHtml(meta.location)));
+                if (meta.beneficiaries) detailFields.push(viewFieldHtml('Beneficiaries', escapeHtml(meta.beneficiaries)));
+                content += viewSectionHtml('Proposal Upload Details', detailFields);
                 content += proposalBudgetCommentsHtml(data);
                 if (meta.description) {
                     content += `<div class="form-section"><h4 class="form-section-title">Description</h4><p class="text-sm text-[#D1D5DB]">${escapeHtml(meta.description)}</p></div>`;

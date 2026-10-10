@@ -1,10 +1,12 @@
 <?php
 if (Permissions::isAdmin()) {
     $projectsForReports = db()->query("SELECT id, title FROM projects WHERE deleted_at IS NULL ORDER BY title")->fetchAll();
+} elseif (Permissions::isFaculty()) {
+    $projectsForReports = AssignmentVisibility::getVisibleProjects('', '', '', 500, 0)['data'];
 } else {
     $projectsForReports = [];
 }
-$canUploadReport = Permissions::isAdmin();
+$canUploadReport = Permissions::isAdmin() || Permissions::isFaculty();
 $reportsByQuarter = [];
 foreach ($reports as $report) {
     $reportsByQuarter[$report['period_quarter'] ?: 'Q1'][] = $report;
@@ -90,8 +92,10 @@ function openReportUpload(q){
         ${fieldHtml({name:'report_type',label:'Type',type:'select',value:'quarterly',options:[{value:'quarterly',label:'Quarterly'}]})}
         ${fieldHtml({name:'period_quarter',label:'Quarter',type:'select',value:q,options:['Q1','Q2','Q3','Q4'].map(x=>({value:x,label:x}))})}
         ${fieldHtml({name:'period_year',label:'Year',type:'number',value:'<?= e($selectedYear ?: date('Y')) ?>'})}
-        ${fieldHtml({name:'summary',label:'Summary',type:'textarea',rows:3,fullWidth:true})}
-        <label class="form-label full-width">File<input name="attachment" type="file" class="form-input"></label>
+        ${fieldHtml({name:'summary',label:'Summary / Notes',type:'textarea',rows:3,fullWidth:true,placeholder:'Optional. Admin can also review details from the uploaded accomplishment file.'})}
+        <label class="form-label full-width">Scanned / Uploaded Report File *
+            <input name="attachment" type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xls,.xlsx,.csv" class="form-input" required>
+        </label>
     </div></div>`;
     sl.openForm(`Upload ${q}`, 'Accomplishment file', formHtml, {showSaveAnother:false});
     document.getElementById('slideoverForm').addEventListener('submit', async e => {

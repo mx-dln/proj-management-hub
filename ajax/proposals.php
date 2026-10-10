@@ -102,27 +102,17 @@ switch ($action) {
         }
 
         $title = sanitize($_POST['title'] ?? '');
+        $projectProgram = sanitize($_POST['project_program'] ?? '');
+        $projectLeader = sanitize($_POST['project_leader'] ?? '');
+        $dateSubmitted = sanitize($_POST['date_submitted'] ?? date('Y-m-d'));
         if (empty($title)) jsonResponse(['success' => false, 'message' => 'Title is required'], 400);
-        $requiredFields = [
-            'description' => 'Description',
-            'college' => 'College',
-            'campus' => 'Campus',
-            'start_date' => 'Start date',
-            'end_date' => 'End date',
-            'budget' => 'Budget',
-            'funding_source' => 'Funding source',
-            'objectives' => 'Objectives',
-            'beneficiaries' => 'Beneficiaries',
-            'location' => 'Location',
-        ];
-        foreach ($requiredFields as $field => $label) {
-            if (trim((string)($_POST[$field] ?? '')) === '') {
-                jsonResponse(['success' => false, 'message' => $label . ' is required'], 400);
-            }
+        if (empty($projectProgram)) jsonResponse(['success' => false, 'message' => 'Project / Program is required'], 400);
+        if (empty($projectLeader)) jsonResponse(['success' => false, 'message' => 'Project leader / head is required'], 400);
+        if (empty($dateSubmitted) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateSubmitted)) {
+            jsonResponse(['success' => false, 'message' => 'Enter a valid submission date'], 400);
         }
-        if (floatval($_POST['budget'] ?? 0) <= 0) jsonResponse(['success' => false, 'message' => 'Budget must be greater than zero'], 400);
         if (empty($_FILES['attachment']['tmp_name'])) jsonResponse(['success' => false, 'message' => 'Proposal file is required'], 400);
-        $upload = uploadFile($_FILES['attachment'], 'proposals', ['pdf','doc','docx']);
+        $upload = uploadFile($_FILES['attachment'], 'proposals', ['pdf','doc','docx','jpg','jpeg','png']);
         if (!$upload['success']) jsonResponse(['success' => false, 'message' => $upload['error'] ?? 'Upload failed'], 400);
 
         // Create a proposal with no project_id (it's a program proposal)
@@ -131,13 +121,17 @@ switch ($action) {
             'project_id' => null, // No project yet
             'title' => $title,
             'submitted_by' => $user['id'],
-            'date_submitted' => date('Y-m-d'),
+            'date_submitted' => $dateSubmitted,
             'status' => 'submitted',
             'remarks' => json_encode([
                 'type' => 'program_proposal',
+                'submission_mode' => 'Scanned proposal upload',
+                'project_program' => $projectProgram,
+                'project_leader' => $projectLeader,
+                'date_submitted' => $dateSubmitted,
                 'description' => sanitize($_POST['description'] ?? ''),
                 'college' => sanitize($_POST['college'] ?? ''),
-                'campus' => sanitize($_POST['campus'] ?? ''),
+                'campus' => sanitize($_POST['campus'] ?? 'Cauayan Campus'),
                 'start_date' => $_POST['start_date'] ?? '',
                 'end_date' => $_POST['end_date'] ?? '',
                 'budget' => floatval($_POST['budget'] ?? 0),
@@ -241,7 +235,7 @@ switch ($action) {
             jsonResponse(['success' => false, 'message' => 'Only the owner can revise a returned proposal'], 403);
         }
 
-        $result = uploadFile($_FILES['attachment'], 'proposals', ['pdf','doc','docx']);
+        $result = uploadFile($_FILES['attachment'], 'proposals', ['pdf','doc','docx','jpg','jpeg','png']);
         if (!$result['success']) jsonResponse(['success' => false, 'message' => $result['error'] ?? 'Upload failed'], 400);
 
         try {

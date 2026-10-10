@@ -8,11 +8,11 @@ $user = currentUser();
 
 switch ($action) {
     case 'template':
-        Permissions::requirePermission(Permissions::canGenerateReports());
         $projectId = intval($_GET['project_id'] ?? 0);
         $year = intval($_GET['year'] ?? date('Y'));
         $quarter = sanitize($_GET['quarter'] ?? 'Q1');
         if (!$projectId || !in_array($quarter, ['Q1','Q2','Q3','Q4'], true)) jsonResponse(['success' => false, 'message' => 'Project, year, and quarter are required'], 400);
+        Permissions::requirePermission(Permissions::canGenerateReports() && (Permissions::isAdmin() || Permissions::isViewer() || Permissions::canAccessProject($projectId)));
         try {
             $projectStmt = db()->prepare("
                 SELECT p.*, pr.title as program_title, pa.name as partner_name, bg.name as beneficiary_name,
@@ -145,18 +145,13 @@ switch ($action) {
         if (!$data['project_id']) jsonResponse(['success' => false, 'message' => 'Project is required'], 400);
         if ($data['report_type'] === 'quarterly' && empty($data['period_quarter'])) jsonResponse(['success' => false, 'message' => 'Quarter is required for quarterly reports'], 400);
         if ($data['period_year'] < 2021 || $data['period_year'] > (int)date('Y') + 1) jsonResponse(['success' => false, 'message' => 'Enter a valid report year'], 400);
+        if (empty($_FILES['attachment']['tmp_name'])) jsonResponse(['success' => false, 'message' => 'Report file is required'], 400);
+        $result = uploadFile($_FILES['attachment'], 'reports', ['pdf','doc','docx','jpg','jpeg','png','xls','xlsx','csv']);
+        if (!$result['success']) jsonResponse(['success' => false, 'message' => $result['error'] ?? 'Attachment upload failed'], 422);
         try {
-            $sql = "INSERT INTO accomplishment_reports (report_number, report_type, period_quarter, period_year, project_id, title, summary, submitted_by, date_submitted, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-            db()->prepare($sql)->execute(array_values($data));
+            $sql = "INSERT INTO accomplishment_reports (report_number, report_type, period_quarter, period_year, project_id, title, summary, submitted_by, date_submitted, status, attachment) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            db()->prepare($sql)->execute(array_merge(array_values($data), [$result['file_path']]));
             $id = db()->lastInsertId();
-            if (!empty($_FILES['attachment']['tmp_name'])) {
-                $result = uploadFile($_FILES['attachment'], 'reports');
-                if ($result['success']) {
-                    db()->prepare("UPDATE accomplishment_reports SET attachment = ? WHERE id = ?")->execute([$result['file_path'], $id]);
-                } else {
-                    jsonResponse(['success' => false, 'message' => $result['error'] ?? 'Attachment upload failed'], 422);
-                }
-            }
             auditLog('create', 'report', $id, 'Created report: ' . $data['title'], false, $projectId);
             jsonResponse(['success' => true, 'message' => 'Report created', 'id' => $id]);
         } catch (Exception $e) { jsonResponse(['success' => false, 'message' => 'Failed'], 500); }
