@@ -66,12 +66,13 @@
         <?php if (empty($documents)): ?>
             <div class="empty-state"><div class="empty-state-icon"><i class="fas fa-file-alt"></i></div><h3 class="empty-state-title">No <?= $isDesignation ? 'designation files' : 'documents' ?> found</h3></div>
         <?php else: ?>
-            <div class="overflow-x-auto"><table class="data-table"><thead><tr><th>Title</th><th>Category</th><th>Type</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+            <div class="overflow-x-auto"><table class="data-table"><thead><tr><th>Title</th><th>Category</th><th>Related Type</th><th>File</th><th>Status</th><th>Actions</th></tr></thead><tbody>
                 <?php foreach ($documents as $i => $d): ?>
                     <tr class="animate-row" style="animation-delay:<?= $i * 0.05 ?>s">
                         <td data-label="Title"><span class="table-title"><?= e($d['title']) ?></span><p class="text-xs text-[#6B7280]"><?= e($d['file_name']) ?></p></td>
                         <td data-label="Category"><span class="text-[#D1D5DB]"><?= e($d['category_name'] ?? '-') ?></span></td>
-                        <td data-label="Type"><span class="text-[#D1D5DB]"><?= e($d['entity_type']) ?></span></td>
+                        <td data-label="Related Type"><span class="text-[#D1D5DB]"><?= e($d['entity_type']) ?></span></td>
+                        <td data-label="File"><span class="file-extension-pill"><?= e(strtoupper($d['file_type'] ?? pathinfo($d['file_name'] ?? '', PATHINFO_EXTENSION))) ?></span></td>
                         <td data-label="Status"><?= getStatusBadge($d['status']) ?></td>
                         <td data-label="Actions">
                             <button onclick="viewDocument(<?= (int)$d['id'] ?>, this)" class="action-btn" aria-label="View <?= e($d['title']) ?>" title="View"><i class="fas fa-eye text-sm" aria-hidden="true"></i></button>

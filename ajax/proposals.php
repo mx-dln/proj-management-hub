@@ -87,7 +87,7 @@ switch ($action) {
         if (!$base || !$file || strpos($file, $base) !== 0 || !is_file($file)) jsonResponse(['success' => false, 'message' => 'File missing'], 404);
         $name = basename($proposal['attachment']);
         $mime = mime_content_type($file) ?: 'application/octet-stream';
-        $inline = !isset($_GET['download']) && in_array($mime, ['application/pdf', 'image/jpeg', 'image/png', 'text/plain'], true);
+        $inline = !isset($_GET['download']) && in_array($mime, ['application/pdf', 'image/jpeg', 'image/png', 'text/plain', 'text/csv', 'text/tab-separated-values'], true);
         header('Content-Type: ' . $mime);
         header('Content-Length: ' . filesize($file));
         header('X-Content-Type-Options: nosniff');
@@ -112,7 +112,7 @@ switch ($action) {
             jsonResponse(['success' => false, 'message' => 'Enter a valid submission date'], 400);
         }
         if (empty($_FILES['attachment']['tmp_name'])) jsonResponse(['success' => false, 'message' => 'Proposal file is required'], 400);
-        $upload = uploadFile($_FILES['attachment'], 'proposals', ['pdf','doc','docx','jpg','jpeg','png']);
+        $upload = uploadFile($_FILES['attachment'], 'proposals', ['pdf','doc','docx','jpg','jpeg','png','csv','xls','xlsx','xlsm']);
         if (!$upload['success']) jsonResponse(['success' => false, 'message' => $upload['error'] ?? 'Upload failed'], 400);
 
         // Create a proposal with no project_id (it's a program proposal)
@@ -182,7 +182,7 @@ switch ($action) {
             db()->prepare($sql)->execute(array_values($data));
             $id = db()->lastInsertId();
             if (!empty($_FILES['attachment']['tmp_name'])) {
-                $result = uploadFile($_FILES['attachment'], 'proposals', ['pdf','doc','docx']);
+                $result = uploadFile($_FILES['attachment'], 'proposals', ['pdf','doc','docx','jpg','jpeg','png','csv','xls','xlsx','xlsm']);
                 if ($result['success']) db()->prepare("UPDATE proposals SET attachment = ? WHERE id = ?")->execute([$result['file_path'], $id]);
             }
             auditLog('create', 'proposal', $id, 'Created proposal: ' . $data['title'], false, $projectId);
@@ -235,7 +235,7 @@ switch ($action) {
             jsonResponse(['success' => false, 'message' => 'Only the owner can revise a returned proposal'], 403);
         }
 
-        $result = uploadFile($_FILES['attachment'], 'proposals', ['pdf','doc','docx','jpg','jpeg','png']);
+        $result = uploadFile($_FILES['attachment'], 'proposals', ['pdf','doc','docx','jpg','jpeg','png','csv','xls','xlsx','xlsm']);
         if (!$result['success']) jsonResponse(['success' => false, 'message' => $result['error'] ?? 'Upload failed'], 400);
 
         try {

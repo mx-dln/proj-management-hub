@@ -25,7 +25,7 @@
                         <td data-label="Number"><span class="table-code"><?= e($p['proposal_number']) ?></span></td>
                         <td data-label="Title"><span class="table-title"><?= e($p['title']) ?></span></td>
                         <td data-label="Project"><span class="text-[#D1D5DB]"><?= e($p['project_title'] ?? $p['title'] ?? '-') ?></span></td>
-                        <td data-label="File"><?php if (!empty($p['attachment'])): ?><a href="<?= SITE_URL ?>/ajax/proposals.php?action=file&amp;id=<?= (int)$p['id'] ?>" target="_blank" rel="noopener" class="action-btn proposal-file-action" title="Open uploaded proposal" aria-label="Open uploaded proposal"><i class="fas fa-file-alt text-sm"></i></a><?php else: ?><span class="text-[#6B7280]">-</span><?php endif; ?></td>
+                        <td data-label="File"><?php if (!empty($p['attachment'])): ?><div class="flex items-center justify-center gap-2"><button type="button" onclick="previewProposalFile(<?= (int)$p['id'] ?>, <?= htmlspecialchars(json_encode($p['title'] ?? 'Proposal'), ENT_QUOTES, 'UTF-8') ?>)" class="action-btn proposal-file-action" title="Preview uploaded proposal" aria-label="Preview uploaded proposal"><i class="fas fa-file-alt text-sm"></i></button><span class="file-extension-pill"><?= e(strtoupper(pathinfo($p['attachment'], PATHINFO_EXTENSION))) ?></span></div><?php else: ?><span class="text-[#6B7280]">-</span><?php endif; ?></td>
                         <td data-label="Submitted"><span class="table-date"><?= formatDate($p['date_submitted']) ?></span></td>
                         <td data-label="Status"><?= getStatusBadge($p['status']) ?></td>
                         <td data-label="Actions">
@@ -71,6 +71,17 @@
 <script>
 const siteUrl = <?= json_encode(SITE_URL) ?>;
 
+function previewProposalFile(id, title = 'Proposal') {
+    const fileUrl = `${siteUrl}/ajax/proposals.php?action=file&id=${Number(id)}`;
+    openDocumentViewer({
+        url: fileUrl,
+        downloadUrl: `${fileUrl}&download=1`,
+        title,
+        subtitle: 'Uploaded proposal file',
+        fileName: `${title || 'proposal'}`
+    });
+}
+
 function openProposalSubmit() {
     const sl = getSlideOver({ size: 'md' });
     const formHtml = `
@@ -82,7 +93,7 @@ function openProposalSubmit() {
                 ${fieldHtml({ name: 'project_leader', label: 'Project Leader / Head', required: true, fullWidth: true })}
                 ${fieldHtml({ name: 'date_submitted', label: 'Date Submitted', type: 'date', value: new Date().toISOString().slice(0, 10), required: true, fullWidth: true })}
                 <label class="form-label full-width">Scanned Proposal File *
-                    <input name="attachment" type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" class="form-input" required>
+                    <input name="attachment" type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.csv,.xls,.xlsx,.xlsm" class="form-input" required>
                 </label>
                 <p class="full-width text-xs text-[#9CA3AF]">Upload the scanned/signed proposal document. Other details will be reviewed from the file by Admin.</p>
             </div>
@@ -146,7 +157,7 @@ async function openProposalRevision(id, btn) {
         <input type="hidden" name="id" value="${Number(id)}">
         ${fieldHtml({ name: 'remarks', label: 'Revision Remarks / Comments', type: 'textarea', rows: 4, fullWidth: true, required: true, placeholder: 'Describe what you changed before resubmitting.' })}
         <label class="form-label full-width">Revised Scanned Proposal File *
-            <input name="attachment" type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" class="form-input" required>
+            <input name="attachment" type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.csv,.xls,.xlsx,.xlsm" class="form-input" required>
         </label>
     </div></div>`;
     sl.openForm('Revise Proposal', data.proposal_number || '', formHtml, { showSaveAnother: false, size: 'md' });
@@ -173,7 +184,7 @@ async function viewProposal(id, btn) {
         if (data.attachment) {
             const fileUrl = `${siteUrl}/ajax/proposals.php?action=file&id=${Number(data.id)}`;
             content += `<div class="form-section"><h4 class="form-section-title">Uploaded Proposal File</h4><div class="flex flex-wrap gap-2">
-                <a href="${fileUrl}" target="_blank" rel="noopener" class="btn-ghost"><i class="fas fa-external-link-alt mr-1"></i> Open</a>
+                <button type="button" onclick="previewProposalFile(${Number(data.id)}, this.dataset.title)" data-title="${escapeHtml(data.title || 'Proposal')}" class="btn-ghost"><i class="fas fa-eye mr-1"></i> Preview</button>
                 <a href="${fileUrl}&download=1" class="btn-primary"><i class="fas fa-download mr-1"></i> Download</a>
             </div></div>`;
         }

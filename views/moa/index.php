@@ -18,7 +18,7 @@ $canManageMoa = Permissions::canManageMoa();
             </form>
             <div class="moa-table-wrap">
                 <table class="moa-table">
-                    <thead><tr><th>MOA</th><th>Project</th><th>Status</th><th>Actions</th></tr></thead>
+                    <thead><tr><th>MOA</th><th>Project</th><th>File</th><th>Status</th><th>Actions</th></tr></thead>
                     <tbody>
                     <?php foreach($moas as $m): ?>
                         <tr>
@@ -27,6 +27,7 @@ $canManageMoa = Permissions::canManageMoa();
                                 <small><?= e($m['partner_name'] ?? '-') ?></small>
                             </td>
                             <td><?= e($m['project_title'] ?? '-') ?></td>
+                            <td><?php if(!empty($m['attachment'])): ?><span class="file-extension-pill"><?= e(strtoupper(pathinfo($m['attachment'], PATHINFO_EXTENSION))) ?></span><?php else: ?><span class="text-[#6B7280]">-</span><?php endif; ?></td>
                             <td><?= getStatusBadge($m['status']) ?></td>
                             <td>
                                 <div class="moa-row-actions">
@@ -37,7 +38,7 @@ $canManageMoa = Permissions::canManageMoa();
                             </td>
                         </tr>
                     <?php endforeach; ?>
-                    <?php if(empty($moas)): ?><tr><td colspan="4" class="moa-empty">No MOA records found</td></tr><?php endif; ?>
+                    <?php if(empty($moas)): ?><tr><td colspan="5" class="moa-empty">No MOA records found</td></tr><?php endif; ?>
                     </tbody>
                 </table>
             </div>
@@ -101,7 +102,7 @@ document.getElementById('moaInlineForm')?.addEventListener('submit', async e => 
 async function viewMoa(id, btn){
     const data = await fetchWithLoading(`${siteUrl}/ajax/moa.php?action=get&id=${id}`, btn);
     const downloadAction = canManageMoa ? `<a href="${siteUrl}/ajax/moa.php?action=file&id=${Number(data.id)}&download=1" class="btn-primary"><i class="fas fa-download" aria-hidden="true"></i> Download</a>` : '';
-    const fileActions = `<div class="flex flex-wrap gap-2 mb-4">${data.attachment ? `<a href="${siteUrl}/ajax/moa.php?action=file&id=${Number(data.id)}" class="btn-ghost" target="_blank" rel="noopener"><i class="fas fa-eye" aria-hidden="true"></i> Open</a>` : ''}<button type="button" onclick="printMoa(${Number(data.id)}, ${data.attachment ? 'true' : 'false'})" class="btn-ghost"><i class="fas fa-print" aria-hidden="true"></i> Print</button>${downloadAction}</div>`;
+    const fileActions = `<div class="flex flex-wrap gap-2 mb-4">${data.attachment ? `<button type="button" onclick="previewMoa(${Number(data.id)}, this.dataset.title)" data-title="${escapeHtml(data.moa_number || 'MOA')}" class="btn-ghost"><i class="fas fa-eye" aria-hidden="true"></i> Preview</button>` : ''}<button type="button" onclick="printMoa(${Number(data.id)}, ${data.attachment ? 'true' : 'false'})" class="btn-ghost"><i class="fas fa-print" aria-hidden="true"></i> Print</button>${downloadAction}</div>`;
     getSlideOver({size:'md'}).openView(data.moa_number, data.project_title || '', fileActions + viewSectionHtml('MOA Information', [
         viewFieldHtml('MOA #', escapeHtml(data.moa_number || '-')),
         viewFieldHtml('Project', escapeHtml(data.project_title || '-')),
@@ -112,6 +113,17 @@ async function viewMoa(id, btn){
     ]), {size:'md'});
 }
 function editMoa(id, btn){ viewMoa(id, btn); }
+function previewMoa(id, title = 'MOA'){
+    const fileUrl = `${siteUrl}/ajax/moa.php?action=file&id=${Number(id)}`;
+    openDocumentViewer({
+        url: fileUrl,
+        downloadUrl: `${fileUrl}&download=1`,
+        title,
+        subtitle: 'Memorandum of Agreement file',
+        fileName: title || 'moa',
+        allowDownload: canManageMoa
+    });
+}
 async function printMoa(id, hasAttachment = false){
     if (!hasAttachment) {
         await printMoaDetails(id);

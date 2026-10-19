@@ -50,7 +50,7 @@ $reportYears = range((int)date('Y'), 2021);
                 <?php endif; ?>
                 <div class="quarter-actions">
                     <?php if($latest): ?><button onclick="viewReport(<?= (int)$latest['id'] ?>, this)" class="btn-ghost"><i class="fas fa-eye mr-1"></i> View</button><?php endif; ?>
-                    <?php if($latest && !empty($latest['attachment'])): ?><button onclick="printReport(<?= (int)$latest['id'] ?>)" class="btn-ghost"><i class="fas fa-print mr-1"></i> Print</button><?php endif; ?>
+                    <?php if($latest && !empty($latest['attachment'])): ?><button onclick="previewReport(<?= (int)$latest['id'] ?>, <?= htmlspecialchars(json_encode($latest['title'] ?? 'Report'), ENT_QUOTES, 'UTF-8') ?>)" class="btn-ghost"><i class="fas fa-eye mr-1"></i> Preview</button><?php endif; ?>
                     <?php if($canUploadReport): ?><button onclick="openReportUpload('<?= $quarter ?>')" class="btn-primary"><i class="fas fa-upload mr-1"></i> Upload</button><?php endif; ?>
                 </div>
             </section>
@@ -58,19 +58,20 @@ $reportYears = range((int)date('Y'), 2021);
     </div>
 
     <div class="data-table-container mt-6">
-        <div class="overflow-x-auto"><table class="data-table"><thead><tr><th>Year</th><th>Quarter</th><th>Title</th><th>Project</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+        <div class="overflow-x-auto"><table class="data-table"><thead><tr><th>Year</th><th>Quarter</th><th>Title</th><th>Project</th><th>File</th><th>Status</th><th>Actions</th></tr></thead><tbody>
         <?php foreach($reports as $r): ?><tr>
             <td><?= e($r['period_year'] ?: '-') ?></td>
             <td><?= e($r['period_quarter'] ?: '-') ?></td>
             <td><span class="table-title"><?= e($r['title']) ?></span></td>
             <td><?= e($r['project_title'] ?? '-') ?></td>
+            <td><?php if(!empty($r['attachment'])): ?><span class="file-extension-pill"><?= e(strtoupper(pathinfo($r['attachment'], PATHINFO_EXTENSION))) ?></span><?php else: ?><span class="text-[#6B7280]">-</span><?php endif; ?></td>
             <td><?= getStatusBadge($r['status']) ?></td>
             <td>
                 <button onclick="viewReport(<?= (int)$r['id'] ?>, this)" class="action-btn" title="View" aria-label="View"><i class="fas fa-eye"></i></button>
-                <?php if(!empty($r['attachment'])): ?><button onclick="printReport(<?= (int)$r['id'] ?>)" class="action-btn" title="Print" aria-label="Print"><i class="fas fa-print"></i></button><?php endif; ?>
+                <?php if(!empty($r['attachment'])): ?><button onclick="previewReport(<?= (int)$r['id'] ?>, <?= htmlspecialchars(json_encode($r['title'] ?? 'Report'), ENT_QUOTES, 'UTF-8') ?>)" class="action-btn" title="Preview" aria-label="Preview"><i class="fas fa-eye"></i></button><?php endif; ?>
             </td>
         </tr><?php endforeach; ?>
-        <?php if(empty($reports)): ?><tr><td colspan="6" class="text-center text-[#6B7280] py-8">No accomplishment files yet</td></tr><?php endif; ?>
+        <?php if(empty($reports)): ?><tr><td colspan="7" class="text-center text-[#6B7280] py-8">No accomplishment files yet</td></tr><?php endif; ?>
         </tbody></table></div>
     </div>
 </div>
@@ -124,7 +125,7 @@ function openReportTemplate(){
 
 async function viewReport(id, btn){
     const data = await fetchWithLoading(`${siteUrl}/ajax/reports.php?action=get&id=${id}`, btn);
-    const fileActions = data.attachment ? `<div class="flex flex-wrap gap-2 mb-4"><a href="${siteUrl}/ajax/reports.php?action=file&id=${Number(data.id)}" class="btn-ghost" target="_blank" rel="noopener"><i class="fas fa-eye" aria-hidden="true"></i> Open</a><button type="button" onclick="printReport(${Number(data.id)})" class="btn-ghost"><i class="fas fa-print" aria-hidden="true"></i> Print</button><a href="${siteUrl}/ajax/reports.php?action=file&id=${Number(data.id)}&download=1" class="btn-primary"><i class="fas fa-download" aria-hidden="true"></i> Download</a></div>` : '';
+    const fileActions = data.attachment ? `<div class="flex flex-wrap gap-2 mb-4"><button type="button" onclick="previewReport(${Number(data.id)}, this.dataset.title)" data-title="${escapeHtml(data.title || 'Report')}" class="btn-ghost"><i class="fas fa-eye" aria-hidden="true"></i> Preview</button><button type="button" onclick="printReport(${Number(data.id)})" class="btn-ghost"><i class="fas fa-print" aria-hidden="true"></i> Print</button><a href="${siteUrl}/ajax/reports.php?action=file&id=${Number(data.id)}&download=1" class="btn-primary"><i class="fas fa-download" aria-hidden="true"></i> Download</a></div>` : '';
     getSlideOver({size:'md'}).openView(data.title, data.report_number, fileActions + viewSectionHtml('Accomplishment File', [
         viewFieldHtml('Quarter', escapeHtml(data.period_quarter || '-')),
         viewFieldHtml('Year', escapeHtml(data.period_year || '-')),
@@ -132,6 +133,16 @@ async function viewReport(id, btn){
         viewFieldHtml('Status', getStatusBadge(data.status)),
         viewFieldHtml('Summary', escapeHtml(data.summary || '-'))
     ]), {size:'md'});
+}
+function previewReport(id, title = 'Report'){
+    const fileUrl = `${siteUrl}/ajax/reports.php?action=file&id=${Number(id)}`;
+    openDocumentViewer({
+        url: fileUrl,
+        downloadUrl: `${fileUrl}&download=1`,
+        title,
+        subtitle: 'Accomplishment report file',
+        fileName: title || 'report'
+    });
 }
 function printReport(id){
     const win = window.open(`${siteUrl}/ajax/reports.php?action=file&id=${Number(id)}`, '_blank', 'noopener');

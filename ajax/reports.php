@@ -117,7 +117,7 @@ switch ($action) {
         if (!$base || !$file || !str_starts_with($file, $base . DIRECTORY_SEPARATOR) || !is_file($file)) jsonResponse(['success' => false, 'message' => 'File not found'], 404);
         $name = basename($report['attachment']);
         $mime = (new finfo(FILEINFO_MIME_TYPE))->file($file);
-        $inline = in_array($mime, ['application/pdf', 'image/jpeg', 'image/png', 'text/plain'], true) && !isset($_GET['download']);
+        $inline = in_array($mime, ['application/pdf', 'image/jpeg', 'image/png', 'text/plain', 'text/csv', 'text/tab-separated-values'], true) && !isset($_GET['download']);
         header('Content-Type: ' . ($inline ? $mime : 'application/octet-stream'));
         header('Content-Disposition: ' . ($inline ? 'inline' : 'attachment') . "; filename=\"report-file\"; filename*=UTF-8''" . rawurlencode($name));
         header('Content-Length: ' . filesize($file));

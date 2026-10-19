@@ -106,8 +106,9 @@ window.viewUser = async function viewUser(id, btn) {
 function userSubmissionHistoryHtml(history) {
     const rows = history.length ? history.map(item => {
         const typeLabel = item.submission_type === 'report' ? 'Report' : 'Proposal';
+        const fileUrl = `${siteUrl}/ajax/${item.submission_type === 'report' ? 'reports' : 'proposals'}.php?action=file&id=${Number(item.submission_id)}`;
         const fileLink = item.attachment
-            ? `<a href="${siteUrl}/ajax/${item.submission_type === 'report' ? 'reports' : 'proposals'}.php?action=file&id=${Number(item.submission_id)}" target="_blank" rel="noopener" class="btn-ghost text-xs"><i class="fas fa-file-alt mr-1"></i> File</a>`
+            ? `<button type="button" onclick="openDocumentViewer({url:'${fileUrl}',downloadUrl:'${fileUrl}&download=1',title:this.dataset.title,subtitle:'${typeLabel} file',fileName:this.dataset.title})" data-title="${escapeHtml(item.title || typeLabel)}" class="btn-ghost text-xs"><i class="fas fa-file-alt mr-1"></i> File</button>`
             : '';
         const versionText = item.submission_type === 'proposal'
             ? `<span>${Number(item.version_count || 0)} version${Number(item.version_count || 0) === 1 ? '' : 's'}</span>`

@@ -15,6 +15,9 @@ logs/*
 config/config.local.php
 config/mail.key
 vendor/
+!assets/vendor/
+!assets/vendor/zrimo/
+!assets/vendor/zrimo/**
 .idea/
 .vscode/
 .DS_Store

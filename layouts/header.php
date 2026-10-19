@@ -17,7 +17,17 @@
         }
     </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="<?= SITE_URL ?>/assets/vendor/zrimo/styles.css">
     <link rel="stylesheet" href="<?= SITE_URL ?>/assets/css/app.css">
+    <script type="importmap">
+        {
+            "imports": {
+                "@silurus/ooxml/docx": "<?= SITE_URL ?>/assets/vendor/silurus-ooxml/docx.mjs",
+                "@silurus/ooxml/xlsx": "<?= SITE_URL ?>/assets/vendor/silurus-ooxml/xlsx.mjs",
+                "@silurus/ooxml/pptx": "<?= SITE_URL ?>/assets/vendor/silurus-ooxml/pptx.mjs"
+            }
+        }
+    </script>
 </head>
 <body class="h-full bg-[#111827] text-[#F9FAFB]">
     <div id="app" class="flex h-full">

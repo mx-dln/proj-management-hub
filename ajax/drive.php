@@ -18,7 +18,7 @@ try {
         if ($n['kind']!=='file') throw new RuntimeException('File not found',404);
         $base=realpath(UPLOAD_PATH.'explorer'); $path=realpath(UPLOAD_PATH.$n['path']);
         if (!$base || !$path || !str_starts_with($path,$base.DIRECTORY_SEPARATOR) || !is_file($path)) throw new RuntimeException('File not found',404);
-        $safe=['application/pdf','image/jpeg','image/png','image/gif','image/webp','video/mp4','video/webm','audio/mpeg','audio/wav','text/plain'];
+        $safe=['application/pdf','image/jpeg','image/png','image/gif','image/webp','video/mp4','video/webm','audio/mpeg','audio/wav','text/plain','text/csv','text/tab-separated-values'];
         $inline=!isset($_GET['download']) && in_array($n['mime_type'],$safe,true);
         header('Content-Type: '.($inline?$n['mime_type']:'application/octet-stream'));
         header('Content-Disposition: '.($inline?'inline':'attachment')."; filename=\"download\"; filename*=UTF-8''".rawurlencode($n['name']));

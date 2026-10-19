@@ -102,7 +102,15 @@ class ProjectExplorer {
   }
  }
  menu(n,x,y){const m=this.$('context');m.replaceChildren();const add=(t,i,f)=>m.append(this.button(t,i,()=>{m.hidden=true;f();}));add(n.kind==='file'?'Open / Preview':'Open','folder-open',()=>this.open(n));if(n.kind==='file')add('Download','download',()=>this.download(n));if(n.writable){add('Rename','pen',()=>this.rename(n));add('Move','folder-tree',()=>this.move(n));add('Delete','trash',()=>this.remove(n));}add('Details','circle-info',()=>this.details(n));m.hidden=false;m.style.left=`${Math.max(8,Math.min(x,innerWidth-220))}px`;m.style.top=`${Math.max(8,Math.min(y,innerHeight-m.offsetHeight-8))}px`;m.querySelector('button').focus();}
- open(n){if(n.kind!=='file')this.navigate(n.id);else this.details(n,true);}
+ open(n){
+  if(n.kind!=='file'){this.navigate(n.id);return;}
+  const viewerTypes=['pdf','doc','docx','docm','xls','xlsx','xlsm','ppt','pptx','pptm','ppsx','jpg','jpeg','png','webp','gif','bmp','tif','tiff','svg','csv','tsv'];
+  if(window.openDocumentViewer&&viewerTypes.includes((n.extension||'').toLowerCase())){
+   window.openDocumentViewer({url:this.fileUrl(n),downloadUrl:this.fileUrl(n,true),title:n.name,subtitle:this.type(n),fileName:n.name});
+   return;
+  }
+  this.details(n,true);
+ }
  download(n){const a=document.createElement('a');a.href=this.fileUrl(n,true);a.click();}
  dialog(title,submit='Save'){this.$('dialog-title').textContent=title;this.$('dialog-body').replaceChildren();this.$('dialog-error').textContent='';this.$('dialog-footer').hidden=!submit;this.$('submit').textContent=submit||'Save';this.$('submit').disabled=false;this.$('dialog').classList.remove('pd-preview','pd-details');this.$('form').onsubmit=e=>e.preventDefault();this.$('new-menu').hidden=true;this.$('dialog').showModal();}
  nameInput(value=''){const label=document.createElement('label');label.textContent='Name';const input=document.createElement('input');input.name='name';input.required=true;input.maxLength=255;input.value=value;label.append(input);this.$('dialog-body').append(label);input.focus();input.select();return input;}
