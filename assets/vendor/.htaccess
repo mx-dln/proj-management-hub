@@ -1,0 +1,5 @@
+# Required by Zrimo and its Office/WASM adapters on Apache/XAMPP.
+AddType application/wasm .wasm
+AddType text/javascript .mjs
+AddType text/javascript .js
+AddType text/css .css

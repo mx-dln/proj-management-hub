@@ -29,7 +29,7 @@
         }
     </script>
 </head>
-<body class="h-full bg-[#111827] text-[#F9FAFB]">
+<body class="h-full bg-[#111827] text-[#F9FAFB]" data-theme="dark">
     <div id="app" class="flex h-full">
         <?php include __DIR__ . '/sidebar.php'; ?>
         <div class="flex-1 flex flex-col overflow-hidden lg:ml-64">

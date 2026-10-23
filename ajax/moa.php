@@ -16,11 +16,14 @@ switch ($action) {
         Permissions::requirePermission(Permissions::isAdmin() || Permissions::isViewer() || Permissions::canAccessProject($moa['project_id']));
         if (isset($_GET['download']) && !Permissions::canManageMoa()) jsonResponse(['success' => false, 'message' => 'Download is restricted for this account.'], 403);
         $base = realpath(UPLOAD_PATH);
-        $file = realpath(UPLOAD_PATH . $moa['attachment']);
+        $attachments = attachmentPaths($moa);
+        $attachmentIndex = max(0, (int)($_GET['attachment_index'] ?? 0));
+        $relativePath = $attachments[$attachmentIndex] ?? ($attachments[0] ?? '');
+        $file = realpath(UPLOAD_PATH . $relativePath);
         if (!$base || !$file || !str_starts_with($file, $base . DIRECTORY_SEPARATOR) || !is_file($file)) jsonResponse(['success' => false, 'message' => 'File not found'], 404);
-        $name = basename($moa['attachment']);
+        $name = basename($relativePath);
         $mime = (new finfo(FILEINFO_MIME_TYPE))->file($file);
-        $inline = in_array($mime, ['application/pdf', 'image/jpeg', 'image/png', 'text/plain', 'text/csv', 'text/tab-separated-values'], true) && !isset($_GET['download']);
+        $inline = in_array($mime, ['application/pdf', 'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'text/plain', 'text/csv', 'text/tab-separated-values'], true) && !isset($_GET['download']);
         header('Content-Type: ' . ($inline ? $mime : 'application/octet-stream'));
         header('Content-Disposition: ' . ($inline ? 'inline' : 'attachment') . "; filename=\"moa-file\"; filename*=UTF-8''" . rawurlencode($name));
         header('Content-Length: ' . filesize($file));
@@ -46,9 +49,12 @@ switch ($action) {
             $sql = "INSERT INTO moas (moa_number, project_id, partner_agency_id, date_signed, expiration_date, status, remarks, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
             db()->prepare($sql)->execute(array_values($data));
             $id = db()->lastInsertId();
-            if (!empty($_FILES['attachment']['tmp_name'])) {
-                $result = uploadFile($_FILES['attachment'], 'moa', ['pdf']);
-                if ($result['success']) db()->prepare("UPDATE moas SET attachment = ? WHERE id = ?")->execute([$result['file_path'], $id]);
+            if (!empty($_FILES['attachments']['tmp_name']) || !empty($_FILES['attachment']['tmp_name'])) {
+                $uploads = uploadFiles($_FILES['attachments'] ?? $_FILES['attachment'], 'moa', ['pdf','doc','docx','jpg','jpeg','png','xls','xlsx','csv']);
+                if ($uploads && !isset($uploads['success'])) {
+                    $paths = array_map(fn($file) => $file['file_path'], $uploads);
+                    db()->prepare("UPDATE moas SET attachment = ?, attachments = ? WHERE id = ?")->execute([$paths[0], json_encode($paths), $id]);
+                }
             }
             auditLog('create', 'moa', $id, 'Created MOA: ' . $data['moa_number']);
             jsonResponse(['success' => true, 'message' => 'MOA created', 'id' => $id]);
@@ -83,6 +89,7 @@ switch ($action) {
             $data = $stmt->fetch();
             if (!$data) jsonResponse(['success' => false, 'message' => 'Not found'], 404);
             Permissions::requirePermission(Permissions::isAdmin() || Permissions::isViewer() || Permissions::canAccessProject($data['project_id']));
+            $data['attachment_count'] = count(attachmentPaths($data));
             jsonResponse($data);
         } catch (Exception $e) {
             jsonResponse(['success' => false, 'message' => 'Error: ' . $e->getMessage()], 500);

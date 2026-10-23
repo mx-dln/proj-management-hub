@@ -10,6 +10,7 @@ uploads/documents/private/*
 !uploads/documents/private/.htaccess
 database/backups/
 backup_*.zip
+isu-proj-hub.zip
 logs/*
 !logs/.gitkeep
 config/config.local.php

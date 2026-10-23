@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1200" viewBox="0 0 1800 1200">
+  <defs><style>
+    .title{font:700 30px Arial,sans-serif;fill:#111}.sub{font:15px Arial,sans-serif;fill:#444}
+    .uc{fill:#fff;stroke:#111;stroke-width:2}.ut{font:16px Arial,sans-serif;fill:#111;text-anchor:middle}
+    .actor{fill:none;stroke:#111;stroke-width:3;stroke-linecap:round}.al{font:700 17px Arial,sans-serif;fill:#111;text-anchor:middle}
+    .line{fill:none;stroke:#222;stroke-width:1.8}.dash{fill:none;stroke:#444;stroke-width:1.6;stroke-dasharray:8 6}
+    .box{fill:#fff;stroke:#888;stroke-width:1.5;stroke-dasharray:7 5}.note{font:italic 14px Arial,sans-serif;fill:#555;text-anchor:middle}
+  </style></defs>
+  <rect width="1800" height="1200" fill="#fff"/>
+  <text x="900" y="45" class="title" text-anchor="middle">Use Case Diagram</text>
+  <text x="900" y="73" class="sub" text-anchor="middle">Web-Based Project Management Hub for Optimized Extension Training Services at ISU-Cauayan</text>
+
+  <!-- Common access functions -->
+  <rect x="600" y="100" width="600" height="130" rx="10" class="box"/>
+  <text x="900" y="124" class="note">Common to all authorized users</text>
+  <ellipse cx="755" cy="176" rx="130" ry="35" class="uc"/>
+  <text x="755" y="170" class="ut"><tspan x="755">Authenticate User and</tspan><tspan x="755" dy="20">Apply Role Permissions</tspan></text>
+  <ellipse cx="1045" cy="176" rx="125" ry="35" class="uc"/>
+  <text x="1045" y="170" class="ut"><tspan x="1045">View Role-Based</tspan><tspan x="1045" dy="20">Dashboard</tspan></text>
+
+  <!-- Left actors -->
+  <g class="actor" transform="translate(110 280)"><circle r="17"/><path d="M0 17v64M-34 43h68M0 81l-29 45M0 81l29 45"/></g>
+  <text x="110" y="434" class="al">System Administrator</text>
+  <g class="actor" transform="translate(110 650)"><circle r="17"/><path d="M0 17v64M-34 43h68M0 81l-29 45M0 81l29 45"/></g>
+  <text x="110" y="804" class="al">ETS Personnel</text>
+  <g class="actor" transform="translate(110 1000)"><circle r="17"/><path d="M0 17v64M-34 43h68M0 81l-29 45M0 81l29 45"/></g>
+  <text x="110" y="1154" class="al">University Administration</text>
+
+  <!-- Left use cases -->
+  <ellipse cx="365" cy="300" rx="150" ry="38" class="uc"/>
+  <text x="365" y="294" class="ut"><tspan x="365">Manage Users, Roles</tspan><tspan x="365" dy="20">and Permissions</tspan></text>
+  <ellipse cx="365" cy="485" rx="165" ry="38" class="uc"/>
+  <text x="365" y="479" class="ut"><tspan x="365">Manage Programs, Projects</tspan><tspan x="365" dy="20">and Components</tspan></text>
+  <ellipse cx="365" cy="585" rx="130" ry="36" class="uc"/>
+  <text x="365" y="579" class="ut"><tspan x="365">Manage</tspan><tspan x="365" dy="20">Extensionists</tspan></text>
+  <ellipse cx="365" cy="685" rx="140" ry="36" class="uc"/>
+  <text x="365" y="679" class="ut"><tspan x="365">Review and Route</tspan><tspan x="365" dy="20">Proposals</tspan></text>
+  <ellipse cx="365" cy="785" rx="135" ry="36" class="uc"/>
+  <text x="365" y="779" class="ut"><tspan x="365">Generate</tspan><tspan x="365" dy="20">Certificates</tspan></text>
+  <ellipse cx="365" cy="1015" rx="145" ry="36" class="uc"/>
+  <text x="365" y="1009" class="ut"><tspan x="365">Generate Reports</tspan><tspan x="365" dy="20">and Analytics</tspan></text>
+
+  <g class="line">
+    <path d="M127 290L215 300"/>
+    <path d="M127 650L205 485"/><path d="M127 662L235 585"/><path d="M127 675L225 685"/><path d="M127 690L230 785"/><path d="M127 705L240 1015"/>
+    <path d="M127 1010L220 1015"/>
+  </g>
+
+  <!-- Right actors -->
+  <g class="actor" transform="translate(1690 280)"><circle r="17"/><path d="M0 17v64M-34 43h68M0 81l-29 45M0 81l29 45"/></g>
+  <text x="1690" y="434" class="al">Program Leader</text>
+  <g class="actor" transform="translate(1690 650)"><circle r="17"/><path d="M0 17v64M-34 43h68M0 81l-29 45M0 81l29 45"/></g>
+  <text x="1690" y="804" class="al">Project Leader</text>
+  <g class="actor" transform="translate(1690 1000)"><circle r="17"/><path d="M0 17v64M-34 43h68M0 81l-29 45M0 81l29 45"/></g>
+  <text x="1690" y="1154" class="al">Faculty Extensionist</text>
+
+  <!-- Right use cases -->
+  <ellipse cx="1435" cy="300" rx="150" ry="38" class="uc"/>
+  <text x="1435" y="294" class="ut"><tspan x="1435">Monitor Project Status</tspan><tspan x="1435" dy="20">and Activities</tspan></text>
+  <ellipse cx="1435" cy="485" rx="145" ry="36" class="uc"/>
+  <text x="1435" y="479" class="ut"><tspan x="1435">Submit and Revise</tspan><tspan x="1435" dy="20">Project Proposals</tspan></text>
+  <ellipse cx="1435" cy="585" rx="160" ry="38" class="uc"/>
+  <text x="1435" y="579" class="ut"><tspan x="1435">Manage Documents</tspan><tspan x="1435" dy="20">and Supporting Files</tspan></text>
+  <ellipse cx="1435" cy="685" rx="165" ry="38" class="uc"/>
+  <text x="1435" y="679" class="ut"><tspan x="1435">Submit Accomplishment</tspan><tspan x="1435" dy="20">Reports and Updates</tspan></text>
+  <ellipse cx="1435" cy="785" rx="155" ry="38" class="uc"/>
+  <text x="1435" y="779" class="ut"><tspan x="1435">Receive Notifications</tspan><tspan x="1435" dy="20">and Status Updates</tspan></text>
+  <ellipse cx="1435" cy="1015" rx="140" ry="36" class="uc"/>
+  <text x="1435" y="1009" class="ut"><tspan x="1435">Maintain Project</tspan><tspan x="1435" dy="20">History</tspan></text>
+
+  <g class="line">
+    <path d="M1673 290L1585 300"/><path d="M1673 305L1590 785"/>
+    <path d="M1673 650L1580 485"/><path d="M1673 662L1595 585"/><path d="M1673 675L1600 685"/>
+    <path d="M1673 990L1595 585"/><path d="M1673 1003L1600 685"/><path d="M1673 1030L1575 1015"/>
+  </g>
+
+  <!-- Proposal workflow relationship -->
+  <path d="M505 685C760 685 1030 485 1290 485" class="dash"/>
+  <text x="900" y="605" class="note">&lt;&lt;review workflow&gt;&gt;</text>
+
+  <text x="900" y="1175" class="sub" text-anchor="middle">Figure 5. Use Case Diagram of the Web-Based Project Management Hub</text>
+</svg>

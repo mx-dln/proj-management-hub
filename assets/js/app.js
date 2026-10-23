@@ -2,6 +2,26 @@
 
 const SITE_URL = window.APP_BASE_URL || window.location.origin;
 
+function applyTheme(theme) {
+    const selected = theme === 'light' ? 'light' : 'dark';
+    document.body.dataset.theme = selected;
+    document.documentElement.dataset.theme = selected;
+    localStorage.setItem('isu_theme', selected);
+    const button = document.getElementById('theme-toggle');
+    if (button) {
+        button.innerHTML = `<i class="fas fa-${selected === 'dark' ? 'sun' : 'moon'} text-sm" aria-hidden="true"></i>`;
+        button.title = selected === 'dark' ? 'Switch to light mode' : 'Switch to dark mode';
+        button.setAttribute('aria-label', button.title);
+    }
+}
+
+function toggleTheme() { applyTheme(document.body.dataset.theme === 'light' ? 'dark' : 'light'); }
+
+document.addEventListener('DOMContentLoaded', () => {
+    const savedTheme = localStorage.getItem('isu_theme');
+    applyTheme(savedTheme || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'));
+});
+
 function appUrl(path = '') {
     if (!path) return SITE_URL;
     if (/^https?:\/\//i.test(path)) return path;

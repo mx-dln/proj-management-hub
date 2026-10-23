@@ -272,6 +272,28 @@ function printDocumentUrl(fileUrl) {
     win.addEventListener('load', () => win.print(), { once: true });
 }
 
+function openDocumentGallery(options) {
+    const urls = Array.isArray(options.urls) && options.urls.length ? options.urls : [options.url];
+    if (urls.length <= 1) return openDocumentViewer({ ...options, url: urls[0] });
+    let index = 0;
+    const render = () => {
+        const currentUrl = urls[index];
+        const currentDownloadUrl = `${currentUrl}${currentUrl.includes('?') ? '&' : '?'}download=1`;
+        openDocumentViewer({ ...options, url: currentUrl, downloadUrl: currentDownloadUrl });
+        const modal = document.getElementById('document-viewer-modal');
+        const actions = modal?.querySelector('.doc-viewer-actions');
+        if (!actions) return;
+        const nav = document.createElement('div');
+        nav.className = 'doc-gallery-nav';
+        nav.innerHTML = `<button type="button" class="btn-ghost" data-gallery-prev aria-label="Previous file"><i class="fas fa-chevron-left"></i></button><span>File ${index + 1} of ${urls.length}</span><button type="button" class="btn-ghost" data-gallery-next aria-label="Next file"><i class="fas fa-chevron-right"></i></button>`;
+        actions.prepend(nav);
+        nav.querySelector('[data-gallery-prev]').addEventListener('click', () => { index = (index - 1 + urls.length) % urls.length; render(); });
+        nav.querySelector('[data-gallery-next]').addEventListener('click', () => { index = (index + 1) % urls.length; render(); });
+    };
+    render();
+}
+
 window.openDocumentViewer = openDocumentViewer;
+window.openDocumentGallery = openDocumentGallery;
 window.printDocumentUrl = printDocumentUrl;
 window.closeDocumentViewer = closeDocumentViewer;

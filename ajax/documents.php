@@ -15,8 +15,9 @@ try {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new RuntimeException('POST required.', 405);
         if (empty($_POST) && (int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 0) throw new RuntimeException('Upload exceeds the server request limit. Choose a smaller file.', 413);
         if (empty($_SESSION['documents_csrf']) || !is_string($_POST['csrf'] ?? null) || !hash_equals($_SESSION['documents_csrf'], $_POST['csrf'])) throw new RuntimeException('Session expired. Refresh and try again.', 403);
-        $id = DocumentModel::upload($_POST, $_FILES['file'] ?? []);
-        jsonResponse(['success' => true, 'message' => 'File uploaded.', 'id' => $id]);
+        $files = $_FILES['files'] ?? $_FILES['file'] ?? [];
+        $ids = DocumentModel::uploadMany($_POST, $files);
+        jsonResponse(['success' => true, 'message' => count($ids) > 1 ? count($ids) . ' files uploaded.' : 'File uploaded.', 'id' => $ids[0] ?? null, 'ids' => $ids]);
     }
     if (!in_array($action, ['get', 'file'], true)) throw new RuntimeException('Invalid action.', 400);
     $document = DocumentModel::find((int)($_GET['id'] ?? 0));

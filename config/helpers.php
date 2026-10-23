@@ -61,6 +61,44 @@ function uploadFile($file, $directory, $allowedTypes = []) {
     return ['success' => false, 'error' => 'Upload failed'];
 }
 
+function uploadFiles($files, $directory, $allowedTypes = []) {
+    if (!isset($files['name'])) return [];
+    $names = is_array($files['name']) ? $files['name'] : [$files['name']];
+    $tmpNames = is_array($files['tmp_name']) ? $files['tmp_name'] : [$files['tmp_name']];
+    $errors = is_array($files['error'] ?? null) ? $files['error'] : [($files['error'] ?? UPLOAD_ERR_OK)];
+    $sizes = is_array($files['size'] ?? null) ? $files['size'] : [($files['size'] ?? 0)];
+    $types = is_array($files['type'] ?? null) ? $files['type'] : [($files['type'] ?? '')];
+    $uploaded = [];
+    foreach ($names as $index => $name) {
+        if ($name === '' || ($errors[$index] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) continue;
+        $result = uploadFile([
+            'name' => $name,
+            'tmp_name' => $tmpNames[$index] ?? '',
+            'error' => $errors[$index] ?? UPLOAD_ERR_OK,
+            'size' => $sizes[$index] ?? 0,
+            'type' => $types[$index] ?? '',
+        ], $directory, $allowedTypes);
+        if (!$result['success']) return ['success' => false, 'error' => $result['error'] ?? 'One of the files could not be uploaded.'];
+        $uploaded[] = $result;
+    }
+    return $uploaded;
+}
+
+function attachmentPaths($row) {
+    $paths = [];
+    if (!empty($row['attachments'])) {
+        $decoded = json_decode($row['attachments'], true);
+        if (is_array($decoded)) {
+            foreach ($decoded as $item) {
+                $path = is_array($item) ? ($item['path'] ?? $item['file_path'] ?? '') : $item;
+                if ($path) $paths[] = $path;
+            }
+        }
+    }
+    if (!empty($row['attachment']) && !in_array($row['attachment'], $paths, true)) array_unshift($paths, $row['attachment']);
+    return array_values(array_unique($paths));
+}
+
 function formatCurrency($amount) { return '₱' . number_format($amount, 2); }
 function formatDate($date, $format = DATE_FORMAT) { return empty($date) ? '-' : date($format, strtotime($date)); }
 function formatDateTime($datetime, $format = DATETIME_FORMAT) { return empty($datetime) ? '-' : date($format, strtotime($datetime)); }

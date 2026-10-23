@@ -66,7 +66,9 @@ $canManageMoa = Permissions::canManageMoa();
                 <label>Date Signed:<input type="date" name="date_signed"></label>
                 <label>End Date:<input type="date" name="expiration_date"></label>
                 <label class="full">Remarks:<textarea name="remarks" rows="3"></textarea></label>
-                <label class="full">MOA File:<input type="file" name="attachment" accept="application/pdf"></label>
+                <label class="full">MOA File:<input id="moa-file" type="file" name="attachments[]" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xls,.xlsx,.csv" multiple></label>
+                <p class="text-xs text-[#9CA3AF]">You may select multiple scanned pages.</p>
+                <div class="camera-scan-panel full"><div class="camera-scan-actions"><button type="button" id="moa-scan-start" class="btn-ghost"><i class="fas fa-camera"></i> Scan with Camera</button><button type="button" id="moa-scan-capture" class="btn-primary hidden"><i class="fas fa-camera-retro"></i> Capture Page</button><button type="button" id="moa-scan-stop" class="btn-ghost hidden"><i class="fas fa-stop"></i> Stop Camera</button></div><div id="moa-scan-panel" class="hidden"><video id="moa-scan-video" autoplay playsinline muted></video><canvas id="moa-scan-canvas" class="hidden"></canvas></div><p id="moa-scan-status" class="camera-scan-status">Capture multiple pages; each page is added to the file list.</p></div>
                 <div class="sketch-actions"><button type="submit" class="btn-primary">Save</button></div>
             </form>
             <?php else: ?><div class="sketch-empty">View access only</div><?php endif; ?>
@@ -83,6 +85,8 @@ $canManageMoa = Permissions::canManageMoa();
 const siteUrl = <?= json_encode(SITE_URL) ?>;
 const canManageMoa = <?= $canManageMoa ? 'true' : 'false' ?>;
 function focusMoaForm(){ document.querySelector('#moaInlineForm input[name="moa_number"]')?.focus(); }
+const moaForm = document.getElementById('moaInlineForm');
+if (moaForm && window.bindCameraScanner) bindCameraScanner(moaForm, document.getElementById('moa-file'), {prefix:'moa'});
 document.getElementById('moaInlineForm')?.addEventListener('submit', async e => {
     e.preventDefault();
     const submitButton = e.target.querySelector('button[type="submit"]');
@@ -113,10 +117,12 @@ async function viewMoa(id, btn){
     ]), {size:'md'});
 }
 function editMoa(id, btn){ viewMoa(id, btn); }
-function previewMoa(id, title = 'MOA'){
+async function previewMoa(id, title = 'MOA'){
     const fileUrl = `${siteUrl}/ajax/moa.php?action=file&id=${Number(id)}`;
-    openDocumentViewer({
-        url: fileUrl,
+    const data = await fetchWithLoading(`${siteUrl}/ajax/moa.php?action=get&id=${Number(id)}`);
+    const urls = Array.from({length: Number(data.attachment_count || 1)}, (_, index) => `${fileUrl}&attachment_index=${index}`);
+    openDocumentGallery({
+        urls,
         downloadUrl: `${fileUrl}&download=1`,
         title,
         subtitle: 'Memorandum of Agreement file',

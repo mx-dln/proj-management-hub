@@ -141,9 +141,12 @@ function openProjectMoaForm(){
         ${fieldHtml({name:'date_signed',label:'Date Signed',type:'date'})}
         ${fieldHtml({name:'expiration_date',label:'End Date',type:'date'})}
         ${fieldHtml({name:'remarks',label:'Remarks',type:'textarea',rows:3,fullWidth:true})}
-        <label class="form-label full-width">MOA File <input name="attachment" type="file" accept="application/pdf" class="form-input" required></label>
+        <label class="form-label full-width">MOA File <input id="project-moa-file" name="attachments[]" type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" class="form-input" multiple required></label>
+        <div class="camera-scan-panel full-width"><div class="camera-scan-actions"><button type="button" id="project-moa-scan-start" class="btn-ghost"><i class="fas fa-camera"></i> Scan with Camera</button><button type="button" id="project-moa-scan-capture" class="btn-primary hidden"><i class="fas fa-camera-retro"></i> Capture Page</button><button type="button" id="project-moa-scan-stop" class="btn-ghost hidden"><i class="fas fa-stop"></i> Stop Camera</button></div><div id="project-moa-scan-panel" class="hidden"><video id="project-moa-scan-video" autoplay playsinline muted></video><canvas id="project-moa-scan-canvas" class="hidden"></canvas></div><p id="project-moa-scan-status" class="camera-scan-status">Capture multiple pages; each page is added to the file list.</p></div>
     </div></div>`, {showSaveAnother:false});
-    document.getElementById('slideoverForm').addEventListener('submit', async e => { e.preventDefault(); await submitSlideOverForm(sl, `<?= SITE_URL ?>/ajax/moa.php?action=create`, new FormData(e.target), () => location.reload()); });
+    const moaForm = document.getElementById('slideoverForm');
+    bindCameraScanner(moaForm, moaForm.querySelector('#project-moa-file'), {prefix:'project-moa', slideover:sl});
+    moaForm.addEventListener('submit', async e => { e.preventDefault(); await submitSlideOverForm(sl, `<?= SITE_URL ?>/ajax/moa.php?action=create`, new FormData(e.target), () => location.reload()); });
 }
 function openProjectReportUpload(q, year){
     const sl = getSlideOver({size:'md'});
@@ -152,8 +155,11 @@ function openProjectReportUpload(q, year){
         ${fieldHtml({name:'title',label:'Title',required:true,value:projectTitle + ' - ' + q + ' ' + year,fullWidth:true})}
         <input type="hidden" name="report_type" value="quarterly"><input type="hidden" name="period_quarter" value="${q}"><input type="hidden" name="period_year" value="${year}">
         ${fieldHtml({name:'summary',label:'Summary',type:'textarea',rows:3,fullWidth:true})}
-        <label class="form-label full-width">File <input name="attachment" type="file" class="form-input" required></label>
+        <label class="form-label full-width">File <input id="project-report-file" name="attachments[]" type="file" class="form-input" multiple required></label>
+        <div class="camera-scan-panel full-width"><div class="camera-scan-actions"><button type="button" id="project-report-scan-start" class="btn-ghost"><i class="fas fa-camera"></i> Scan with Camera</button><button type="button" id="project-report-scan-capture" class="btn-primary hidden"><i class="fas fa-camera-retro"></i> Capture Page</button><button type="button" id="project-report-scan-stop" class="btn-ghost hidden"><i class="fas fa-stop"></i> Stop Camera</button></div><div id="project-report-scan-panel" class="hidden"><video id="project-report-scan-video" autoplay playsinline muted></video><canvas id="project-report-scan-canvas" class="hidden"></canvas></div><p id="project-report-scan-status" class="camera-scan-status">Capture multiple pages; each page is added to the file list.</p></div>
     </div></div>`, {showSaveAnother:false});
-    document.getElementById('slideoverForm').addEventListener('submit', async e => { e.preventDefault(); await submitSlideOverForm(sl, `<?= SITE_URL ?>/ajax/reports.php?action=create`, new FormData(e.target), () => location.reload()); });
+    const reportForm = document.getElementById('slideoverForm');
+    bindCameraScanner(reportForm, reportForm.querySelector('#project-report-file'), {prefix:'project-report', slideover:sl});
+    reportForm.addEventListener('submit', async e => { e.preventDefault(); await submitSlideOverForm(sl, `<?= SITE_URL ?>/ajax/reports.php?action=create`, new FormData(e.target), () => location.reload()); });
 }
 </script>

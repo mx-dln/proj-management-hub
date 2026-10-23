@@ -817,7 +817,7 @@ CREATE TABLE `email_queue` (
 CREATE TABLE `explorer_migrations` (
   `version` varchar(100) NOT NULL,
   `applied_at` datetime NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `explorer_migrations`

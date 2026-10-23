@@ -83,11 +83,14 @@ switch ($action) {
         }
         if (!$canRead) jsonResponse(['success' => false, 'message' => 'Permission denied'], 403);
         $base = realpath(UPLOAD_PATH);
-        $file = realpath(UPLOAD_PATH . $proposal['attachment']);
+        $attachments = attachmentPaths($proposal);
+        $attachmentIndex = max(0, (int)($_GET['attachment_index'] ?? 0));
+        $relativePath = $attachments[$attachmentIndex] ?? ($attachments[0] ?? '');
+        $file = realpath(UPLOAD_PATH . $relativePath);
         if (!$base || !$file || strpos($file, $base) !== 0 || !is_file($file)) jsonResponse(['success' => false, 'message' => 'File missing'], 404);
-        $name = basename($proposal['attachment']);
+        $name = basename($relativePath);
         $mime = mime_content_type($file) ?: 'application/octet-stream';
-        $inline = !isset($_GET['download']) && in_array($mime, ['application/pdf', 'image/jpeg', 'image/png', 'text/plain', 'text/csv', 'text/tab-separated-values'], true);
+        $inline = !isset($_GET['download']) && in_array($mime, ['application/pdf', 'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'text/plain', 'text/csv', 'text/tab-separated-values'], true);
         header('Content-Type: ' . $mime);
         header('Content-Length: ' . filesize($file));
         header('X-Content-Type-Options: nosniff');
@@ -96,9 +99,9 @@ switch ($action) {
         exit;
 
     case 'create_program_proposal':
-        // Faculty submits a proposal for a new program
+        // Faculty submits, or Admin records, a proposal for a new program.
         if (!in_array($user['role'], ['faculty', 'admin'])) {
-            jsonResponse(['success' => false, 'message' => 'Only faculty can submit proposals'], 403);
+            jsonResponse(['success' => false, 'message' => 'Only faculty or admin can submit proposals'], 403);
         }
 
         $title = sanitize($_POST['title'] ?? '');
@@ -111,9 +114,9 @@ switch ($action) {
         if (empty($dateSubmitted) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateSubmitted)) {
             jsonResponse(['success' => false, 'message' => 'Enter a valid submission date'], 400);
         }
-        if (empty($_FILES['attachment']['tmp_name'])) jsonResponse(['success' => false, 'message' => 'Proposal file is required'], 400);
-        $upload = uploadFile($_FILES['attachment'], 'proposals', ['pdf','doc','docx','jpg','jpeg','png','csv','xls','xlsx','xlsm']);
-        if (!$upload['success']) jsonResponse(['success' => false, 'message' => $upload['error'] ?? 'Upload failed'], 400);
+        $uploads = uploadFiles($_FILES['attachments'] ?? $_FILES['attachment'] ?? [], 'proposals', ['pdf','doc','docx','jpg','jpeg','png','csv','xls','xlsx','xlsm']);
+        if (!$uploads || (isset($uploads['success']) && !$uploads['success'])) jsonResponse(['success' => false, 'message' => $uploads['error'] ?? 'Proposal file is required'], 400);
+        $paths = array_map(fn($file) => $file['file_path'], $uploads);
 
         // Create a proposal with no project_id (it's a program proposal)
         $data = [
@@ -143,14 +146,14 @@ switch ($action) {
         ];
 
         try {
-            $sql = "INSERT INTO proposals (proposal_number, project_id, title, submitted_by, date_submitted, status, remarks, attachment) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            $sql = "INSERT INTO proposals (proposal_number, project_id, title, proponent, submitted_by, date_submitted, status, remarks, attachment, attachments) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             db()->prepare($sql)->execute([
-                $data['proposal_number'], $data['project_id'], $data['title'],
-                $data['submitted_by'], $data['date_submitted'], $data['status'], $data['remarks'], $upload['file_path']
+                $data['proposal_number'], $data['project_id'], $data['title'], sanitize($_POST['proponent'] ?? $projectLeader),
+                $data['submitted_by'], $data['date_submitted'], $data['status'], $data['remarks'], $paths[0], json_encode($paths)
             ]);
             $id = db()->lastInsertId();
             db()->prepare("INSERT INTO proposal_versions (proposal_id, version, attachment, remarks, uploaded_by) VALUES (?, 1, ?, ?, ?)")
-                ->execute([$id, $upload['file_path'], 'Initial submission', $user['id']]);
+                ->execute([$id, $paths[0], 'Initial submission', $user['id']]);
 
             // Notify admins
             $admins = db()->query("SELECT id FROM users WHERE role = 'admin' AND deleted_at IS NULL")->fetchAll();
@@ -159,7 +162,7 @@ switch ($action) {
             }
 
             auditLog('create', 'proposal', $id, 'Submitted program proposal: ' . $title);
-            jsonResponse(['success' => true, 'message' => 'Proposal submitted for review', 'id' => $id]);
+            jsonResponse(['success' => true, 'message' => 'Proposal submitted for review', 'id' => $id, 'attachment_count' => count($paths)]);
         } catch (Exception $e) {
             jsonResponse(['success' => false, 'message' => 'Failed: ' . $e->getMessage()], 500);
         }
@@ -172,18 +175,22 @@ switch ($action) {
             'proposal_number' => generateCode('PROP', 'proposals', 'proposal_number'),
             'project_id' => $projectId,
             'title' => sanitize($_POST['title'] ?? ''),
+            'proponent' => sanitize($_POST['proponent'] ?? ''),
             'submitted_by' => $user['id'],
             'status' => 'draft',
             'remarks' => sanitize($_POST['remarks'] ?? ''),
         ];
         if (empty($data['title'])) jsonResponse(['success' => false, 'message' => 'Title is required'], 400);
         try {
-            $sql = "INSERT INTO proposals (proposal_number, project_id, title, submitted_by, status, remarks) VALUES (?, ?, ?, ?, ?, ?)";
+            $sql = "INSERT INTO proposals (proposal_number, project_id, title, proponent, submitted_by, status, remarks) VALUES (?, ?, ?, ?, ?, ?, ?)";
             db()->prepare($sql)->execute(array_values($data));
             $id = db()->lastInsertId();
-            if (!empty($_FILES['attachment']['tmp_name'])) {
-                $result = uploadFile($_FILES['attachment'], 'proposals', ['pdf','doc','docx','jpg','jpeg','png','csv','xls','xlsx','xlsm']);
-                if ($result['success']) db()->prepare("UPDATE proposals SET attachment = ? WHERE id = ?")->execute([$result['file_path'], $id]);
+            if (!empty($_FILES['attachments']['tmp_name']) || !empty($_FILES['attachment']['tmp_name'])) {
+                $uploads = uploadFiles($_FILES['attachments'] ?? $_FILES['attachment'], 'proposals', ['pdf','doc','docx','jpg','jpeg','png','csv','xls','xlsx','xlsm']);
+                if ($uploads && !isset($uploads['success'])) {
+                    $paths = array_map(fn($file) => $file['file_path'], $uploads);
+                    db()->prepare("UPDATE proposals SET attachment = ?, attachments = ? WHERE id = ?")->execute([$paths[0], json_encode($paths), $id]);
+                }
             }
             auditLog('create', 'proposal', $id, 'Created proposal: ' . $data['title'], false, $projectId);
             jsonResponse(['success' => true, 'message' => 'Proposal created', 'id' => $id]);
@@ -225,7 +232,7 @@ switch ($action) {
         $id = intval($_POST['id'] ?? 0);
         $remarks = sanitize($_POST['remarks'] ?? '');
         if (!$id) jsonResponse(['success' => false, 'message' => 'Invalid proposal'], 400);
-        if (empty($_FILES['attachment']['tmp_name'])) jsonResponse(['success' => false, 'message' => 'Revised proposal file is required'], 400);
+        if (empty($_FILES['attachments']['tmp_name']) && empty($_FILES['attachment']['tmp_name'])) jsonResponse(['success' => false, 'message' => 'Revised proposal file is required'], 400);
 
         $proposal = db()->prepare("SELECT * FROM proposals WHERE id = ?");
         $proposal->execute([$id]);
@@ -235,16 +242,17 @@ switch ($action) {
             jsonResponse(['success' => false, 'message' => 'Only the owner can revise a returned proposal'], 403);
         }
 
-        $result = uploadFile($_FILES['attachment'], 'proposals', ['pdf','doc','docx','jpg','jpeg','png','csv','xls','xlsx','xlsm']);
-        if (!$result['success']) jsonResponse(['success' => false, 'message' => $result['error'] ?? 'Upload failed'], 400);
+        $uploads = uploadFiles($_FILES['attachments'] ?? $_FILES['attachment'], 'proposals', ['pdf','doc','docx','jpg','jpeg','png','csv','xls','xlsx','xlsm']);
+        if (!$uploads || (isset($uploads['success']) && !$uploads['success'])) jsonResponse(['success' => false, 'message' => $uploads['error'] ?? 'Upload failed'], 400);
+        $paths = array_map(fn($file) => $file['file_path'], $uploads);
 
         try {
             $nextVersion = (int)$p['version'] + 1;
             db()->beginTransaction();
-            db()->prepare("UPDATE proposals SET attachment = ?, version = ?, status = 'submitted', date_submitted = CURDATE(), reviewed_by = NULL, reviewed_at = NULL WHERE id = ?")
-                ->execute([$result['file_path'], $nextVersion, $id]);
+            db()->prepare("UPDATE proposals SET attachment = ?, attachments = ?, version = ?, status = 'submitted', date_submitted = CURDATE(), reviewed_by = NULL, reviewed_at = NULL WHERE id = ?")
+                ->execute([$paths[0], json_encode($paths), $nextVersion, $id]);
             db()->prepare("INSERT INTO proposal_versions (proposal_id, version, attachment, remarks, uploaded_by) VALUES (?, ?, ?, ?, ?)")
-                ->execute([$id, $nextVersion, $result['file_path'], $remarks ?: 'Revised submission', $user['id']]);
+                ->execute([$id, $nextVersion, $paths[0], $remarks ?: 'Revised submission', $user['id']]);
             db()->prepare("INSERT INTO proposal_approvals (proposal_id, approver_id, action, remarks) VALUES (?, ?, 'submitted', ?)")
                 ->execute([$id, $user['id'], $remarks ?: 'Revised and resubmitted']);
 
@@ -254,7 +262,7 @@ switch ($action) {
             }
             db()->commit();
             auditLog('edit', 'proposal', $id, 'Revised and resubmitted proposal');
-            jsonResponse(['success' => true, 'message' => 'Proposal revised and submitted']);
+            jsonResponse(['success' => true, 'message' => 'Proposal revised and submitted', 'attachment_count' => count($paths)]);
         } catch (Exception $e) {
             db()->rollback();
             jsonResponse(['success' => false, 'message' => 'Failed: ' . $e->getMessage()], 500);
@@ -454,6 +462,7 @@ switch ($action) {
             ");
             $budgetComments->execute([$id]);
             $data['budget_comments'] = $budgetComments->fetchAll();
+            $data['attachment_count'] = count(attachmentPaths($data));
             
             jsonResponse($data);
         } catch (Exception $e) {

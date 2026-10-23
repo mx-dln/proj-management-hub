@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1200" viewBox="0 0 1800 1200">
+  <defs>
+    <style>
+      .title{font:700 30px Arial,sans-serif;fill:#111}.subtitle{font:15px Arial,sans-serif;fill:#444}
+      .uc{fill:#fff;stroke:#111;stroke-width:2}.uct{font:16px Arial,sans-serif;fill:#111;text-anchor:middle}
+      .actor{fill:none;stroke:#111;stroke-width:3;stroke-linecap:round}.label{font:700 17px Arial,sans-serif;fill:#111;text-anchor:middle}
+      .assoc{fill:none;stroke:#222;stroke-width:1.8}.shared{fill:#fff;stroke:#777;stroke-width:1.5;stroke-dasharray:7 5}
+      .note{font:italic 14px Arial,sans-serif;fill:#555;text-anchor:middle}
+    </style>
+  </defs>
+  <rect width="1800" height="1200" fill="#fff"/>
+  <text x="900" y="45" class="title" text-anchor="middle">Use Case Diagram</text>
+  <text x="900" y="73" class="subtitle" text-anchor="middle">Web-Based Project Management Hub for Optimized Extension Training Services at ISU-Cauayan</text>
+
+  <!-- Common use cases -->
+  <rect x="615" y="98" width="570" height="132" rx="10" class="shared"/>
+  <text x="900" y="122" class="note">Common to all authorized users</text>
+  <ellipse cx="760" cy="174" rx="125" ry="34" class="uc"/>
+  <text x="760" y="169" class="uct"><tspan x="760">Authenticate User and</tspan><tspan x="760" dy="20">Apply Role Permissions</tspan></text>
+  <ellipse cx="1040" cy="174" rx="120" ry="34" class="uc"/>
+  <text x="1040" y="169" class="uct"><tspan x="1040">View Role-Based</tspan><tspan x="1040" dy="20">Dashboard</tspan></text>
+
+  <!-- System Administrator cluster -->
+  <g class="actor" transform="translate(105 250)"><circle r="17"/><path d="M0 17v64M-34 43h68M0 81l-29 45M0 81l29 45"/></g>
+  <text x="105" y="404" class="label">System Administrator</text>
+  <ellipse cx="350" cy="265" rx="145" ry="36" class="uc"/>
+  <text x="350" y="260" class="uct"><tspan x="350">Manage Users, Roles</tspan><tspan x="350" dy="20">and Permissions</tspan></text>
+  <ellipse cx="350" cy="365" rx="140" ry="36" class="uc"/>
+  <text x="350" y="360" class="uct"><tspan x="350">Maintain Project</tspan><tspan x="350" dy="20">History</tspan></text>
+  <g class="assoc"><path d="M122 260L205 265"/><path d="M122 278L210 365"/><path d="M122 245L635 174"/></g>
+
+  <!-- Program Leader cluster -->
+  <g class="actor" transform="translate(1695 250)"><circle r="17"/><path d="M0 17v64M-34 43h68M0 81l-29 45M0 81l29 45"/></g>
+  <text x="1695" y="404" class="label">Program Leader</text>
+  <ellipse cx="1450" cy="265" rx="145" ry="36" class="uc"/>
+  <text x="1450" y="260" class="uct"><tspan x="1450">Monitor Project Status</tspan><tspan x="1450" dy="20">and Activities</tspan></text>
+  <ellipse cx="1450" cy="365" rx="145" ry="36" class="uc"/>
+  <text x="1450" y="360" class="uct"><tspan x="1450">Receive Notifications</tspan><tspan x="1450" dy="20">and Status Updates</tspan></text>
+  <g class="assoc"><path d="M1678 260L1595 265"/><path d="M1678 278L1590 365"/><path d="M1678 245L1160 174"/></g>
+
+  <!-- ETS Personnel cluster -->
+  <g class="actor" transform="translate(105 630)"><circle r="17"/><path d="M0 17v64M-34 43h68M0 81l-29 45M0 81l29 45"/></g>
+  <text x="105" y="784" class="label">ETS Personnel</text>
+  <ellipse cx="355" cy="500" rx="155" ry="38" class="uc"/>
+  <text x="355" y="494" class="uct"><tspan x="355">Manage Programs, Projects</tspan><tspan x="355" dy="20">and Components</tspan></text>
+  <ellipse cx="355" cy="600" rx="125" ry="36" class="uc"/>
+  <text x="355" y="595" class="uct"><tspan x="355">Manage</tspan><tspan x="355" dy="20">Extensionists</tspan></text>
+  <ellipse cx="355" cy="700" rx="135" ry="36" class="uc"/>
+  <text x="355" y="695" class="uct"><tspan x="355">Review and Route</tspan><tspan x="355" dy="20">Proposals</tspan></text>
+  <ellipse cx="355" cy="800" rx="135" ry="36" class="uc"/>
+  <text x="355" y="795" class="uct"><tspan x="355">Generate</tspan><tspan x="355" dy="20">Certificates</tspan></text>
+  <g class="assoc"><path d="M122 630L205 500"/><path d="M122 640L230 600"/><path d="M122 654L220 700"/><path d="M122 670L220 800"/></g>
+
+  <!-- Project Leader cluster -->
+  <g class="actor" transform="translate(1695 630)"><circle r="17"/><path d="M0 17v64M-34 43h68M0 81l-29 45M0 81l29 45"/></g>
+  <text x="1695" y="784" class="label">Project Leader</text>
+  <ellipse cx="1445" cy="500" rx="145" ry="36" class="uc"/>
+  <text x="1445" y="495" class="uct"><tspan x="1445">Submit and Revise</tspan><tspan x="1445" dy="20">Project Proposals</tspan></text>
+  <ellipse cx="1445" cy="600" rx="155" ry="38" class="uc"/>
+  <text x="1445" y="594" class="uct"><tspan x="1445">Manage Documents</tspan><tspan x="1445" dy="20">and Supporting Files</tspan></text>
+  <ellipse cx="1445" cy="700" rx="155" ry="38" class="uc"/>
+  <text x="1445" y="694" class="uct"><tspan x="1445">Submit Accomplishment</tspan><tspan x="1445" dy="20">Reports and Updates</tspan></text>
+  <g class="assoc"><path d="M1678 630L1590 500"/><path d="M1678 640L1600 600"/><path d="M1678 655L1600 700"/><path d="M1678 670L1595 365"/><path d="M1678 682L1595 265"/><path d="M1678 695L490 365"/></g>
+
+  <!-- University Administration cluster -->
+  <g class="actor" transform="translate(105 1000)"><circle r="17"/><path d="M0 17v64M-34 43h68M0 81l-29 45M0 81l29 45"/></g>
+  <text x="105" y="1154" class="label">University Administration</text>
+  <ellipse cx="365" cy="1015" rx="145" ry="36" class="uc"/>
+  <text x="365" y="1010" class="uct"><tspan x="365">Generate Reports</tspan><tspan x="365" dy="20">and Analytics</tspan></text>
+  <g class="assoc"><path d="M122 1010L220 1015"/><path d="M122 995L635 174"/><path d="M490 800L350 979"/></g>
+
+  <!-- Faculty Extensionist cluster -->
+  <g class="actor" transform="translate(1695 1000)"><circle r="17"/><path d="M0 17v64M-34 43h68M0 81l-29 45M0 81l29 45"/></g>
+  <text x="1695" y="1154" class="label">Faculty Extensionist</text>
+  <ellipse cx="1445" cy="930" rx="155" ry="38" class="uc"/>
+  <text x="1445" y="924" class="uct"><tspan x="1445">Upload Supporting</tspan><tspan x="1445" dy="20">Documents</tspan></text>
+  <ellipse cx="1445" cy="1030" rx="155" ry="38" class="uc"/>
+  <text x="1445" y="1024" class="uct"><tspan x="1445">Submit Accomplishment</tspan><tspan x="1445" dy="20">Information</tspan></text>
+  <g class="assoc"><path d="M1678 1000L1600 930"/><path d="M1678 1015L1600 1030"/><path d="M1678 985L1595 365"/><path d="M1600 930L1515 638"/><path d="M1600 1030L1515 738"/><path d="M1678 1030L490 365"/></g>
+
+  <!-- Shared relationship between proposal review and submission -->
+  <path d="M490 700C760 700 1040 500 1300 500" class="assoc" stroke-dasharray="8 6"/>
+  <text x="900" y="625" class="note">&lt;&lt;includes review workflow&gt;&gt;</text>
+
+  <text x="900" y="1172" class="subtitle" text-anchor="middle">Figure 5. Use Case Diagram of the Web-Based Project Management Hub</text>
+</svg>

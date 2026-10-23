@@ -12,7 +12,7 @@ function openDocumentUpload(preselectedType = '', preselectedId = '') {
             <div><label class="form-label" for="document-title">Title</label><input id="document-title" name="title" class="form-input" maxlength="255" required></div>
             <div><label class="form-label" for="document-target">Related Record</label><select id="document-target" name="target" class="form-select" required><option value="">Select...</option>${optionMarkup(documentConfig.targets)}</select></div>
             ${documentConfig.scope === 'designations' ? '' : `<div><label class="form-label" for="document-category">Category</label><select id="document-category" name="category_id" class="form-select" required><option value="">Select...</option>${optionMarkup(documentConfig.categories)}</select></div>`}
-            <div><label class="form-label" for="document-file">File</label><input id="document-file" name="file" type="file" accept="${documentConfig.extensions.map(ext => '.' + ext).join(',')}" class="form-input" required><p class="text-xs text-[#9CA3AF] mt-2">Maximum file size: ${documentSize(documentConfig.limit)}</p></div>
+            <div><label class="form-label" for="document-file">Files</label><input id="document-file" name="files[]" type="file" accept="${documentConfig.extensions.map(ext => '.' + ext).join(',')}" class="form-input" multiple required><p class="text-xs text-[#9CA3AF] mt-2">Select multiple scanned pages. Maximum file size per file: ${documentSize(documentConfig.limit)}</p></div>
             <div class="border border-[#374151] rounded-lg p-3 bg-[#111827]">
                 <div class="flex flex-wrap items-center justify-between gap-2">
                     <div><p class="form-label mb-0">Scan Document</p><p class="text-xs text-[#9CA3AF] mt-1">Use the device camera to capture and upload a page as JPG.</p></div>
@@ -33,7 +33,7 @@ function openDocumentUpload(preselectedType = '', preselectedId = '') {
             <progress id="document-upload-progress" class="w-full hidden" max="100" value="0" aria-label="Upload progress"></progress>
         </div>`, { showSaveAnother: false });
     const form = sl.element.querySelector('form');
-    const fileInput = form.elements.file;
+    const fileInput = form.querySelector('#document-file');
     bindDocumentScanner(form, fileInput);
     if (preselectedType && preselectedId) {
         form.elements.target.value = `${preselectedType}:${preselectedId}`;
@@ -43,8 +43,8 @@ function openDocumentUpload(preselectedType = '', preselectedId = '') {
     });
     form.addEventListener('submit', async event => {
         event.preventDefault();
-        const file = fileInput.files[0];
-        if (!file || file.size > documentConfig.limit) {
+        const files = Array.from(fileInput.files || []);
+        if (!files.length || files.some(file => file.size > documentConfig.limit)) {
             showToast('Choose a file within the current upload limit.', 'error');
             return;
         }
@@ -144,6 +144,7 @@ function bindDocumentScanner(form, fileInput) {
         const fileName = `scan-${new Date().toISOString().replace(/[:.]/g, '-')}.jpg`;
         const file = new File([blob], fileName, { type: 'image/jpeg' });
         const transfer = new DataTransfer();
+        Array.from(fileInput.files || []).forEach(existing => transfer.items.add(existing));
         transfer.items.add(file);
         fileInput.files = transfer.files;
         if (!form.elements.title.value) form.elements.title.value = fileName;

@@ -104,6 +104,10 @@ if ($currentPage !== 'dashboard') {
             <i class="fas fa-question-circle text-sm"></i>
         </button>
 
+        <button onclick="toggleTheme()" class="action-btn" id="theme-toggle" aria-label="Switch theme" title="Switch theme">
+            <i class="fas fa-sun text-sm" aria-hidden="true"></i>
+        </button>
+
         <!-- Settings Shortcut -->
         <?php if ($user['role'] === 'admin'): ?>
             <a href="<?= SITE_URL ?>/index.php?module=settings" class="action-btn" aria-label="Settings">

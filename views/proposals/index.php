@@ -1,7 +1,9 @@
 <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
     <div><h1 class="text-2xl font-bold text-[#F9FAFB]">Proposals</h1><p class="text-[#9CA3AF] text-sm mt-1">Manage project proposals</p></div>
-    <?php if ($_SESSION['role'] === 'faculty'): ?>
-        <button onclick="openProposalSubmit()" class="btn-primary"><i class="fas fa-plus mr-1"></i> Add Proposal</button>
+    <?php if ($_SESSION['role'] === 'admin'): ?>
+        <button onclick="openProposalSubmit(true)" class="btn-primary"><i class="fas fa-camera mr-1"></i> Scan Proposal</button>
+    <?php elseif ($_SESSION['role'] === 'faculty'): ?>
+        <button onclick="openProposalSubmit(false)" class="btn-primary"><i class="fas fa-plus mr-1"></i> Add Proposal</button>
     <?php endif; ?>
 </div>
 
@@ -19,11 +21,12 @@
         <?php if (empty($proposals)): ?>
             <div class="empty-state"><div class="empty-state-icon"><i class="fas fa-file-alt"></i></div><h3 class="empty-state-title">No proposals found</h3></div>
         <?php else: ?>
-            <div class="overflow-x-auto"><table class="data-table proposals-table"><thead><tr><th>Number</th><th>Title</th><th>Project</th><th>File</th><th>Submitted</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+            <div class="overflow-x-auto"><table class="data-table proposals-table"><thead><tr><th>Number</th><th>Title</th><th>Proponent</th><th>Project</th><th>File</th><th>Submitted</th><th>Status</th><th>Actions</th></tr></thead><tbody>
                 <?php foreach ($proposals as $i => $p): ?>
                     <tr class="animate-row" style="animation-delay:<?= $i * 0.05 ?>s">
                         <td data-label="Number"><span class="table-code"><?= e($p['proposal_number']) ?></span></td>
                         <td data-label="Title"><span class="table-title"><?= e($p['title']) ?></span></td>
+                        <td data-label="Proponent"><span class="text-[#D1D5DB]"><?= e($p['proponent'] ?? '-') ?></span></td>
                         <td data-label="Project"><span class="text-[#D1D5DB]"><?= e($p['project_title'] ?? $p['title'] ?? '-') ?></span></td>
                         <td data-label="File"><?php if (!empty($p['attachment'])): ?><div class="flex items-center justify-center gap-2"><button type="button" onclick="previewProposalFile(<?= (int)$p['id'] ?>, <?= htmlspecialchars(json_encode($p['title'] ?? 'Proposal'), ENT_QUOTES, 'UTF-8') ?>)" class="action-btn proposal-file-action" title="Preview uploaded proposal" aria-label="Preview uploaded proposal"><i class="fas fa-file-alt text-sm"></i></button><span class="file-extension-pill"><?= e(strtoupper(pathinfo($p['attachment'], PATHINFO_EXTENSION))) ?></span></div><?php else: ?><span class="text-[#6B7280]">-</span><?php endif; ?></td>
                         <td data-label="Submitted"><span class="table-date"><?= formatDate($p['date_submitted']) ?></span></td>
@@ -71,10 +74,12 @@
 <script>
 const siteUrl = <?= json_encode(SITE_URL) ?>;
 
-function previewProposalFile(id, title = 'Proposal') {
+async function previewProposalFile(id, title = 'Proposal') {
     const fileUrl = `${siteUrl}/ajax/proposals.php?action=file&id=${Number(id)}`;
-    openDocumentViewer({
-        url: fileUrl,
+    const data = await fetchWithLoading(`${siteUrl}/ajax/proposals.php?action=get&id=${Number(id)}`);
+    const urls = Array.from({length: Number(data.attachment_count || 1)}, (_, index) => `${fileUrl}&attachment_index=${index}`);
+    openDocumentGallery({
+        urls,
         downloadUrl: `${fileUrl}&download=1`,
         title,
         subtitle: 'Uploaded proposal file',
@@ -82,8 +87,24 @@ function previewProposalFile(id, title = 'Proposal') {
     });
 }
 
-function openProposalSubmit() {
+function openProposalSubmit(adminScan = false) {
     const sl = getSlideOver({ size: 'md' });
+    const scanMarkup = `
+                <div class="proposal-scan-panel full-width">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div><p class="form-label mb-0">Scan with Camera</p><p class="text-xs text-[#9CA3AF] mt-1">Capture one or more pages when no scanned file is available.</p></div>
+                        <button type="button" id="proposal-scan-start" class="btn-ghost"><i class="fas fa-camera mr-1" aria-hidden="true"></i> Open Camera</button>
+                    </div>
+                    <div id="proposal-scan-panel" class="hidden mt-3 space-y-3">
+                        <video id="proposal-scan-video" class="w-full rounded bg-black" playsinline autoplay muted style="max-height:320px;object-fit:contain"></video>
+                        <canvas id="proposal-scan-canvas" class="hidden"></canvas>
+                        <div class="flex flex-wrap gap-2">
+                            <button type="button" id="proposal-scan-capture" class="btn-primary"><i class="fas fa-circle-dot mr-1" aria-hidden="true"></i> Capture Page</button>
+                            <button type="button" id="proposal-scan-stop" class="btn-ghost">Close Camera</button>
+                        </div>
+                        <p id="proposal-scan-status" class="text-xs text-[#9CA3AF]" role="status"></p>
+                    </div>
+                </div>`;
     const formHtml = `
         <div class="form-section">
             <h4 class="form-section-title">Scanned Proposal Submission</h4>
@@ -91,17 +112,79 @@ function openProposalSubmit() {
                 ${fieldHtml({ name: 'title', label: 'Proposal Title', required: true, fullWidth: true })}
                 ${fieldHtml({ name: 'project_program', label: 'Project / Program', required: true, fullWidth: true })}
                 ${fieldHtml({ name: 'project_leader', label: 'Project Leader / Head', required: true, fullWidth: true })}
+                ${fieldHtml({ name: 'proponent', label: 'Proponent', required: true, fullWidth: true })}
                 ${fieldHtml({ name: 'date_submitted', label: 'Date Submitted', type: 'date', value: new Date().toISOString().slice(0, 10), required: true, fullWidth: true })}
                 <label class="form-label full-width">Scanned Proposal File *
-                    <input name="attachment" type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.csv,.xls,.xlsx,.xlsm" class="form-input" required>
+                    <input name="attachments[]" type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.csv,.xls,.xlsx,.xlsm" class="form-input" multiple required>
                 </label>
+                ${scanMarkup}
                 <p class="full-width text-xs text-[#9CA3AF]">Upload the scanned/signed proposal document. Other details will be reviewed from the file by Admin.</p>
             </div>
         </div>`;
-    sl.openForm('Add Proposal', 'Upload scanned proposal for admin review', formHtml, { showSaveAnother: false, size: 'md' });
-    document.getElementById('slideoverForm').addEventListener('submit', async (e) => {
+    sl.openForm(adminScan ? 'Scan Proposal' : 'Add Proposal', adminScan ? 'Capture proposal pages for review' : 'Upload scanned proposal for admin review', formHtml, { showSaveAnother: false, size: 'md' });
+    const form = document.getElementById('slideoverForm');
+    const fileInput = form.querySelector('input[name="attachments[]"]');
+    bindProposalScanner(form, fileInput, sl);
+    form.addEventListener('submit', async (e) => {
         e.preventDefault();
         await submitSlideOverForm(sl, `${siteUrl}/ajax/proposals.php?action=create_program_proposal`, new FormData(e.target), () => location.reload());
+    });
+}
+
+function bindProposalScanner(form, fileInput, slideover) {
+    const startButton = form.querySelector('#proposal-scan-start');
+    const stopButton = form.querySelector('#proposal-scan-stop');
+    const captureButton = form.querySelector('#proposal-scan-capture');
+    const panel = form.querySelector('#proposal-scan-panel');
+    const video = form.querySelector('#proposal-scan-video');
+    const canvas = form.querySelector('#proposal-scan-canvas');
+    const status = form.querySelector('#proposal-scan-status');
+    let stream = null;
+
+    const stopScan = () => {
+        if (stream) stream.getTracks().forEach(track => track.stop());
+        stream = null;
+        video.srcObject = null;
+        panel.classList.add('hidden');
+    };
+    slideover.onClose = stopScan;
+
+    startButton.addEventListener('click', async () => {
+        if (!navigator.mediaDevices?.getUserMedia) {
+            showToast('Camera scanning is not supported in this browser.', 'error');
+            return;
+        }
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+            video.srcObject = stream;
+            panel.classList.remove('hidden');
+            status.textContent = 'Position the proposal page clearly, then capture.';
+        } catch (error) {
+            showToast('Camera access was blocked or unavailable.', 'error');
+        }
+    });
+
+    stopButton.addEventListener('click', stopScan);
+    captureButton.addEventListener('click', async () => {
+        if (!stream || !video.videoWidth) {
+            showToast('Camera is not ready yet.', 'error');
+            return;
+        }
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+        if (!blob) {
+            showToast('Could not capture the proposal page.', 'error');
+            return;
+        }
+        const fileName = `proposal-scan-${new Date().toISOString().replace(/[:.]/g, '-')}.jpg`;
+        const transfer = new DataTransfer();
+        Array.from(fileInput.files || []).forEach(existing => transfer.items.add(existing));
+        transfer.items.add(new File([blob], fileName, { type: 'image/jpeg' }));
+        fileInput.files = transfer.files;
+        status.textContent = `Captured ${fileName}. Capture another page or save the proposal.`;
+        showToast('Proposal page captured.');
     });
 }
 
@@ -157,7 +240,7 @@ async function openProposalRevision(id, btn) {
         <input type="hidden" name="id" value="${Number(id)}">
         ${fieldHtml({ name: 'remarks', label: 'Revision Remarks / Comments', type: 'textarea', rows: 4, fullWidth: true, required: true, placeholder: 'Describe what you changed before resubmitting.' })}
         <label class="form-label full-width">Revised Scanned Proposal File *
-            <input name="attachment" type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.csv,.xls,.xlsx,.xlsm" class="form-input" required>
+            <input name="attachments[]" type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.csv,.xls,.xlsx,.xlsm" class="form-input" multiple required>
         </label>
     </div></div>`;
     sl.openForm('Revise Proposal', data.proposal_number || '', formHtml, { showSaveAnother: false, size: 'md' });
@@ -178,6 +261,7 @@ async function viewProposal(id, btn) {
             viewFieldHtml('Number', `<span class="table-code">${escapeHtml(data.proposal_number)}</span>`),
             viewFieldHtml('Status', getStatusBadge(data.status)),
             viewFieldHtml('Project', escapeHtml(data.project_title || '-')),
+            viewFieldHtml('Proponent', escapeHtml(data.proponent || '-')),
             viewFieldHtml('Submitted', formatDate(data.date_submitted)),
             viewFieldHtml('Submitted By', escapeHtml(data.submitter_name || '-')),
         ]);

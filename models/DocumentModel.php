@@ -112,6 +112,21 @@ class DocumentModel {
         return $documentId;
     }
 
+    public static function uploadMany($input, $files) {
+        $names = $files['name'] ?? [];
+        if (!is_array($names)) return [self::upload($input, $files)];
+
+        $uploaded = [];
+        foreach (array_keys($names) as $index) {
+            $file = [];
+            foreach (['name', 'type', 'tmp_name', 'error', 'size'] as $key) {
+                $file[$key] = $files[$key][$index] ?? null;
+            }
+            $uploaded[] = self::upload($input, $file);
+        }
+        return $uploaded;
+    }
+
     private static function notifyDesignationRecipients($type, $id, $title, $documentId) {
         $assignmentTable = $type === 'activity' ? 'activity_assignments' : $type . '_assignments';
         $entityColumn = $type === 'activity' ? 'activity_id' : $type . '_id';

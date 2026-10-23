@@ -112,12 +112,18 @@ switch ($action) {
         $report = $stmt->fetch();
         if (!$report || empty($report['attachment'])) jsonResponse(['success' => false, 'message' => 'File not found'], 404);
         Permissions::requirePermission(Permissions::isAdmin() || Permissions::isViewer() || Permissions::canCreateReport($report['project_id']));
+        if (isset($_GET['download']) && !Permissions::isAdmin()) {
+            jsonResponse(['success' => false, 'message' => 'Accomplishment files can be viewed and printed only.'], 403);
+        }
+        $attachments = attachmentPaths($report);
+        $attachmentIndex = max(0, (int)($_GET['attachment_index'] ?? 0));
+        $relativePath = $attachments[$attachmentIndex] ?? ($attachments[0] ?? '');
         $base = realpath(UPLOAD_PATH);
-        $file = realpath(UPLOAD_PATH . $report['attachment']);
+        $file = realpath(UPLOAD_PATH . $relativePath);
         if (!$base || !$file || !str_starts_with($file, $base . DIRECTORY_SEPARATOR) || !is_file($file)) jsonResponse(['success' => false, 'message' => 'File not found'], 404);
-        $name = basename($report['attachment']);
+        $name = basename($relativePath);
         $mime = (new finfo(FILEINFO_MIME_TYPE))->file($file);
-        $inline = in_array($mime, ['application/pdf', 'image/jpeg', 'image/png', 'text/plain', 'text/csv', 'text/tab-separated-values'], true) && !isset($_GET['download']);
+        $inline = in_array($mime, ['application/pdf', 'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'text/plain', 'text/csv', 'text/tab-separated-values'], true) && !isset($_GET['download']);
         header('Content-Type: ' . ($inline ? $mime : 'application/octet-stream'));
         header('Content-Disposition: ' . ($inline ? 'inline' : 'attachment') . "; filename=\"report-file\"; filename*=UTF-8''" . rawurlencode($name));
         header('Content-Length: ' . filesize($file));
@@ -128,7 +134,7 @@ switch ($action) {
 
     case 'create':
         $projectId = intval($_POST['project_id'] ?? 0);
-        Permissions::requirePermission(Permissions::canCreateReport($projectId));
+        Permissions::requirePermission(Permissions::isAdmin());
         $data = [
             'report_number' => generateCode('AR', 'accomplishment_reports', 'report_number'),
             'report_type' => sanitize($_POST['report_type'] ?? 'quarterly'),
@@ -145,15 +151,16 @@ switch ($action) {
         if (!$data['project_id']) jsonResponse(['success' => false, 'message' => 'Project is required'], 400);
         if ($data['report_type'] === 'quarterly' && empty($data['period_quarter'])) jsonResponse(['success' => false, 'message' => 'Quarter is required for quarterly reports'], 400);
         if ($data['period_year'] < 2021 || $data['period_year'] > (int)date('Y') + 1) jsonResponse(['success' => false, 'message' => 'Enter a valid report year'], 400);
-        if (empty($_FILES['attachment']['tmp_name'])) jsonResponse(['success' => false, 'message' => 'Report file is required'], 400);
-        $result = uploadFile($_FILES['attachment'], 'reports', ['pdf','doc','docx','jpg','jpeg','png','xls','xlsx','csv']);
-        if (!$result['success']) jsonResponse(['success' => false, 'message' => $result['error'] ?? 'Attachment upload failed'], 422);
+        $files = $_FILES['attachments'] ?? $_FILES['attachment'] ?? [];
+        $uploads = uploadFiles($files, 'reports', ['pdf','doc','docx','jpg','jpeg','png','xls','xlsx','csv']);
+        if (!$uploads || (isset($uploads['success']) && !$uploads['success'])) jsonResponse(['success' => false, 'message' => $uploads['error'] ?? 'Report file is required'], 422);
+        $paths = array_map(fn($file) => $file['file_path'], $uploads);
         try {
-            $sql = "INSERT INTO accomplishment_reports (report_number, report_type, period_quarter, period_year, project_id, title, summary, submitted_by, date_submitted, status, attachment) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-            db()->prepare($sql)->execute(array_merge(array_values($data), [$result['file_path']]));
+            $sql = "INSERT INTO accomplishment_reports (report_number, report_type, period_quarter, period_year, project_id, title, summary, submitted_by, date_submitted, status, attachment, attachments) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            db()->prepare($sql)->execute(array_merge(array_values($data), [$paths[0], json_encode($paths)]));
             $id = db()->lastInsertId();
             auditLog('create', 'report', $id, 'Created report: ' . $data['title'], false, $projectId);
-            jsonResponse(['success' => true, 'message' => 'Report created', 'id' => $id]);
+            jsonResponse(['success' => true, 'message' => 'Report created', 'id' => $id, 'attachment_count' => count($paths)]);
         } catch (Exception $e) { jsonResponse(['success' => false, 'message' => 'Failed'], 500); }
         break;
 
@@ -215,6 +222,7 @@ switch ($action) {
             $data = $stmt->fetch();
             if (!$data) jsonResponse(['success' => false, 'message' => 'Not found'], 404);
             Permissions::requirePermission(Permissions::isAdmin() || Permissions::isViewer() || Permissions::canCreateReport($data['project_id']));
+            $data['attachment_count'] = count(attachmentPaths($data));
             jsonResponse($data);
         } catch (Exception $e) {
             jsonResponse(['success' => false, 'message' => 'Error: ' . $e->getMessage()], 500);

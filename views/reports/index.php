@@ -6,7 +6,8 @@ if (Permissions::isAdmin()) {
 } else {
     $projectsForReports = [];
 }
-$canUploadReport = Permissions::isAdmin() || Permissions::isFaculty();
+$canUploadReport = Permissions::isAdmin();
+$canDownloadReport = Permissions::isAdmin();
 $reportsByQuarter = [];
 foreach ($reports as $report) {
     $reportsByQuarter[$report['period_quarter'] ?: 'Q1'][] = $report;
@@ -49,7 +50,6 @@ $reportYears = range((int)date('Y'), 2021);
                     <small>Ready for upload</small>
                 <?php endif; ?>
                 <div class="quarter-actions">
-                    <?php if($latest): ?><button onclick="viewReport(<?= (int)$latest['id'] ?>, this)" class="btn-ghost"><i class="fas fa-eye mr-1"></i> View</button><?php endif; ?>
                     <?php if($latest && !empty($latest['attachment'])): ?><button onclick="previewReport(<?= (int)$latest['id'] ?>, <?= htmlspecialchars(json_encode($latest['title'] ?? 'Report'), ENT_QUOTES, 'UTF-8') ?>)" class="btn-ghost"><i class="fas fa-eye mr-1"></i> Preview</button><?php endif; ?>
                     <?php if($canUploadReport): ?><button onclick="openReportUpload('<?= $quarter ?>')" class="btn-primary"><i class="fas fa-upload mr-1"></i> Upload</button><?php endif; ?>
                 </div>
@@ -64,10 +64,9 @@ $reportYears = range((int)date('Y'), 2021);
             <td><?= e($r['period_quarter'] ?: '-') ?></td>
             <td><span class="table-title"><?= e($r['title']) ?></span></td>
             <td><?= e($r['project_title'] ?? '-') ?></td>
-            <td><?php if(!empty($r['attachment'])): ?><span class="file-extension-pill"><?= e(strtoupper(pathinfo($r['attachment'], PATHINFO_EXTENSION))) ?></span><?php else: ?><span class="text-[#6B7280]">-</span><?php endif; ?></td>
+            <td><?php if(!empty($r['attachment'])): ?><span class="file-extension-pill"><?= e(strtoupper(pathinfo($r['attachment'], PATHINFO_EXTENSION))) ?></span><?php if(!empty($r['attachments'])): ?><span class="text-xs text-[#9CA3AF] ml-1">+<?= count(attachmentPaths($r)) - 1 ?></span><?php endif; ?><?php else: ?><span class="text-[#6B7280]">-</span><?php endif; ?></td>
             <td><?= getStatusBadge($r['status']) ?></td>
             <td>
-                <button onclick="viewReport(<?= (int)$r['id'] ?>, this)" class="action-btn" title="View" aria-label="View"><i class="fas fa-eye"></i></button>
                 <?php if(!empty($r['attachment'])): ?><button onclick="previewReport(<?= (int)$r['id'] ?>, <?= htmlspecialchars(json_encode($r['title'] ?? 'Report'), ENT_QUOTES, 'UTF-8') ?>)" class="action-btn" title="Preview" aria-label="Preview"><i class="fas fa-eye"></i></button><?php endif; ?>
             </td>
         </tr><?php endforeach; ?>
@@ -95,11 +94,15 @@ function openReportUpload(q){
         ${fieldHtml({name:'period_year',label:'Year',type:'number',value:'<?= e($selectedYear ?: date('Y')) ?>'})}
         ${fieldHtml({name:'summary',label:'Summary / Notes',type:'textarea',rows:3,fullWidth:true,placeholder:'Optional. Admin can also review details from the uploaded accomplishment file.'})}
         <label class="form-label full-width">Scanned / Uploaded Report File *
-            <input name="attachment" type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xls,.xlsx,.csv" class="form-input" required>
+            <input id="report-file" name="attachments[]" type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xls,.xlsx,.csv" class="form-input" multiple required>
+            <p class="text-xs text-[#9CA3AF] mt-1">Select one or more scanned pages. Images will be kept in upload order.</p>
         </label>
+        <div class="camera-scan-panel full-width"><div class="camera-scan-actions"><button type="button" id="report-scan-start" class="btn-ghost"><i class="fas fa-camera"></i> Scan with Camera</button><button type="button" id="report-scan-capture" class="btn-primary hidden"><i class="fas fa-camera-retro"></i> Capture Page</button><button type="button" id="report-scan-stop" class="btn-ghost hidden"><i class="fas fa-stop"></i> Stop Camera</button></div><div id="report-scan-panel" class="hidden"><video id="report-scan-video" autoplay playsinline muted></video><canvas id="report-scan-canvas" class="hidden"></canvas></div><p id="report-scan-status" class="camera-scan-status">Capture multiple pages; each page is added to the file list.</p></div>
     </div></div>`;
     sl.openForm(`Upload ${q}`, 'Accomplishment file', formHtml, {showSaveAnother:false});
-    document.getElementById('slideoverForm').addEventListener('submit', async e => {
+    const reportForm = document.getElementById('slideoverForm');
+    bindCameraScanner(reportForm, reportForm.querySelector('#report-file'), {prefix:'report', slideover:sl});
+    reportForm.addEventListener('submit', async e => {
         e.preventDefault();
         await submitSlideOverForm(sl, `${siteUrl}/ajax/reports.php?action=create`, new FormData(e.target), () => location.reload());
     });
@@ -123,25 +126,17 @@ function openReportTemplate(){
     });
 }
 
-async function viewReport(id, btn){
-    const data = await fetchWithLoading(`${siteUrl}/ajax/reports.php?action=get&id=${id}`, btn);
-    const fileActions = data.attachment ? `<div class="flex flex-wrap gap-2 mb-4"><button type="button" onclick="previewReport(${Number(data.id)}, this.dataset.title)" data-title="${escapeHtml(data.title || 'Report')}" class="btn-ghost"><i class="fas fa-eye" aria-hidden="true"></i> Preview</button><button type="button" onclick="printReport(${Number(data.id)})" class="btn-ghost"><i class="fas fa-print" aria-hidden="true"></i> Print</button><a href="${siteUrl}/ajax/reports.php?action=file&id=${Number(data.id)}&download=1" class="btn-primary"><i class="fas fa-download" aria-hidden="true"></i> Download</a></div>` : '';
-    getSlideOver({size:'md'}).openView(data.title, data.report_number, fileActions + viewSectionHtml('Accomplishment File', [
-        viewFieldHtml('Quarter', escapeHtml(data.period_quarter || '-')),
-        viewFieldHtml('Year', escapeHtml(data.period_year || '-')),
-        viewFieldHtml('Project', escapeHtml(data.project_title || '-')),
-        viewFieldHtml('Status', getStatusBadge(data.status)),
-        viewFieldHtml('Summary', escapeHtml(data.summary || '-'))
-    ]), {size:'md'});
-}
-function previewReport(id, title = 'Report'){
+async function previewReport(id, title = 'Report'){
     const fileUrl = `${siteUrl}/ajax/reports.php?action=file&id=${Number(id)}`;
-    openDocumentViewer({
-        url: fileUrl,
+    const data = await fetchWithLoading(`${siteUrl}/ajax/reports.php?action=get&id=${Number(id)}`);
+    const urls = Array.from({length: Number(data.attachment_count || 1)}, (_, index) => `${fileUrl}&attachment_index=${index}`);
+    openDocumentGallery({
+        urls,
         downloadUrl: `${fileUrl}&download=1`,
         title,
         subtitle: 'Accomplishment report file',
-        fileName: title || 'report'
+        fileName: title || 'report',
+        allowDownload: <?= $canDownloadReport ? 'true' : 'false' ?>
     });
 }
 function printReport(id){
