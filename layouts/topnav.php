@@ -85,7 +85,7 @@ if ($currentPage !== 'dashboard') {
                     <span class="absolute -top-0.5 -right-0.5 bg-[#DC2626] text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold" id="notif-badge"><?= $notifCount > 9 ? '9+' : $notifCount ?></span>
                 <?php endif; ?>
             </button>
-            <div id="notif-dropdown" class="hidden absolute right-0 mt-2 w-80 bg-[#1F2937] rounded-xl shadow-xl border border-[#374151] overflow-hidden z-50">
+            <div id="notif-dropdown" class="notification-dropdown hidden absolute right-0 mt-2 w-80 bg-[#1F2937] rounded-xl shadow-xl border border-[#374151] overflow-hidden z-50">
                 <div class="p-3 border-b border-[#374151] flex items-center justify-between">
                     <span class="font-semibold text-[#F9FAFB] text-sm">Notifications</span>
                     <button onclick="markAllNotifRead()" class="text-xs text-[#86EFAC] hover:text-[#0F643A] transition-colors">Mark all read</button>

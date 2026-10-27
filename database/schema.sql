@@ -29,6 +29,10 @@ CREATE TABLE `users` (
   `password` varchar(255) NOT NULL,
   `role` enum('admin','faculty','viewer') NOT NULL DEFAULT 'faculty',
   `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `registration_status` enum('approved','pending','rejected') NOT NULL DEFAULT 'approved',
+  `registration_reviewed_by` int(11) DEFAULT NULL,
+  `registration_reviewed_at` datetime DEFAULT NULL,
+  `registration_rejection_reason` varchar(500) DEFAULT NULL,
   `email_verified` tinyint(1) NOT NULL DEFAULT 0,
   `last_login` datetime DEFAULT NULL,
   `last_password_change` datetime DEFAULT NULL,
@@ -710,12 +714,12 @@ INSERT INTO `departments` (`name`, `code`) VALUES
 ('College of Nursing', 'CN'),
 ('Extension Training Services', 'ETS');
 
--- Users (password for all: password123)
+-- Users (development password for all: password)
 INSERT INTO `users` (`username`, `email`, `password`, `role`) VALUES
-('admin', 'admin@isu-cauayan.edu.ph', '$2y$12$9RyZgphPsFEARzNaZkT1o.vZBPubkt/10gwmH4n0MBp6rbm4KbVCu', 'admin'),
-('faculty1', 'faculty1@isu-cauayan.edu.ph', '$2y$12$9RyZgphPsFEARzNaZkT1o.vZBPubkt/10gwmH4n0MBp6rbm4KbVCu', 'faculty'),
-('faculty2', 'faculty2@isu-cauayan.edu.ph', '$2y$12$9RyZgphPsFEARzNaZkT1o.vZBPubkt/10gwmH4n0MBp6rbm4KbVCu', 'faculty'),
-('viewer', 'viewer@isu-cauayan.edu.ph', '$2y$12$9RyZgphPsFEARzNaZkT1o.vZBPubkt/10gwmH4n0MBp6rbm4KbVCu', 'viewer');
+('admin', 'admin@isu-cauayan.edu.ph', '$2y$12$8n9cOyUmSQAsk7O.qThQse9y.EabUE/Z1hl8Sofn1dBtUbdS3oX3e', 'admin'),
+('faculty1', 'faculty1@isu-cauayan.edu.ph', '$2y$12$8n9cOyUmSQAsk7O.qThQse9y.EabUE/Z1hl8Sofn1dBtUbdS3oX3e', 'faculty'),
+('faculty2', 'faculty2@isu-cauayan.edu.ph', '$2y$12$8n9cOyUmSQAsk7O.qThQse9y.EabUE/Z1hl8Sofn1dBtUbdS3oX3e', 'faculty'),
+('viewer', 'viewer@isu-cauayan.edu.ph', '$2y$12$8n9cOyUmSQAsk7O.qThQse9y.EabUE/Z1hl8Sofn1dBtUbdS3oX3e', 'viewer');
 
 -- Faculty Profiles
 INSERT INTO `faculty_profiles` (`user_id`, `employee_id`, `first_name`, `last_name`, `middle_name`, `department_id`, `position`, `is_extensionist`) VALUES

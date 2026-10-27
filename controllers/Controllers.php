@@ -13,6 +13,8 @@ class AuthController {
         $model = new UserModel();
         $user = $model->authenticate($username, $password);
         if ($user) {
+            if (($user['registration_status'] ?? 'approved') === 'pending') return ['success' => false, 'message' => 'Your registration is waiting for Administrator approval.'];
+            if (($user['registration_status'] ?? 'approved') === 'rejected') return ['success' => false, 'message' => 'Your registration was rejected. Please contact an Administrator.'];
             if (!$user['is_active']) return ['success' => false, 'message' => 'Account is deactivated'];
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['username'] = $user['username'];

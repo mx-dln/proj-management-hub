@@ -73,16 +73,16 @@ INSERT INTO `departments` (`name`, `code`) VALUES
 ('Extension Training Services', 'ETS');
 
 -- ============================================================
--- USERS (password: password123)
+-- USERS (development password: password)
 -- ============================================================
 INSERT INTO `users` (`username`, `email`, `password`, `role`, `is_active`) VALUES
-('admin', 'admin@isu-cauayan.edu.ph', '$2y$12$9RyZgphPsFEARzNaZkT1o.vZBPubkt/10gwmH4n0MBp6rbm4KbVCu', 'admin', 1),
-('etshead', 'ets.head@isu-cauayan.edu.ph', '$2y$12$9RyZgphPsFEARzNaZkT1o.vZBPubkt/10gwmH4n0MBp6rbm4KbVCu', 'admin', 1),
-('faculty1', 'juan.delacruz@isu-cauayan.edu.ph', '$2y$12$9RyZgphPsFEARzNaZkT1o.vZBPubkt/10gwmH4n0MBp6rbm4KbVCu', 'faculty', 1),
-('faculty2', 'maria.santos@isu-cauayan.edu.ph', '$2y$12$9RyZgphPsFEARzNaZkT1o.vZBPubkt/10gwmH4n0MBp6rbm4KbVCu', 'faculty', 1),
-('faculty3', 'pedro.reyes@isu-cauayan.edu.ph', '$2y$12$9RyZgphPsFEARzNaZkT1o.vZBPubkt/10gwmH4n0MBp6rbm4KbVCu', 'faculty', 1),
-('faculty4', 'ana.garcia@isu-cauayan.edu.ph', '$2y$12$9RyZgphPsFEARzNaZkT1o.vZBPubkt/10gwmH4n0MBp6rbm4KbVCu', 'faculty', 1),
-('viewer', 'dean@isu-cauayan.edu.ph', '$2y$12$9RyZgphPsFEARzNaZkT1o.vZBPubkt/10gwmH4n0MBp6rbm4KbVCu', 'viewer', 1);
+('admin', 'admin@isu-cauayan.edu.ph', '$2y$12$8n9cOyUmSQAsk7O.qThQse9y.EabUE/Z1hl8Sofn1dBtUbdS3oX3e', 'admin', 1),
+('etshead', 'ets.head@isu-cauayan.edu.ph', '$2y$12$8n9cOyUmSQAsk7O.qThQse9y.EabUE/Z1hl8Sofn1dBtUbdS3oX3e', 'admin', 1),
+('faculty1', 'juan.delacruz@isu-cauayan.edu.ph', '$2y$12$8n9cOyUmSQAsk7O.qThQse9y.EabUE/Z1hl8Sofn1dBtUbdS3oX3e', 'faculty', 1),
+('faculty2', 'maria.santos@isu-cauayan.edu.ph', '$2y$12$8n9cOyUmSQAsk7O.qThQse9y.EabUE/Z1hl8Sofn1dBtUbdS3oX3e', 'faculty', 1),
+('faculty3', 'pedro.reyes@isu-cauayan.edu.ph', '$2y$12$8n9cOyUmSQAsk7O.qThQse9y.EabUE/Z1hl8Sofn1dBtUbdS3oX3e', 'faculty', 1),
+('faculty4', 'ana.garcia@isu-cauayan.edu.ph', '$2y$12$8n9cOyUmSQAsk7O.qThQse9y.EabUE/Z1hl8Sofn1dBtUbdS3oX3e', 'faculty', 1),
+('viewer', 'dean@isu-cauayan.edu.ph', '$2y$12$8n9cOyUmSQAsk7O.qThQse9y.EabUE/Z1hl8Sofn1dBtUbdS3oX3e', 'viewer', 1);
 
 -- ============================================================
 -- FACULTY PROFILES

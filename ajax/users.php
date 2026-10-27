@@ -7,6 +7,38 @@ $action = $_GET['action'] ?? '';
 $user = currentUser();
 
 switch ($action) {
+    case 'review_registration':
+        Permissions::requirePermission(Permissions::canManageUsers());
+        $input = json_decode(file_get_contents('php://input'), true) ?: $_POST;
+        $id = intval($input['id'] ?? 0);
+        $decision = $input['decision'] ?? '';
+        if (!in_array($decision, ['approved', 'rejected'], true)) jsonResponse(['success' => false, 'message' => 'Invalid registration decision.'], 400);
+        $stmt = db()->prepare("SELECT username FROM users WHERE id = ? AND deleted_at IS NULL AND registration_status = 'pending'");
+        $stmt->execute([$id]);
+        $pending = $stmt->fetch();
+        if (!$pending) jsonResponse(['success' => false, 'message' => 'Pending registration not found.'], 404);
+        $reason = $decision === 'rejected' ? sanitize($input['reason'] ?? '') : null;
+        db()->prepare('UPDATE users SET is_active = ?, registration_status = ?, registration_reviewed_by = ?, registration_reviewed_at = NOW(), registration_rejection_reason = ? WHERE id = ?')
+            ->execute([$decision === 'approved' ? 1 : 0, $decision, (int)$_SESSION['user_id'], $reason, $id]);
+        auditLog($decision === 'approved' ? 'approve' : 'reject', 'user', $id, ucfirst($decision) . ' registration: ' . $pending['username']);
+        jsonResponse(['success' => true, 'message' => 'Registration ' . $decision . '.']);
+        break;
+
+    case 'change_password':
+        Permissions::requirePermission(Permissions::canManageUsers());
+        $input = json_decode(file_get_contents('php://input'), true) ?: $_POST;
+        $id = intval($input['id'] ?? 0);
+        $password = $input['password'] ?? '';
+        $confirm = $input['confirm_password'] ?? '';
+        if (!$id || strlen($password) < 6) jsonResponse(['success' => false, 'message' => 'A password with at least 6 characters is required.'], 400);
+        if ($password !== $confirm) jsonResponse(['success' => false, 'message' => 'Passwords do not match.'], 400);
+        $stmt = db()->prepare('UPDATE users SET password = ?, last_password_change = NOW() WHERE id = ? AND deleted_at IS NULL');
+        $stmt->execute([password_hash($password, PASSWORD_DEFAULT), $id]);
+        if (!$stmt->rowCount()) jsonResponse(['success' => false, 'message' => 'User not found.'], 404);
+        auditLog('edit', 'user', $id, 'Administrator changed user password');
+        jsonResponse(['success' => true, 'message' => 'Password changed successfully.']);
+        break;
+
     case 'create':
         Permissions::requirePermission(Permissions::canManageUsers());
         $username = sanitize($_POST['username'] ?? '');

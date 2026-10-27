@@ -50,7 +50,7 @@ $reportYears = range((int)date('Y'), 2021);
                     <small>Ready for upload</small>
                 <?php endif; ?>
                 <div class="quarter-actions">
-                    <?php if($latest && !empty($latest['attachment'])): ?><button onclick="previewReport(<?= (int)$latest['id'] ?>, <?= htmlspecialchars(json_encode($latest['title'] ?? 'Report'), ENT_QUOTES, 'UTF-8') ?>)" class="btn-ghost"><i class="fas fa-eye mr-1"></i> Preview</button><?php endif; ?>
+                    <?php if($latest && !empty($latest['attachment'])): ?><button onclick="previewReport(<?= (int)$latest['id'] ?>, <?= htmlspecialchars(json_encode($latest['title'] ?? 'Report'), ENT_QUOTES, 'UTF-8') ?>)" class="btn-ghost"><i class="fas fa-eye mr-1"></i> View</button><button onclick="printReport(<?= (int)$latest['id'] ?>)" class="btn-ghost"><i class="fas fa-print mr-1"></i> Print</button><?php endif; ?>
                     <?php if($canUploadReport): ?><button onclick="openReportUpload('<?= $quarter ?>')" class="btn-primary"><i class="fas fa-upload mr-1"></i> Upload</button><?php endif; ?>
                 </div>
             </section>
@@ -67,7 +67,7 @@ $reportYears = range((int)date('Y'), 2021);
             <td><?php if(!empty($r['attachment'])): ?><span class="file-extension-pill"><?= e(strtoupper(pathinfo($r['attachment'], PATHINFO_EXTENSION))) ?></span><?php if(!empty($r['attachments'])): ?><span class="text-xs text-[#9CA3AF] ml-1">+<?= count(attachmentPaths($r)) - 1 ?></span><?php endif; ?><?php else: ?><span class="text-[#6B7280]">-</span><?php endif; ?></td>
             <td><?= getStatusBadge($r['status']) ?></td>
             <td>
-                <?php if(!empty($r['attachment'])): ?><button onclick="previewReport(<?= (int)$r['id'] ?>, <?= htmlspecialchars(json_encode($r['title'] ?? 'Report'), ENT_QUOTES, 'UTF-8') ?>)" class="action-btn" title="Preview" aria-label="Preview"><i class="fas fa-eye"></i></button><?php endif; ?>
+                <?php if(!empty($r['attachment'])): ?><button onclick="previewReport(<?= (int)$r['id'] ?>, <?= htmlspecialchars(json_encode($r['title'] ?? 'Report'), ENT_QUOTES, 'UTF-8') ?>)" class="action-btn" title="View" aria-label="View"><i class="fas fa-eye"></i></button><button onclick="printReport(<?= (int)$r['id'] ?>)" class="action-btn" title="Print" aria-label="Print"><i class="fas fa-print"></i></button><?php endif; ?>
             </td>
         </tr><?php endforeach; ?>
         <?php if(empty($reports)): ?><tr><td colspan="7" class="text-center text-[#6B7280] py-8">No accomplishment files yet</td></tr><?php endif; ?>

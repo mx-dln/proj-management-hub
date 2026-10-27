@@ -7,8 +7,6 @@ require_once __DIR__ . '/controllers/Controllers.php';
 
 if (isLoggedIn()) { header('Location: index.php'); exit; }
 $error = '';
-$developmentHost = preg_match('/^(localhost|127\.0\.0\.1)(:\d+)?$/i', $_SERVER['HTTP_HOST'] ?? '') === 1
-    || str_ends_with(strtolower($_SERVER['HTTP_HOST'] ?? ''), '.test');
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $auth = new AuthController();
     $result = $auth->login($_POST['username'] ?? '', $_POST['password'] ?? '');
@@ -52,32 +50,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
                 <button type="submit" class="w-full py-2.5 rounded-xl bg-[#0F643A] hover:bg-[#1E7A4B] text-white font-semibold transition-all transform hover:scale-[1.01] active:scale-[0.99] shadow-lg"><i class="fas fa-sign-in-alt mr-2"></i> Sign In</button>
             </form>
-            <?php if ($developmentHost): ?>
-                <div class="mt-5 border-t border-[#D8E3DA] pt-4">
-                    <p class="text-[#5C6B63] text-xs font-semibold uppercase tracking-wide mb-2">Development quick login</p>
-                    <div class="grid grid-cols-2 gap-2">
-                        <?php foreach ([
-                            ['username' => 'admin', 'label' => 'Admin'],
-                            ['username' => 'etshead', 'label' => 'ETS Head'],
-                            ['username' => 'faculty1', 'label' => 'Faculty'],
-                            ['username' => 'viewer', 'label' => 'Viewer'],
-                        ] as $quickLogin): ?>
-                            <button type="button" class="quick-login px-3 py-2 rounded-lg border border-[#D8E3DA] bg-[#F8FAF8] text-[#0F643A] text-xs font-semibold hover:bg-[#E8F3EB]" data-username="<?= e($quickLogin['username']) ?>"><?= e($quickLogin['label']) ?></button>
-                        <?php endforeach; ?>
-                    </div>
-                    <p class="text-[#6B7280] text-[11px] mt-2">Development password: <strong>Dev@12345</strong></p>
-                </div>
-            <?php endif; ?>
+            <div class="mt-5 text-center"><a href="<?= SITE_URL ?>/register.php" class="text-sm font-semibold text-[#0F643A] hover:underline"><i class="fas fa-user-plus mr-1"></i> Register as ETS Head or Faculty</a></div>
             <div class="mt-6 text-center"><p class="text-[#6B7280] text-xs">ISU-Cauayan Extension Training Services</p><p class="text-[#5C6B63]/60 text-xs mt-1">Project Management Hub v2.0</p></div>
         </div>
     </div>
     <script>
         function togglePassword(){const i=document.getElementById('password'),ic=document.getElementById('eye-icon');if(i.type==='password'){i.type='text';ic.classList.replace('fa-eye','fa-eye-slash')}else{i.type='password';ic.classList.replace('fa-eye-slash','fa-eye')}}
-        document.querySelectorAll('.quick-login').forEach(button => button.addEventListener('click', () => {
-            document.getElementById('username').value = button.dataset.username || '';
-            document.getElementById('password').value = 'Dev@12345';
-            document.getElementById('loginForm').requestSubmit();
-        }));
     </script>
 </body>
 </html>

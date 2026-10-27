@@ -4,7 +4,7 @@ $roleFilter = $_GET['role'] ?? '';
 ?>
 <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
     <div><h1 class="text-2xl font-bold text-[#F9FAFB]">Users</h1><p class="text-[#9CA3AF] text-sm mt-1">Manage user accounts and access roles</p></div>
-    <button onclick="openCreateUser()" class="btn-primary"><i class="fas fa-user-plus mr-1"></i> New User</button>
+    <div class="flex flex-wrap gap-2"><button onclick="openCreateUser()" class="btn-primary"><i class="fas fa-user-plus mr-1"></i> New User</button></div>
 </div>
 
 <div class="filter-bar mb-6">
@@ -33,11 +33,13 @@ $roleFilter = $_GET['role'] ?? '';
                     <td data-label="Name"><?= e(trim(($u['first_name'] ?? '') . ' ' . ($u['last_name'] ?? '')) ?: '-') ?></td>
                     <td data-label="Department"><?= e($u['department_name'] ?? '-') ?></td>
                     <td data-label="Role"><span class="badge badge-submitted"><?= e(ucfirst($u['role'])) ?></span></td>
-                    <td data-label="Status"><span class="badge <?= $u['is_active'] ? 'badge-approved' : 'badge-archived' ?>"><?= $u['is_active'] ? 'Active' : 'Inactive' ?></span></td>
+                    <td data-label="Status"><span class="badge <?= ($u['registration_status'] ?? 'approved') === 'pending' ? 'badge-under-review' : ($u['is_active'] ? 'badge-approved' : 'badge-archived') ?>"><?= ($u['registration_status'] ?? 'approved') === 'pending' ? 'Pending Approval' : ($u['is_active'] ? 'Active' : 'Inactive') ?></span></td>
                     <td data-label="Last Login"><span class="table-date"><?= $u['last_login'] ? formatDateTime($u['last_login']) : '-' ?></span></td>
                     <td data-label="Actions">
                         <button onclick="viewUser(<?= (int)$u['id'] ?>, this)" class="action-btn" title="View" aria-label="View"><i class="fas fa-eye"></i></button>
                         <button onclick="editUser(<?= (int)$u['id'] ?>, this)" class="action-btn" title="Edit" aria-label="Edit"><i class="fas fa-pen"></i></button>
+                        <button onclick="changeUserPassword(<?= (int)$u['id'] ?>, this)" class="action-btn" title="Change password" aria-label="Change password"><i class="fas fa-key"></i></button>
+                        <?php if (($u['registration_status'] ?? 'approved') === 'pending'): ?><button onclick="reviewRegistration(<?= (int)$u['id'] ?>, 'approved', this)" class="action-btn" title="Approve registration" aria-label="Approve registration"><i class="fas fa-check text-green-400"></i></button><button onclick="reviewRegistration(<?= (int)$u['id'] ?>, 'rejected', this)" class="action-btn action-btn-danger" title="Reject registration" aria-label="Reject registration"><i class="fas fa-times"></i></button><?php endif; ?>
                         <button onclick="toggleUserStatus(<?= (int)$u['id'] ?>, this)" class="action-btn" title="<?= $u['is_active'] ? 'Deactivate' : 'Activate' ?>" aria-label="<?= $u['is_active'] ? 'Deactivate' : 'Activate' ?>"><i class="fas <?= $u['is_active'] ? 'fa-user-slash' : 'fa-user-check' ?>"></i></button>
                         <button onclick="deleteUser(<?= (int)$u['id'] ?>, this)" class="action-btn action-btn-danger" title="Delete" aria-label="Delete"><i class="fas fa-trash"></i></button>
                     </td>
@@ -64,13 +66,13 @@ window.usersSiteUrl = <?= json_encode(SITE_URL) ?>;
 const siteUrl = window.usersSiteUrl;
 const departments = <?= json_encode(array_map(fn($d) => ['value' => $d['id'], 'label' => $d['name']], $departments), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 
-function userFormHtml(data = {}, isEdit = false) {
+function userFormHtml(data = {}, isEdit = false, defaultRole = 'faculty') {
     return `<div class="form-section"><div class="form-grid">
         ${isEdit ? `<input type="hidden" name="id" value="${Number(data.id || 0)}">` : ''}
         ${fieldHtml({name:'username',label:'Username',required:true,value:data.username || ''})}
         ${fieldHtml({name:'email',label:'Email',type:'email',required:true,value:data.email || ''})}
         ${fieldHtml({name:'password',label:isEdit ? 'New Password' : 'Password',type:'password',required:!isEdit,help:isEdit ? 'Leave blank to keep current password.' : ''})}
-        ${fieldHtml({name:'role',label:'Role',type:'select',required:true,value:data.role || 'faculty',options:[{value:'admin',label:'Admin'},{value:'faculty',label:'Faculty'},{value:'viewer',label:'Viewer'}]})}
+        ${fieldHtml({name:'role',label:'Role',type:'select',required:true,value:data.role || defaultRole,options:[{value:'admin',label:'Admin / ETS Head'},{value:'faculty',label:'Faculty'},{value:'viewer',label:'Viewer'}]})}
         ${fieldHtml({name:'employee_id',label:'Employee ID',value:data.employee_id || ''})}
         ${fieldHtml({name:'department_id',label:'Department',type:'select',value:data.department_id || '',options:departments})}
         ${fieldHtml({name:'first_name',label:'First Name',value:data.first_name || ''})}
@@ -81,13 +83,33 @@ function userFormHtml(data = {}, isEdit = false) {
     </div></div>`;
 }
 
-window.openCreateUser = function openCreateUser() {
+window.openCreateUser = function openCreateUser(defaultRole = 'faculty') {
     const sl = getSlideOver({size:'md'});
-    sl.openForm('New User', 'Create user account', userFormHtml(), {showSaveAnother:false});
+    sl.openForm('New User', 'Create user account', userFormHtml({}, false, defaultRole), {showSaveAnother:false});
     document.getElementById('slideoverForm').addEventListener('submit', async e => {
         e.preventDefault();
         await submitSlideOverForm(sl, `${siteUrl}/ajax/users.php?action=create`, new FormData(e.target), () => location.reload());
     });
+}
+
+window.changeUserPassword = async function changeUserPassword(id, btn) {
+    const data = await fetchWithLoading(`${siteUrl}/ajax/users.php?action=get&id=${id}`, btn);
+    const sl = getSlideOver({size:'sm'});
+    sl.openForm('Change Password', data.username || '', `<div class="form-section"><div class="form-grid"><input type="hidden" name="id" value="${Number(id)}">${fieldHtml({name:'password',label:'New Password',type:'password',required:true,fullWidth:true})}${fieldHtml({name:'confirm_password',label:'Confirm New Password',type:'password',required:true,fullWidth:true})}</div></div>`, {showSaveAnother:false});
+    document.getElementById('slideoverForm').addEventListener('submit', async e => { e.preventDefault(); await submitSlideOverForm(sl, `${siteUrl}/ajax/users.php?action=change_password`, new FormData(e.target), () => { sl.close(); showToast('Password changed successfully.'); }); });
+}
+
+window.reviewRegistration = async function reviewRegistration(id, decision, btn) {
+    let reason = '';
+    if (decision === 'rejected') { reason = prompt('Reason for rejecting this registration (optional):') || ''; if (!confirm('Reject this registration?')) return; }
+    else if (!confirm('Approve this registration?')) return;
+    setButtonLoading(btn, true);
+    try {
+        const response = await fetch(`${siteUrl}/ajax/users.php?action=review_registration`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id, decision, reason})});
+        const result = await response.json();
+        if (!response.ok || !result.success) throw new Error(result.message || 'Registration review failed.');
+        showToast(result.message || 'Registration updated.'); setTimeout(() => location.reload(), 700);
+    } catch (error) { showToast(error.message || 'Registration review failed.', 'error'); setButtonLoading(btn, false); }
 }
 
 window.viewUser = async function viewUser(id, btn) {

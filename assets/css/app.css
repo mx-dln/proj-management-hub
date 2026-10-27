@@ -1203,6 +1203,15 @@
 .camera-scan-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .camera-scan-panel video{display:block;width:100%;max-height:min(46vh,360px);margin-top:12px;border-radius:6px;background:#000;object-fit:contain}
 .camera-scan-status{margin:8px 0 0;color:#9CA3AF;font-size:12px}
+[data-theme="light"] .notification-dropdown{background:#fff!important;border-color:#d5ddd9!important;color:#16202a}
+[data-theme="light"] .notification-dropdown .border-b,[data-theme="light"] .notification-dropdown .border-t,[data-theme="light"] .notification-dropdown .border-b{border-color:#d5ddd9!important}
+[data-theme="light"] .notification-dropdown a,[data-theme="light"] .notification-dropdown button{color:#0f643a!important}
+@media(max-width:640px){
+    .notification-dropdown{position:fixed!important;top:4.5rem;left:12px;right:12px;width:auto!important;max-width:none;margin-top:0!important;border-radius:10px;max-height:calc(100vh - 5.25rem);overflow:hidden}
+    .notification-dropdown #notif-list{max-height:calc(100vh - 10.5rem);overflow-y:auto}
+    .notification-dropdown .p-3{padding:12px 14px}
+    .notification-dropdown .p-2\.5{padding:12px 14px}
+}
 [data-theme="light"] .camera-scan-panel{background:#f8fafc;border-color:#cbd5d1;color:#334155}
 [data-theme="light"] .camera-scan-status{color:#64748b}
 @media(max-width:640px){.camera-scan-actions{align-items:stretch}.camera-scan-actions button{flex:1;justify-content:center;min-width:135px}.camera-scan-panel video{max-height:42vh}}
