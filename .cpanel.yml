@@ -1,8 +1,5 @@
 ---
 deployment:
   tasks:
-    # By default, deploy to this cPanel account's public_html directory.
-    # Change this path if the domain uses a different document root.
-    - export DEPLOYPATH="${HOME}/public_html/"
-    - /usr/bin/rsync -a --exclude='.git/' --exclude='uploads/' --exclude='logs/' --exclude='database/backups/' --exclude='config/config.local.php' --exclude='config/mail.key' --exclude='vendor/' ./ "${DEPLOYPATH}"
-    - cd "${DEPLOYPATH}" && if command -v composer >/dev/null 2>&1; then composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader; elif [ -x "${HOME}/bin/composer" ]; then "${HOME}/bin/composer" install --no-dev --prefer-dist --no-interaction --optimize-autoloader; else echo 'Composer was not found on cPanel.'; exit 1; fi
+    - export DEPLOYPATH=/home/isuproje/public_html/
+    - /usr/bin/rsync -a --exclude=.git --exclude=uploads --exclude=logs --exclude=database/backups --exclude=config/config.local.php --exclude=config/mail.key --exclude=vendor ./ $DEPLOYPATH

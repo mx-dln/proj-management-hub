@@ -14,7 +14,7 @@ The workflow can also be started manually from GitHub Actions.
 3. Add the GitHub Actions public SSH key to the cPanel account's `~/.ssh/authorized_keys`.
 4. Confirm that the cPanel project folder has no uncommitted tracked changes. The workflow uses `git pull --ff-only` and stops safely if local changes would be overwritten.
 5. Confirm Composer is available on cPanel and that `composer install` works from the project folder.
-6. If the domain does not use `/home/<account>/public_html/`, edit the `DEPLOYPATH` line in `.cpanel.yml` before deploying.
+6. The current manifest targets `/home/isuproje/public_html/`, based on the hosting account shown in the cPanel screenshot. If the domain uses a different document root, edit the `DEPLOYPATH` line in `.cpanel.yml` before deploying.
 
 ## GitHub repository secrets
 
