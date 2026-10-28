@@ -34,6 +34,29 @@ function registrationFailureMessage(Throwable $e, string $reference): string {
     return $hint . ' Reference: ' . $reference . ' Please contact the Administrator.';
 }
 
+function registrationSchemaIssue(): ?string {
+    try {
+        $required = [
+            'users' => ['username', 'email', 'password', 'role', 'is_active', 'registration_status'],
+            'faculty_profiles' => ['user_id', 'employee_id', 'first_name', 'last_name', 'department_id', 'email', 'position'],
+        ];
+        foreach ($required as $table => $columns) {
+            $available = db()->query("SHOW COLUMNS FROM `{$table}`")->fetchAll(PDO::FETCH_COLUMN, 0);
+            $missing = array_values(array_diff($columns, $available));
+            if ($missing) {
+                error_log(sprintf('[registration:schema] table=%s missing=%s', $table, implode(',', $missing)));
+                return $table === 'users'
+                    ? 'The live database needs the registration approval migration.'
+                    : 'The live database needs the latest faculty profile migration.';
+            }
+        }
+    } catch (Throwable $e) {
+        error_log('[registration:schema-check] ' . $e->getMessage());
+        return 'The live database tables could not be checked.';
+    }
+    return null;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = sanitize($_POST['username'] ?? '');
     $email = sanitize($_POST['email'] ?? '');
@@ -54,6 +77,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $existing = db()->prepare('SELECT id FROM users WHERE username = ? OR email = ? LIMIT 1');
         $existing->execute([$username, $email]);
         if ($existing->fetch()) $error = 'Username or email is already registered.';
+    }
+
+    if (!$error) {
+        $error = registrationSchemaIssue() ?? '';
     }
 
     if (!$error) {
