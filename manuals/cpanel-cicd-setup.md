@@ -1,7 +1,7 @@
 # cPanel CI/CD Setup
 
-The repository now includes a GitHub Actions workflow at `.github/workflows/deploy-cpanel.yml`.
-Every push to `main` will connect to cPanel through SSH, pull the latest `main` branch, and run Composer.
+The repository now includes a cPanel deployment manifest at `.cpanel.yml` and a GitHub Actions workflow at `.github/workflows/deploy-cpanel.yml`.
+The cPanel **Update from Remote** and **Deploy HEAD Commit** buttons can now pull the latest `main` branch and deploy it to the document root. Every push to `main` can also be deployed through the GitHub Actions workflow, if the SSH secrets are configured.
 The workflow can also be started manually from GitHub Actions.
 
 ## Required cPanel setup
@@ -14,6 +14,7 @@ The workflow can also be started manually from GitHub Actions.
 3. Add the GitHub Actions public SSH key to the cPanel account's `~/.ssh/authorized_keys`.
 4. Confirm that the cPanel project folder has no uncommitted tracked changes. The workflow uses `git pull --ff-only` and stops safely if local changes would be overwritten.
 5. Confirm Composer is available on cPanel and that `composer install` works from the project folder.
+6. If the domain does not use `/home/<account>/public_html/`, edit the `DEPLOYPATH` line in `.cpanel.yml` before deploying.
 
 ## GitHub repository secrets
 
@@ -31,7 +32,7 @@ Never commit an SSH private key, SMTP password, database password, `config/confi
 
 ## What is preserved on cPanel
 
-The workflow only updates tracked Git files. It does not delete or replace:
+The cPanel deployment manifest only copies tracked application files. It does not delete or replace:
 
 - `config/config.local.php`
 - `config/mail.key`
