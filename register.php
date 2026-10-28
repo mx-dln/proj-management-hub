@@ -83,6 +83,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = registrationSchemaIssue() ?? '';
     }
 
+    if (!$error && $employeeId !== '') {
+        $employeeCheck = db()->prepare('SELECT id FROM faculty_profiles WHERE employee_id = ? LIMIT 1');
+        $employeeCheck->execute([$employeeId]);
+        if ($employeeCheck->fetch()) $error = 'That Employee ID is already registered. Please use the correct Employee ID or leave it blank.';
+    }
+
     if (!$error) {
         try {
             db()->beginTransaction();
