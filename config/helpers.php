@@ -171,13 +171,24 @@ function createNotification($userId, $title, $message, $type = 'info', $entityTy
     }
 }
 
-function sendAccountEmail($email, $name, $username, $status = 'approved') {
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) return false;
+function sendAccountEmail($email, $name, $username, $status = 'approved', ?string &$error = null) {
+    $error = null;
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $error = 'The recipient email address is invalid.';
+        return false;
+    }
     try {
         require_once __DIR__ . '/../includes/Mailer.php';
         $mailer = new Mailer(db());
         $settings = $mailer->settings();
-        if (($settings['mail_enabled'] ?? '0') !== '1' || ($settings['mail_accounts'] ?? '1') !== '1') return false;
+        if (($settings['mail_enabled'] ?? '0') !== '1') {
+            $error = 'Email notifications are disabled in Settings.';
+            return false;
+        }
+        if (($settings['mail_accounts'] ?? '1') !== '1') {
+            $error = 'Account email notifications are disabled in Settings.';
+            return false;
+        }
         $isPending = $status === 'pending';
         $title = $isPending ? 'Registration received - ISU Project Hub' : 'Your ISU Project Hub account was created';
         $message = $isPending
@@ -186,7 +197,8 @@ function sendAccountEmail($email, $name, $username, $status = 'approved') {
         $mailer->send($email, $name, $title, $message, '/index.php?module=notifications');
         return true;
     } catch (Throwable $e) {
-        error_log('Account email delivery failed: ' . $e->getMessage());
+        $error = $e->getMessage();
+        error_log('Account email delivery failed: ' . $error);
         return false;
     }
 }

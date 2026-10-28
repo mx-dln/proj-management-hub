@@ -98,9 +98,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             db()->prepare("INSERT INTO faculty_profiles (user_id, employee_id, first_name, last_name, department_id, email, position) VALUES (?, ?, ?, ?, ?, ?, ?)")
                 ->execute([$userId, $employeeId ?: 'PENDING-' . str_pad((string)$userId, 4, '0', STR_PAD_LEFT), $firstName, $lastName, $departmentId, $email, $role === 'ets_head' ? 'ETS Head' : 'Faculty']);
             db()->commit();
-            $emailSent = sendAccountEmail($email, trim($firstName . ' ' . $lastName), $username, 'pending');
+            $emailError = null;
+            $emailSent = sendAccountEmail($email, trim($firstName . ' ' . $lastName), $username, 'pending', $emailError);
             $success = 'Registration submitted. An Administrator must approve your account before you can sign in.'
-                . ($emailSent ? ' A confirmation email was sent.' : ' SMTP email is not configured or the email could not be delivered yet.');
+                . ($emailSent ? ' A confirmation email was sent.' : ' Email diagnostic: ' . ($emailError ?: 'The mail service did not return a diagnostic.'));
         } catch (Throwable $e) {
             if (db()->inTransaction()) db()->rollBack();
             $error = registrationFailureMessage($e, registrationReference());
