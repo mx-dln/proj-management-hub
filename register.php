@@ -7,6 +7,33 @@ $error = '';
 $success = '';
 $departments = db()->query("SELECT id, name FROM departments WHERE is_active = 1 ORDER BY name")->fetchAll();
 
+function registrationReference(): string {
+    return 'REG-' . strtoupper(bin2hex(random_bytes(4)));
+}
+
+function registrationFailureMessage(Throwable $e, string $reference): string {
+    $details = strtolower($e->getMessage());
+    $hint = 'The server could not save the registration.';
+    if (str_contains($details, 'registration_status') || str_contains($details, 'unknown column')) {
+        $hint = 'The live database needs the latest registration migration.';
+    } elseif (str_contains($details, 'faculty_profiles') || str_contains($details, 'department_id')) {
+        $hint = 'The live database schema is missing a required profile field.';
+    } elseif (str_contains($details, 'duplicate') || str_contains($details, 'unique')) {
+        $hint = 'That username or email is already registered.';
+    } elseif (str_contains($details, 'access denied') || str_contains($details, 'database')) {
+        $hint = 'The live database connection or permissions need to be checked.';
+    }
+    error_log(sprintf(
+        '[registration:%s] %s | file=%s line=%d | ip=%s',
+        $reference,
+        $e->getMessage(),
+        $e->getFile(),
+        $e->getLine(),
+        $_SERVER['REMOTE_ADDR'] ?? 'unknown'
+    ));
+    return $hint . ' Reference: ' . $reference . ' Please contact the Administrator.';
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = sanitize($_POST['username'] ?? '');
     $email = sanitize($_POST['email'] ?? '');
@@ -43,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 . ($emailSent ? ' A confirmation email was sent.' : ' SMTP email is not configured or the email could not be delivered yet.');
         } catch (Throwable $e) {
             if (db()->inTransaction()) db()->rollBack();
-            $error = 'Registration could not be submitted. Please try again.';
+            $error = registrationFailureMessage($e, registrationReference());
         }
     }
 }
