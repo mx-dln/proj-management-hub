@@ -171,6 +171,26 @@ function createNotification($userId, $title, $message, $type = 'info', $entityTy
     }
 }
 
+function sendAccountEmail($email, $name, $username, $status = 'approved') {
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) return false;
+    try {
+        require_once __DIR__ . '/../includes/Mailer.php';
+        $mailer = new Mailer(db());
+        $settings = $mailer->settings();
+        if (($settings['mail_enabled'] ?? '0') !== '1' || ($settings['mail_accounts'] ?? '1') !== '1') return false;
+        $isPending = $status === 'pending';
+        $title = $isPending ? 'Registration received - ISU Project Hub' : 'Your ISU Project Hub account was created';
+        $message = $isPending
+            ? "Hello {$name},\n\nYour account registration for ISU Project Hub has been received. An Administrator will review and approve your account before you can sign in.\n\nUsername: {$username}"
+            : "Hello {$name},\n\nAn Administrator created your ISU Project Hub account.\n\nUsername: {$username}\n\nPlease contact the Administrator for your temporary password or password instructions. You can sign in after receiving them.";
+        $mailer->send($email, $name, $title, $message, '/index.php?module=notifications');
+        return true;
+    } catch (Throwable $e) {
+        error_log('Account email delivery failed: ' . $e->getMessage());
+        return false;
+    }
+}
+
 function getUnreadNotificationCount($userId) {
     $stmt = db()->prepare("SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0");
     $stmt->execute([$userId]);

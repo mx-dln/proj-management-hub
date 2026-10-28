@@ -73,7 +73,8 @@ switch ($action) {
                 ]);
             
             auditLog('create', 'user', $userId, 'Created user: ' . $username);
-            jsonResponse(['success' => true, 'message' => 'User created', 'id' => $userId]);
+            $emailSent = sendAccountEmail($email, trim((string)($_POST['first_name'] ?? '') . ' ' . (string)($_POST['last_name'] ?? '')), $username, 'approved');
+            jsonResponse(['success' => true, 'message' => $emailSent ? 'User created and account email sent.' : 'User created. Account email was not sent; check SMTP settings.', 'id' => $userId, 'email_sent' => $emailSent]);
         } catch (Exception $e) { jsonResponse(['success' => false, 'message' => 'Failed: ' . $e->getMessage()], 500); }
         break;
 

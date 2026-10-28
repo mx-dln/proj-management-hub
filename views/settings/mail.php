@@ -7,7 +7,7 @@ $mailConfig = (new Mailer(db()))->publicSettings();
         <input type="hidden" name="csrf" value="<?= e($_SESSION['settings_csrf']) ?>">
         <div class="flex flex-wrap items-center justify-between gap-4">
             <h2 class="text-lg font-semibold text-[#F9FAFB]">Email Delivery</h2>
-            <label class="flex items-center gap-2 text-sm text-[#D1D5DB]"><input id="mail-enabled" type="checkbox" name="mail_enabled" value="1" <?= $mailConfig['mail_enabled'] === '1' ? 'checked' : '' ?>> Enable email notifications</label>
+            <div class="flex flex-wrap gap-4 text-sm text-[#D1D5DB]"><label class="flex items-center gap-2"><input id="mail-enabled" type="checkbox" name="mail_enabled" value="1" <?= $mailConfig['mail_enabled'] === '1' ? 'checked' : '' ?>> Enable email notifications</label><label class="flex items-center gap-2"><input type="checkbox" name="mail_accounts" value="1" <?= ($mailConfig['mail_accounts'] ?? '1') === '1' ? 'checked' : '' ?>> Account notifications</label></div>
         </div>
         <fieldset class="border-t border-[#374151] pt-4">
             <legend class="text-sm font-semibold text-[#D1D5DB] pr-3">SMTP Server</legend>

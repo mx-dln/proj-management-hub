@@ -18,6 +18,7 @@ class Mailer {
         'mail_proposals' => '1',
         'mail_reports' => '1',
         'mail_assignments' => '1',
+        'mail_accounts' => '1',
     ];
 
     public function __construct(private PDO $db, private ?string $keyPath = null) {
@@ -40,7 +41,7 @@ class Mailer {
         $config = $this->settings();
         foreach (self::DEFAULTS as $key => $default) {
             if ($key === 'mail_password') continue;
-            if (in_array($key, ['mail_enabled', 'mail_auth', 'mail_proposals', 'mail_reports', 'mail_assignments'], true)) {
+            if (in_array($key, ['mail_enabled', 'mail_auth', 'mail_proposals', 'mail_reports', 'mail_assignments', 'mail_accounts'], true)) {
                 $config[$key] = ($input[$key] ?? '0') === '1' ? '1' : '0';
             } else {
                 if (isset($input[$key]) && !is_string($input[$key])) throw new InvalidArgumentException('Invalid mail setting.');
