@@ -18,6 +18,7 @@ if ($action === 'status') jsonResponse(['success' => true, 'queue' => $queue->st
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') jsonResponse(['success' => false, 'message' => 'POST required.'], 405);
 if (empty($_SESSION['settings_csrf']) || !is_string($_POST['csrf'] ?? null) || !hash_equals($_SESSION['settings_csrf'], $_POST['csrf'])) jsonResponse(['success' => false, 'message' => 'Session expired. Refresh and try again.'], 403);
 try {
+    $diagnostic = [];
     switch ($action) {
         case 'save':
             if (($_POST['mail_enabled'] ?? '') === '1' && !$queue->status()['available']) throw new RuntimeException('Install the email queue migration before enabling email.');
@@ -27,10 +28,17 @@ try {
         case 'test':
             if (time() - (int)($_SESSION['mail_last_test'] ?? 0) < 30) jsonResponse(['success' => false, 'message' => 'Wait 30 seconds before sending another test.'], 429);
             $_SESSION['mail_last_test'] = time();
+            $recipient = trim((string)($_POST['test_recipient'] ?? $user['email']));
+            if (!filter_var($recipient, FILTER_VALIDATE_EMAIL)) jsonResponse(['success' => false, 'message' => 'Enter a valid test recipient email.'], 422);
             session_write_close();
-            $mailer->send($user['email'], $user['username'], 'SMTP test - ISU Project Hub', 'Your saved SMTP settings successfully sent this test message.', '/index.php?module=notifications');
-            auditLog('email_test', 'settings', null, 'SMTP server accepted a test email for the signed-in administrator');
-            jsonResponse(['success' => true, 'message' => 'SMTP server accepted the test email. Check your inbox and spam folder.']);
+            $sendTest = ($_POST['send_test'] ?? '1') === '1';
+            if ($sendTest) {
+                $mailer->send($recipient, $user['username'], 'SMTP test - ISU Project Hub', 'Your saved SMTP settings successfully sent this test message.', '/index.php?module=notifications', $diagnostic);
+            } else {
+                $mailer->testConnection();
+            }
+            auditLog('email_test', 'settings', null, $sendTest ? 'SMTP server accepted a test email for the signed-in administrator' : 'SMTP connection test succeeded');
+            jsonResponse(['success' => true, 'message' => $sendTest ? 'SMTP server accepted the test email for ' . $recipient . '. Check the inbox and spam folder.' : 'SMTP connection succeeded. No email was sent.', 'diagnostic' => $diagnostic]);
         case 'process':
             session_write_close();
             $result = $queue->process(5);
@@ -50,7 +58,7 @@ try {
         error_log('Mail settings database operation failed.');
         jsonResponse(['success' => false, 'message' => 'Email settings could not be updated. Check the database migration.'], 500);
     }
-    jsonResponse(['success' => false, 'message' => $e->getMessage()], 503);
+    jsonResponse(['success' => false, 'message' => $e->getMessage(), 'diagnostic' => $action === 'test' ? ($diagnostic ?? []) : []], 503);
 } catch (Throwable $e) {
     error_log('Mail settings operation failed.');
     jsonResponse(['success' => false, 'message' => 'The email operation failed. Check the server configuration.'], 500);

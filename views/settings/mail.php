@@ -11,10 +11,11 @@ $mailConfig = (new Mailer(db()))->publicSettings();
         </div>
         <fieldset class="border-t border-[#374151] pt-4">
             <legend class="text-sm font-semibold text-[#D1D5DB] pr-3">SMTP Server</legend>
+            <div class="flex flex-wrap items-center gap-2 mb-4"><span class="text-xs text-[#9CA3AF]">Quick presets:</span><button type="button" id="mail-preset-cpanel-ssl" class="btn-ghost text-xs">cPanel SSL · 465</button><button type="button" id="mail-preset-cpanel-tls" class="btn-ghost text-xs">cPanel STARTTLS · 587</button></div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="min-w-0"><label for="mail-host" class="form-label">Host</label><input id="mail-host" name="mail_host" class="form-input" maxlength="255" placeholder="smtp.example.com" value="<?= e($mailConfig['mail_host']) ?>"></div>
                 <div><label for="mail-port" class="form-label">Port</label><input id="mail-port" name="mail_port" type="number" min="1" max="65535" required class="form-input" value="<?= e($mailConfig['mail_port']) ?>"></div>
-                <div><label for="mail-encryption" class="form-label">Encryption</label><select id="mail-encryption" name="mail_encryption" class="form-input"><?php foreach (['tls' => 'STARTTLS', 'ssl' => 'SSL / TLS', 'none' => 'None (local mail server only)'] as $value => $label): ?><option value="<?= $value ?>" <?= $mailConfig['mail_encryption'] === $value ? 'selected' : '' ?>><?= $label ?></option><?php endforeach; ?></select></div>
+                <div><label for="mail-encryption" class="form-label">Security</label><select id="mail-encryption" name="mail_encryption" class="form-input"><?php foreach (['auto' => 'Auto', 'ssl' => 'SSL', 'tls' => 'TLS / STARTTLS', 'tls_optional' => 'TLS when available', 'none' => 'None'] as $value => $label): ?><option value="<?= $value ?>" <?= $mailConfig['mail_encryption'] === $value ? 'selected' : '' ?>><?= $label ?></option><?php endforeach; ?></select><div class="flex flex-wrap gap-2 mt-2"><span class="text-xs text-[#9CA3AF]">Common ports:</span><?php foreach (['25' => '25', '465' => '465', '587' => '587'] as $port => $label): ?><button type="button" class="mail-port-preset btn-ghost text-xs px-2 py-1" data-port="<?= $port ?>"><?= $label ?></button><?php endforeach; ?></div></div>
                 <div class="flex items-end min-h-[64px]"><label class="flex items-center gap-2 text-sm text-[#D1D5DB] pb-3"><input type="checkbox" id="mail-auth" name="mail_auth" value="1" <?= $mailConfig['mail_auth'] === '1' ? 'checked' : '' ?>> SMTP authentication</label></div>
                 <div class="min-w-0"><label for="mail-username" class="form-label">Username</label><input id="mail-username" name="mail_username" autocomplete="off" maxlength="255" class="form-input" value="<?= e($mailConfig['mail_username']) ?>"></div>
                 <div class="min-w-0"><label for="mail-password" class="form-label">Password / App Password</label><input id="mail-password" type="password" name="mail_password" autocomplete="new-password" class="form-input" maxlength="4096"><p id="mail-password-note" class="text-xs text-[#9CA3AF] mt-1"><?= $mailConfig['password_configured'] ? 'Password saved. Leave blank to keep it.' : 'No password saved.' ?></p><label class="flex items-center gap-2 text-xs text-[#9CA3AF] mt-2"><input type="checkbox" name="clear_password" value="1"> Remove saved password</label></div>
@@ -35,12 +36,20 @@ $mailConfig = (new Mailer(db()))->publicSettings();
             <label class="flex items-start gap-3 text-sm text-[#D1D5DB]"><input type="checkbox" class="mt-1" name="mail_<?= $category ?>" value="1" <?= $mailConfig['mail_' . $category] === '1' ? 'checked' : '' ?>><span><?= e($label) ?></span></label>
             <?php endforeach; ?>
         </fieldset>
+        <fieldset class="border-t border-[#374151] pt-4">
+            <legend class="text-sm font-semibold text-[#D1D5DB] pr-3">SMTP Test</legend>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                <div><label for="mail-test-recipient" class="form-label">Test recipient</label><input id="mail-test-recipient" type="email" class="form-input" value="<?= e($user['email'] ?? '') ?>" placeholder="you@example.com"><p class="text-xs text-[#9CA3AF] mt-1">Used only for the test email; it is not saved.</p></div>
+                <label class="flex items-center gap-2 text-sm text-[#D1D5DB] pb-3"><input id="mail-send-test" type="checkbox" checked> Send a test email after connection</label>
+            </div>
+        </fieldset>
         <div class="flex flex-wrap gap-3 items-center">
             <button type="submit" class="btn-primary"><i class="fas fa-save mr-2" aria-hidden="true"></i>Save Email Settings</button>
-            <button type="button" id="mail-test" class="btn-ghost"><i class="fas fa-paper-plane mr-2" aria-hidden="true"></i>Send Test to My Email</button>
+            <button type="button" id="mail-test" class="btn-ghost"><i class="fas fa-stethoscope mr-2" aria-hidden="true"></i>Save &amp; Test SMTP</button>
             <span id="mail-unsaved" class="text-xs text-[#FCD34D] hidden">Save changes before sending a test.</span>
         </div>
         <p id="mail-feedback" role="status" aria-live="polite" class="text-sm text-[#D1D5DB] break-words"></p>
+        <div id="mail-diagnostic-wrap" class="hidden mt-4"><div class="text-sm font-semibold text-[#D1D5DB] mb-2">SMTP diagnostic transcript</div><pre id="mail-diagnostic" class="max-h-80 overflow-auto rounded-lg border border-[#374151] bg-[#0B1220] p-3 text-xs leading-5 text-[#A7F3D0] whitespace-pre-wrap"></pre><p class="text-xs text-[#9CA3AF] mt-2">Authentication payloads and passwords are redacted.</p></div>
     </form>
     <section class="mt-8 border-t border-[#374151] pt-5" aria-labelledby="mail-queue-heading">
         <div class="flex flex-wrap items-center justify-between gap-3">

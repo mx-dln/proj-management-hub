@@ -38,8 +38,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             db()->prepare("INSERT INTO faculty_profiles (user_id, employee_id, first_name, last_name, department_id, email, position) VALUES (?, ?, ?, ?, ?, ?, ?)")
                 ->execute([$userId, $employeeId ?: 'PENDING-' . str_pad((string)$userId, 4, '0', STR_PAD_LEFT), $firstName, $lastName, $departmentId, $email, $role === 'ets_head' ? 'ETS Head' : 'Faculty']);
             db()->commit();
-            sendAccountEmail($email, trim($firstName . ' ' . $lastName), $username, 'pending');
-            $success = 'Registration submitted. An Administrator must approve your account before you can sign in.';
+            $emailSent = sendAccountEmail($email, trim($firstName . ' ' . $lastName), $username, 'pending');
+            $success = 'Registration submitted. An Administrator must approve your account before you can sign in.'
+                . ($emailSent ? ' A confirmation email was sent.' : ' SMTP email is not configured or the email could not be delivered yet.');
         } catch (Throwable $e) {
             if (db()->inTransaction()) db()->rollBack();
             $error = 'Registration could not be submitted. Please try again.';

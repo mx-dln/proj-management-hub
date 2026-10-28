@@ -77,7 +77,7 @@ class Mailer {
         if (!ctype_digit($config['mail_port']) || (int)$config['mail_port'] < 1 || (int)$config['mail_port'] > 65535) {
             throw new InvalidArgumentException('SMTP port must be between 1 and 65535.');
         }
-        if (!in_array($config['mail_encryption'], ['tls', 'ssl', 'none'], true)) throw new InvalidArgumentException('Choose a valid SMTP encryption option.');
+        if (!in_array($config['mail_encryption'], ['auto', 'tls', 'ssl', 'tls_optional', 'none'], true)) throw new InvalidArgumentException('Choose a valid SMTP encryption option.');
         $host = $config['mail_host'];
         if (($required || $host !== '') && !filter_var($host, FILTER_VALIDATE_IP) && !filter_var($host, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME)) {
             throw new InvalidArgumentException('Enter an SMTP hostname without a protocol or port.');
@@ -142,7 +142,7 @@ class Mailer {
         return ['subject' => preg_replace('/[\r\n]+/', ' ', $title), 'html' => $html, 'text' => $title . "\n\n" . $message . "\n\nOpen Project Hub: " . $url];
     }
 
-    public function send(string $email, string $name, string $title, string $message, string $actionUrl): void {
+    public function send(string $email, string $name, string $title, string $message, string $actionUrl, ?array &$debug = null): void {
         $config = $this->settings();
         $this->validate($config);
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) throw new InvalidArgumentException('The recipient does not have a valid email address.');
@@ -153,8 +153,8 @@ class Mailer {
         $mail->isSMTP();
         $mail->Host = $config['mail_host'];
         $mail->Port = (int)$config['mail_port'];
-        $mail->SMTPSecure = $config['mail_encryption'] === 'none' ? '' : $config['mail_encryption'];
-        $mail->SMTPAutoTLS = $config['mail_encryption'] !== 'none';
+        $mail->SMTPSecure = in_array($config['mail_encryption'], ['tls', 'ssl'], true) ? $config['mail_encryption'] : '';
+        $mail->SMTPAutoTLS = in_array($config['mail_encryption'], ['auto', 'tls', 'tls_optional'], true);
         $mail->SMTPAuth = $config['mail_auth'] === '1';
         if ($mail->SMTPAuth) {
             $mail->Username = $config['mail_username'];
@@ -162,6 +162,15 @@ class Mailer {
         }
         $mail->Timeout = 10;
         $mail->getSMTPInstance()->Timelimit = 20;
+        if (is_array($debug)) {
+            $debug = [];
+            $mail->SMTPDebug = 2;
+            $mail->Debugoutput = static function ($line) use (&$debug): void {
+                $line = preg_replace('/AUTH(?:\s+\w+)?\s+[^\r\n]*/i', 'AUTH [redacted]', (string)$line);
+                $line = preg_replace('/(password|pass|secret)\s*[:=]\s*[^\s]+/i', '$1=[redacted]', $line);
+                $debug[] = trim((string)$line);
+            };
+        }
         $mail->CharSet = 'UTF-8';
         $mail->setFrom($config['mail_from_email'], $config['mail_from_name']);
         if ($config['mail_reply_to'] !== '') $mail->addReplyTo($config['mail_reply_to']);
@@ -179,6 +188,38 @@ class Mailer {
             $reason = str_contains($error, 'authenticat') ? 'SMTP authentication failed. Check the username and password.'
                 : (str_contains($error, 'connect') ? 'SMTP connection failed. Check the host, port, TLS settings, and network access.'
                 : 'SMTP server did not accept the email. Check the sender address and provider settings.');
+            throw new RuntimeException($reason);
+        } finally {
+            $mail->smtpClose();
+        }
+    }
+
+    public function testConnection(): void {
+        $config = $this->settings();
+        $this->validate($config);
+        $autoload = __DIR__ . '/../vendor/autoload.php';
+        if (!is_file($autoload)) throw new RuntimeException('Mail library is unavailable. Run composer install on the server.');
+        require_once $autoload;
+        $mail = new PHPMailer(true);
+        $mail->isSMTP();
+        $mail->Host = $config['mail_host'];
+        $mail->Port = (int)$config['mail_port'];
+        $mail->SMTPSecure = in_array($config['mail_encryption'], ['tls', 'ssl'], true) ? $config['mail_encryption'] : '';
+        $mail->SMTPAutoTLS = in_array($config['mail_encryption'], ['auto', 'tls', 'tls_optional'], true);
+        $mail->SMTPAuth = $config['mail_auth'] === '1';
+        if ($mail->SMTPAuth) {
+            $mail->Username = $config['mail_username'];
+            $mail->Password = $this->decrypt($config['mail_password']);
+        }
+        $mail->Timeout = 10;
+        $mail->getSMTPInstance()->Timelimit = 20;
+        try {
+            if (!$mail->smtpConnect()) throw new RuntimeException('SMTP server did not accept the connection.');
+        } catch (\PHPMailer\PHPMailer\Exception $e) {
+            $error = strtolower($mail->ErrorInfo);
+            $reason = str_contains($error, 'authenticat') ? 'SMTP authentication failed. Check the username and password.'
+                : (str_contains($error, 'connect') ? 'SMTP connection failed. Check the host, port, TLS settings, and network access.'
+                : 'SMTP server did not accept the connection. Check the sender address and provider settings.');
             throw new RuntimeException($reason);
         } finally {
             $mail->smtpClose();
