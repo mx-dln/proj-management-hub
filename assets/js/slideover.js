@@ -10,14 +10,33 @@ class SlideOver {
         this.element = null;
         this.backdrop = null;
         this.isOpen = false;
+        this.closeTimeout = null;
     }
 
     open(content, size) {
-        if (this.isOpen) this.close(true);
-        
+        if (this.closeTimeout) {
+            clearTimeout(this.closeTimeout);
+            this.closeTimeout = null;
+        }
+
+        // If already open, immediately clean up old DOM elements without animation delay
+        if (this.element) {
+            this.element.remove();
+            this.element = null;
+        }
+        if (this.backdrop) {
+            this.backdrop.remove();
+            this.backdrop = null;
+        }
+        if (this.escHandler) {
+            document.removeEventListener('keydown', this.escHandler);
+            this.escHandler = null;
+        }
+
         const panelSize = size || this.size;
         this.isOpen = true;
         this.hasUnsavedChanges = false;
+        document.body.style.overflow = 'hidden';
 
         // Create backdrop
         this.backdrop = document.createElement('div');
@@ -67,13 +86,14 @@ class SlideOver {
     openForm(title, subtitle, formHtml, options = {}) {
         const size = options.size || 'md';
         const showSaveAnother = options.showSaveAnother !== false;
+        const submitText = options.submitText || 'Save';
         
         const footerHtml = `
             <div class="slideover-footer">
                 <button type="button" class="btn-ghost slideover-cancel">Cancel</button>
                 ${showSaveAnother ? '<button type="button" class="btn-save-another" id="saveAndCreate">Save & Create Another</button>' : ''}
                 <button type="submit" form="slideoverForm" class="btn-primary slideover-save" id="saveBtn">
-                    <span class="save-text">Save</span>
+                    <span class="save-text">${escapeHtml(submitText)}</span>
                     <span class="save-spinner hidden"><span class="btn-spinner"></span>Saving...</span>
                 </button>
             </div>
@@ -127,7 +147,7 @@ class SlideOver {
     }
 
     close(force = false) {
-        if (!this.isOpen) return;
+        if (!this.isOpen && !this.element) return;
 
         if (this.hasUnsavedChanges && !force) {
             this.showUnsavedDialog();
@@ -135,29 +155,41 @@ class SlideOver {
         }
 
         this.isOpen = false;
+        this.hasUnsavedChanges = false;
+
+        if (this.closeTimeout) {
+            clearTimeout(this.closeTimeout);
+            this.closeTimeout = null;
+        }
+
+        // Capture local element references so subsequent open() won't have its new elements removed
+        const el = this.element;
+        const bd = this.backdrop;
+        this.element = null;
+        this.backdrop = null;
 
         // Animate out
-        if (this.element) {
-            this.element.classList.add('closing');
-        }
-        if (this.backdrop) {
-            this.backdrop.classList.add('closing');
-        }
+        if (el) el.classList.add('closing');
+        if (bd) bd.classList.add('closing');
 
-        setTimeout(() => {
-            this.element?.remove();
-            this.backdrop?.remove();
-            this.element = null;
-            this.backdrop = null;
-            document.body.style.overflow = '';
+        this.closeTimeout = setTimeout(() => {
+            el?.remove();
+            bd?.remove();
+            if (!currentSlideOver || !currentSlideOver.isOpen) {
+                document.body.style.overflow = '';
+            }
+            this.closeTimeout = null;
         }, 200);
 
         // Remove ESC handler
         if (this.escHandler) {
             document.removeEventListener('keydown', this.escHandler);
+            this.escHandler = null;
         }
 
-        if (this.onClose) this.onClose();
+        if (this.onClose) {
+            try { this.onClose(); } catch (err) { console.error('onClose error:', err); }
+        }
     }
 
     showUnsavedDialog() {

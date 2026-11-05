@@ -99,7 +99,7 @@ function openReportUpload(q){
         </label>
         <div class="camera-scan-panel full-width"><div class="camera-scan-actions"><button type="button" id="report-scan-start" class="btn-ghost"><i class="fas fa-camera"></i> Scan with Camera</button><button type="button" id="report-scan-capture" class="btn-primary hidden"><i class="fas fa-camera-retro"></i> Capture Page</button><button type="button" id="report-scan-stop" class="btn-ghost hidden"><i class="fas fa-stop"></i> Stop Camera</button></div><div id="report-scan-panel" class="hidden"><video id="report-scan-video" autoplay playsinline muted></video><canvas id="report-scan-canvas" class="hidden"></canvas></div><p id="report-scan-status" class="camera-scan-status">Capture multiple pages; each page is added to the file list.</p></div>
     </div></div>`;
-    sl.openForm(`Upload ${q}`, 'Accomplishment file', formHtml, {showSaveAnother:false});
+    sl.openForm(`Upload ${q}`, 'Accomplishment file', formHtml, {showSaveAnother:false, submitText:'Upload Report'});
     const reportForm = document.getElementById('slideoverForm');
     bindCameraScanner(reportForm, reportForm.querySelector('#report-file'), {prefix:'report', slideover:sl});
     reportForm.addEventListener('submit', async e => {
@@ -115,29 +115,45 @@ function openReportTemplate(){
         ${fieldHtml({name:'period_quarter',label:'Quarter',type:'select',value:'<?= e($selectedQuarter ?: 'Q1') ?>',options:['Q1','Q2','Q3','Q4'].map(x=>({value:x,label:x}))})}
         ${fieldHtml({name:'period_year',label:'Year',type:'number',value:'<?= e($selectedYear ?: date('Y')) ?>'})}
     </div></div>`;
-    sl.openForm('Generate Report Template', 'Build from project data', formHtml, {showSaveAnother:false});
+    sl.openForm('Generate Report Template', 'Build from project data', formHtml, {showSaveAnother:false, submitText:'Generate Template'});
     document.getElementById('slideoverForm').addEventListener('submit', async e => {
         e.preventDefault();
-        const data = new FormData(e.target);
-        const url = `${siteUrl}/ajax/reports.php?action=template&project_id=${encodeURIComponent(data.get('project_id'))}&quarter=${encodeURIComponent(data.get('period_quarter'))}&year=${encodeURIComponent(data.get('period_year'))}`;
-        const result = await fetchWithLoading(url);
-        if (!result.success) { showToast(result.message || 'Failed to generate template', 'error'); return; }
-        sl.openView('Generated Report Template', `${data.get('period_quarter')} ${data.get('period_year')}`, `<div class="flex justify-end mb-3 no-print"><button onclick="window.print()" class="btn-primary"><i class="fas fa-print mr-1"></i> Print</button></div>${result.html}`, {size:'lg'});
+        sl.setLoading(true);
+        try {
+            const data = new FormData(e.target);
+            const url = `${siteUrl}/ajax/reports.php?action=template&project_id=${encodeURIComponent(data.get('project_id'))}&quarter=${encodeURIComponent(data.get('period_quarter'))}&year=${encodeURIComponent(data.get('period_year'))}`;
+            const result = await fetchWithLoading(url);
+            if (!result.success) {
+                sl.setLoading(false);
+                showToast(result.message || 'Failed to generate template', 'error');
+                return;
+            }
+            sl.openView('Generated Report Template', `${data.get('period_quarter')} ${data.get('period_year')}`, `<div class="flex justify-end mb-3 no-print"><button onclick="window.print()" class="btn-primary"><i class="fas fa-print mr-1"></i> Print</button></div>${result.html}`, {size:'lg'});
+        } catch (err) {
+            console.error('Template generation error:', err);
+            sl.setLoading(false);
+            showToast(err.message || 'An error occurred while generating template', 'error');
+        }
     });
 }
 
 async function previewReport(id, title = 'Report'){
-    const fileUrl = `${siteUrl}/ajax/reports.php?action=file&id=${Number(id)}`;
-    const data = await fetchWithLoading(`${siteUrl}/ajax/reports.php?action=get&id=${Number(id)}`);
-    const urls = Array.from({length: Number(data.attachment_count || 1)}, (_, index) => `${fileUrl}&attachment_index=${index}`);
-    openDocumentGallery({
-        urls,
-        downloadUrl: `${fileUrl}&download=1`,
-        title,
-        subtitle: 'Accomplishment report file',
-        fileName: title || 'report',
-        allowDownload: <?= $canDownloadReport ? 'true' : 'false' ?>
-    });
+    try {
+        const fileUrl = `${siteUrl}/ajax/reports.php?action=file&id=${Number(id)}`;
+        const data = await fetchWithLoading(`${siteUrl}/ajax/reports.php?action=get&id=${Number(id)}`);
+        const urls = Array.from({length: Number(data.attachment_count || 1)}, (_, index) => `${fileUrl}&attachment_index=${index}`);
+        openDocumentGallery({
+            urls,
+            downloadUrl: `${fileUrl}&download=1`,
+            title,
+            subtitle: 'Accomplishment report file',
+            fileName: title || 'report',
+            allowDownload: <?= $canDownloadReport ? 'true' : 'false' ?>
+        });
+    } catch (err) {
+        console.error('Preview report error:', err);
+        showToast(err.message || 'Failed to preview report', 'error');
+    }
 }
 function printReport(id){
     const win = window.open(`${siteUrl}/ajax/reports.php?action=file&id=${Number(id)}`, '_blank', 'noopener');

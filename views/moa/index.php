@@ -84,6 +84,8 @@ $canManageMoa = Permissions::canManageMoa();
 <script>
 const siteUrl = <?= json_encode(SITE_URL) ?>;
 const canManageMoa = <?= $canManageMoa ? 'true' : 'false' ?>;
+const projectOptions = <?= json_encode(array_map(fn($p) => ['value'=>$p['id'],'label'=>$p['title']], $projectOptions)) ?>;
+const partnerOptions = <?= json_encode(array_map(fn($p) => ['value'=>$p['id'],'label'=>$p['name']], $partnerOptions)) ?>;
 function focusMoaForm(){ document.querySelector('#moaInlineForm input[name="moa_number"]')?.focus(); }
 const moaForm = document.getElementById('moaInlineForm');
 if (moaForm && window.bindCameraScanner) bindCameraScanner(moaForm, document.getElementById('moa-file'), {prefix:'moa'});
@@ -104,19 +106,63 @@ document.getElementById('moaInlineForm')?.addEventListener('submit', async e => 
     }
 });
 async function viewMoa(id, btn){
-    const data = await fetchWithLoading(`${siteUrl}/ajax/moa.php?action=get&id=${id}`, btn);
-    const downloadAction = canManageMoa ? `<a href="${siteUrl}/ajax/moa.php?action=file&id=${Number(data.id)}&download=1" class="btn-primary"><i class="fas fa-download" aria-hidden="true"></i> Download</a>` : '';
-    const fileActions = `<div class="flex flex-wrap gap-2 mb-4">${data.attachment ? `<button type="button" onclick="previewMoa(${Number(data.id)}, this.dataset.title)" data-title="${escapeHtml(data.moa_number || 'MOA')}" class="btn-ghost"><i class="fas fa-eye" aria-hidden="true"></i> Preview</button>` : ''}<button type="button" onclick="printMoa(${Number(data.id)}, ${data.attachment ? 'true' : 'false'})" class="btn-ghost"><i class="fas fa-print" aria-hidden="true"></i> Print</button>${downloadAction}</div>`;
-    getSlideOver({size:'md'}).openView(data.moa_number, data.project_title || '', fileActions + viewSectionHtml('MOA Information', [
-        viewFieldHtml('MOA #', escapeHtml(data.moa_number || '-')),
-        viewFieldHtml('Project', escapeHtml(data.project_title || '-')),
-        viewFieldHtml('Partner Agency', escapeHtml(data.partner_name || '-')),
-        viewFieldHtml('Date Signed', formatDate(data.date_signed)),
-        viewFieldHtml('End Date', formatDate(data.expiration_date)),
-        viewFieldHtml('Remarks', escapeHtml(data.remarks || '-')),
-    ]), {size:'md'});
+    try {
+        const data = await fetchWithLoading(`${siteUrl}/ajax/moa.php?action=get&id=${id}`, btn);
+        const downloadAction = canManageMoa ? `<a href="${siteUrl}/ajax/moa.php?action=file&id=${Number(data.id)}&download=1" class="btn-primary"><i class="fas fa-download" aria-hidden="true"></i> Download</a>` : '';
+        const fileActions = `<div class="flex flex-wrap gap-2 mb-4">${data.attachment ? `<button type="button" onclick="previewMoa(${Number(data.id)}, this.dataset.title)" data-title="${escapeHtml(data.moa_number || 'MOA')}" class="btn-ghost"><i class="fas fa-eye" aria-hidden="true"></i> Preview</button>` : ''}<button type="button" onclick="printMoa(${Number(data.id)}, ${data.attachment ? 'true' : 'false'})" class="btn-ghost"><i class="fas fa-print" aria-hidden="true"></i> Print</button>${downloadAction}</div>`;
+        getSlideOver({size:'md'}).openView(data.moa_number, data.project_title || '', fileActions + viewSectionHtml('MOA Information', [
+            viewFieldHtml('MOA #', escapeHtml(data.moa_number || '-')),
+            viewFieldHtml('Project', escapeHtml(data.project_title || '-')),
+            viewFieldHtml('Partner Agency', escapeHtml(data.partner_name || '-')),
+            viewFieldHtml('Status', getStatusBadge(data.status)),
+            viewFieldHtml('Date Signed', formatDate(data.date_signed)),
+            viewFieldHtml('End Date', formatDate(data.expiration_date)),
+            viewFieldHtml('Remarks', escapeHtml(data.remarks || '-')),
+        ]), {size:'md', onEdit: canManageMoa ? () => editMoa(id, null) : null});
+    } catch (err) {
+        console.error('Error:', err);
+        showToast(err.message || 'Failed to load MOA', 'error');
+    }
 }
-function editMoa(id, btn){ viewMoa(id, btn); }
+async function editMoa(id, btn){
+    const sl = getSlideOver({size:'md'});
+    try {
+        const data = await fetchWithLoading(`${siteUrl}/ajax/moa.php?action=get&id=${id}`, btn);
+        const formHtml = `
+            <input type="hidden" name="id" value="${data.id}">
+            <div class="form-section">
+                <h4 class="form-section-title">MOA Information</h4>
+                <div class="form-grid">
+                    ${fieldHtml({name:'moa_number',label:'MOA Number',required:true,value:data.moa_number || '',fullWidth:true})}
+                    ${fieldHtml({name:'project_id',label:'Project',type:'select',required:true,value:data.project_id || '',options:projectOptions,fullWidth:true})}
+                    ${fieldHtml({name:'partner_agency_id',label:'Partner Agency',type:'select',value:data.partner_agency_id || '',options:partnerOptions,fullWidth:true})}
+                    ${fieldHtml({name:'status',label:'Status',type:'select',value:data.status || 'pending',options:[
+                        {value:'pending',label:'Pending'},
+                        {value:'active',label:'Active'},
+                        {value:'expired',label:'Expired'},
+                        {value:'terminated',label:'Terminated'}
+                    ]})}
+                    ${fieldHtml({name:'date_signed',label:'Date Signed',type:'date',value:data.date_signed || ''})}
+                    ${fieldHtml({name:'expiration_date',label:'End Date',type:'date',value:data.expiration_date || ''})}
+                    ${fieldHtml({name:'remarks',label:'Remarks',type:'textarea',rows:3,value:data.remarks || '',fullWidth:true})}
+                    <label class="form-label full-width">Upload Replacement File (Optional)
+                        <input id="edit-moa-file" type="file" name="attachments[]" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xls,.xlsx,.csv" class="form-input" multiple>
+                        <p class="text-xs text-[#9CA3AF] mt-1">${data.attachment ? 'Current file: ' + escapeHtml(data.attachment.split('/').pop()) + ' (leave empty to keep current file)' : 'No file currently attached.'}</p>
+                    </label>
+                </div>
+            </div>`;
+        sl.openForm('Edit MOA', data.moa_number || '', formHtml, {showSaveAnother:false, submitText:'Update MOA'});
+        const form = document.getElementById('slideoverForm');
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await submitSlideOverForm(sl, `${siteUrl}/ajax/moa.php?action=update`, new FormData(e.target), () => location.reload());
+        });
+    } catch (err) {
+        console.error('Error:', err);
+        showToast(err.message || 'Failed to load MOA', 'error');
+        sl.close(true);
+    }
+}
 async function previewMoa(id, title = 'MOA'){
     const fileUrl = `${siteUrl}/ajax/moa.php?action=file&id=${Number(id)}`;
     const data = await fetchWithLoading(`${siteUrl}/ajax/moa.php?action=get&id=${Number(id)}`);

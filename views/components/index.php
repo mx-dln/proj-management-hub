@@ -57,7 +57,8 @@ $componentProjectOptions = Permissions::isAdmin()
 const siteUrl = <?= json_encode(SITE_URL) ?>;
 
 function refreshComponentsTable() {
-    fetch(`${siteUrl}/index.php?module=components`)
+    const search = window.location.search || '?module=components';
+    fetch(`${siteUrl}/index.php${search}`)
         .then(r => r.text())
         .then(html => {
             const parser = new DOMParser();
@@ -100,9 +101,10 @@ async function viewComponent(id, btn) {
             viewFieldHtml('Project', escapeHtml(data.project_title || '-')),
             viewFieldHtml('Start Date', formatDate(data.start_date)),
             viewFieldHtml('End Date', formatDate(data.end_date)),
-            viewFieldHtml('Completion', data.completion_percentage + '%'),
-        ]) + (data.description ? viewSectionHtml('Description', [`<div class="full-width"><p class="text-sm text-[#D1D5DB]">${escapeHtml(data.description)}</p></div>`]) : '');
-        sl.openView(data.title, data.component_code, content, { size: 'md', onEdit: () => editComponent(id, null) });
+            viewFieldHtml('Completion', (data.completion_percentage ?? 0) + '%'),
+        ]) + (data.description ? viewSectionHtml('Description', [`<div class="full-width"><p class="text-sm text-[#D1D5DB]">${escapeHtml(data.description)}</p></div>`]) : '')
+           + (data.expected_outputs ? viewSectionHtml('Expected Outputs', [`<div class="full-width"><p class="text-sm text-[#D1D5DB]">${escapeHtml(data.expected_outputs)}</p></div>`]) : '');
+        sl.openView(data.title, data.component_code, content, { size: 'md', onEdit: (data.canEdit !== false) ? () => editComponent(id, null) : null });
     } catch (err) { console.error('Error:', err); showToast(err.message || 'Failed to load', 'error'); sl.close(true); }
 }
 
@@ -117,9 +119,12 @@ async function editComponent(id, btn) {
             <div class="form-section">
                 <div class="form-grid">
                     ${fieldHtml({ name: 'title', label: 'Title', required: true, value: data.title, fullWidth: true })}
-                    ${fieldHtml({ name: 'description', label: 'Description', type: 'textarea', value: data.description, fullWidth: true, rows: 3 })}
-                    ${fieldHtml({ name: 'status', label: 'Status', type: 'select', value: data.status, options: [{value:'planned',label:'Planned'},{value:'in_progress',label:'In Progress'},{value:'completed',label:'Completed'}] })}
-                    ${fieldHtml({ name: 'completion_percentage', label: 'Completion %', type: 'number', value: data.completion_percentage })}
+                    ${fieldHtml({ name: 'description', label: 'Description', type: 'textarea', value: data.description || '', fullWidth: true, rows: 3 })}
+                    ${fieldHtml({ name: 'start_date', label: 'Start Date', type: 'date', value: data.start_date || '' })}
+                    ${fieldHtml({ name: 'end_date', label: 'End Date', type: 'date', value: data.end_date || '' })}
+                    ${fieldHtml({ name: 'status', label: 'Status', type: 'select', value: data.status, options: [{value:'planned',label:'Planned'},{value:'in_progress',label:'In Progress'},{value:'completed',label:'Completed'},{value:'cancelled',label:'Cancelled'}] })}
+                    ${fieldHtml({ name: 'completion_percentage', label: 'Completion %', type: 'number', value: data.completion_percentage ?? 0 })}
+                    ${fieldHtml({ name: 'expected_outputs', label: 'Expected Outputs', type: 'textarea', value: data.expected_outputs || '', fullWidth: true, rows: 3 })}
                 </div>
             </div>`;
         sl.openForm('Edit Component', data.component_code, formHtml, { showSaveAnother: false });

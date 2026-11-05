@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Sep 21, 2026 at 11:04 PM
+-- Generation Time: Oct 29, 2026 at 10:42 PM
 -- Server version: 11.8.2-MariaDB
 -- PHP Version: 8.5.7
 
@@ -43,6 +43,7 @@ CREATE TABLE `accomplishment_reports` (
   `reviewed_at` datetime DEFAULT NULL,
   `remarks` text DEFAULT NULL,
   `attachment` varchar(255) DEFAULT NULL,
+  `attachments` longtext DEFAULT NULL,
   `created_at` datetime NOT NULL DEFAULT current_timestamp(),
   `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -51,11 +52,15 @@ CREATE TABLE `accomplishment_reports` (
 -- Dumping data for table `accomplishment_reports`
 --
 
-INSERT INTO `accomplishment_reports` (`id`, `report_number`, `report_type`, `period_quarter`, `period_year`, `project_id`, `title`, `summary`, `submitted_by`, `date_submitted`, `status`, `reviewed_by`, `reviewed_at`, `remarks`, `attachment`, `created_at`, `updated_at`) VALUES
-(1, 'AR-2026-0001', 'quarterly', 'Q1', '2026', 1, 'Q1 Accomplishment Report - Organic Farming', 'First quarter activities completed. 3 training sessions conducted with 45 participants.', 3, '2026-04-05', 'submitted', NULL, NULL, NULL, NULL, '2026-07-29 17:25:11', '2026-09-21 11:41:00'),
-(2, 'AR-2026-0002', 'quarterly', 'Q1', '2026', 3, 'Q1 Accomplishment Report - Digital Literacy', 'Computer basics workshop completed. 30 seniors trained.', 4, '2026-04-03', 'submitted', NULL, NULL, NULL, NULL, '2026-07-29 17:25:11', '2026-09-21 11:41:00'),
-(3, 'AR-2025-0003', 'terminal', NULL, '2025', 5, 'Terminal Report - Health and Nutrition', 'Project completed successfully. 200 community members reached.', 3, '2026-01-15', 'submitted', NULL, NULL, NULL, NULL, '2026-07-29 17:25:11', '2026-09-21 11:41:00'),
-(4, 'AR-2026-0004', 'quarterly', 'Q1', '2026', 6, 'Q1 Accomplishment Report', 'test', 4, '2026-09-21', 'submitted', NULL, NULL, NULL, 'reports/6ab0a6863d866_1789961862.jpg', '2026-09-21 11:37:42', '2026-09-21 11:39:06');
+INSERT INTO `accomplishment_reports` (`id`, `report_number`, `report_type`, `period_quarter`, `period_year`, `project_id`, `title`, `summary`, `submitted_by`, `date_submitted`, `status`, `reviewed_by`, `reviewed_at`, `remarks`, `attachment`, `attachments`, `created_at`, `updated_at`) VALUES
+(1, 'AR-2026-0001', 'quarterly', 'Q1', '2026', 1, 'Q1 Accomplishment Report - Organic Farming', 'First quarter activities completed. 3 training sessions conducted with 45 participants.', 3, '2026-04-05', 'submitted', NULL, NULL, NULL, NULL, NULL, '2026-07-29 17:25:11', '2026-09-21 11:41:00'),
+(2, 'AR-2026-0002', 'quarterly', 'Q1', '2026', 3, 'Q1 Accomplishment Report - Digital Literacy', 'Computer basics workshop completed. 30 seniors trained.', 4, '2026-04-03', 'submitted', NULL, NULL, NULL, NULL, NULL, '2026-07-29 17:25:11', '2026-09-21 11:41:00'),
+(3, 'AR-2025-0003', 'terminal', NULL, '2025', 5, 'Terminal Report - Health and Nutrition', 'Project completed successfully. 200 community members reached.', 3, '2026-01-15', 'submitted', NULL, NULL, NULL, NULL, NULL, '2026-07-29 17:25:11', '2026-09-21 11:41:00'),
+(4, 'AR-2026-0004', 'quarterly', 'Q1', '2026', 6, 'Q1 Accomplishment Report', 'test', 4, '2026-09-21', 'submitted', NULL, NULL, NULL, 'reports/6ab0a6863d866_1789961862.jpg', NULL, '2026-09-21 11:37:42', '2026-09-21 11:39:06'),
+(5, 'AR-2026-0005', 'quarterly', 'Q1', '2026', 5, 'Q1 Accomplishment Report', 'test', 1, '2026-10-23', 'submitted', NULL, NULL, NULL, 'reports/6adaa26e16cff_1792713326.jpg', '[\"reports\\/6adaa26e16cff_1792713326.jpg\",\"reports\\/6adaa26e17161_1792713326.jpg\",\"reports\\/6adaa26e17450_1792713326.jpg\",\"reports\\/6adaa26e1765a_1792713326.jpg\",\"reports\\/6adaa26e1789f_1792713326.jpg\",\"reports\\/6adaa26e17aa4_1792713326.jpg\"]', '2026-10-23 07:55:26', '2026-10-23 07:55:26'),
+(6, 'AR-2026-0006', 'quarterly', 'Q1', '2026', 7, 'Q1 Accomplishment Report', '', 1, '2026-10-23', 'submitted', NULL, NULL, NULL, 'reports/6adab0eb1fc04_1792717035.jpg', '[\"reports\\/6adab0eb1fc04_1792717035.jpg\"]', '2026-10-23 08:57:15', '2026-10-23 08:57:15'),
+(7, 'AR-2026-0007', 'quarterly', 'Q2', '2026', 7, 'Q2 Accomplishment Report', '', 1, '2026-10-23', 'submitted', NULL, NULL, NULL, 'reports/6adab20483acc_1792717316.jpg', '[\"reports\\/6adab20483acc_1792717316.jpg\"]', '2026-10-23 09:01:56', '2026-10-23 09:01:56'),
+(8, 'AR-2026-F1', 'quarterly', 'Q1', '2026', 4, 'Faculty1 Sample Accomplishment Report', 'Sample data for testing Faculty View and Print permissions.', 3, '2026-10-24', 'submitted', NULL, NULL, NULL, 'reports/6ab0a6863d866_1789961862.jpg', '[\"reports\\/6ab0a6863d866_1789961862.jpg\"]', '2026-10-24 17:17:03', '2026-10-24 17:17:03');
 
 -- --------------------------------------------------------
 
@@ -537,7 +542,158 @@ INSERT INTO `audit_logs` (`id`, `user_id`, `action`, `entity_type`, `entity_id`,
 (207, 2, 'edit', 'settings', NULL, 'Updated SMTP settings and email preferences', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36', 0, '2026-09-21 16:50:44'),
 (208, 2, 'edit', 'settings', NULL, 'Updated SMTP settings and email preferences', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36', 0, '2026-09-21 16:51:07'),
 (209, 2, 'edit', 'settings', NULL, 'Updated SMTP settings and email preferences', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36', 0, '2026-09-21 16:51:11'),
-(210, 2, 'logout', 'user', 2, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36', 0, '2026-09-21 17:00:22');
+(210, 2, 'logout', 'user', 2, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36', 0, '2026-09-21 17:00:22'),
+(211, 4, 'login', 'user', 4, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36', 0, '2026-09-22 07:33:19'),
+(212, 4, 'logout', 'user', 4, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36', 0, '2026-09-22 14:41:54'),
+(213, 1, 'login', 'user', 1, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36', 0, '2026-09-22 14:42:07'),
+(214, 1, 'create', 'moa', 4, 'Created MOA: Test', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Mobile Safari/537.36', 0, '2026-09-22 14:45:26'),
+(215, 1, 'logout', 'user', 1, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36', 0, '2026-09-22 15:47:50'),
+(216, 3, 'login', 'user', 3, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36', 0, '2026-09-22 15:47:56'),
+(217, 3, 'logout', 'user', 3, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36', 0, '2026-09-22 15:48:26'),
+(218, 2, 'login', 'user', 2, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36', 0, '2026-09-26 18:22:01'),
+(219, 2, 'edit', 'settings', NULL, 'Updated SMTP settings and email preferences', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36', 0, '2026-09-26 18:22:26'),
+(220, 2, 'email_test', 'settings', NULL, 'SMTP server accepted a test email for the signed-in administrator', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36', 0, '2026-09-26 18:22:35'),
+(221, 2, 'logout', 'user', 2, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36', 0, '2026-09-26 18:29:05'),
+(222, 3, 'login', 'user', 3, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36', 0, '2026-09-26 18:29:14'),
+(223, 3, 'edit', 'proposal', 5, 'Revised and resubmitted proposal', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36', 0, '2026-09-26 18:29:59'),
+(224, 3, 'logout', 'user', 3, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36', 0, '2026-09-26 18:30:05'),
+(225, 2, 'login', 'user', 2, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36', 0, '2026-09-26 18:30:12'),
+(226, 2, 'email', 'partner_agency', 1, 'Sent email to partner: Cauayan City Agriculture Office', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36', 0, '2026-09-26 18:49:44'),
+(227, 2, 'comment', 'proposal', 9, 'Added proposal budget comment', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36', 0, '2026-09-26 19:10:00'),
+(228, 2, 'comment', 'proposal', 9, 'Added proposal comment', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36', 0, '2026-09-26 19:10:13'),
+(229, 2, 'comment', 'proposal', 9, 'Added proposal comment', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36', 0, '2026-09-26 19:10:15'),
+(230, 2, 'approved', 'proposal', 5, 'Approved proposal', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36', 0, '2026-09-26 19:15:33'),
+(231, 2, 'approved', 'proposal', 5, 'Approved proposal', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36', 0, '2026-09-26 19:15:43'),
+(232, 2, 'create', 'program', 6, 'Auto-created program from approved proposal: HAKDOG', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36', 0, '2026-09-26 19:18:57'),
+(233, 2, 'approved', 'proposal', 9, 'Approved proposal', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36', 0, '2026-09-26 19:18:57'),
+(234, 1, 'login', 'user', 1, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36', 0, '2026-09-26 19:26:20'),
+(235, 1, 'login', 'user', 1, 'User logged in', NULL, NULL, '127.0.0.1', 'curl/8.21.0', 0, '2026-09-26 19:30:07'),
+(236, 1, 'logout', 'user', 1, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36', 0, '2026-09-26 19:32:27'),
+(237, 3, 'login', 'user', 3, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36', 0, '2026-09-26 19:32:29'),
+(238, 3, 'login', 'user', 3, 'User logged in', NULL, NULL, '127.0.0.1', 'curl/8.21.0', 0, '2026-09-26 19:34:45'),
+(239, 1, 'login', 'user', 1, 'User logged in', NULL, NULL, '127.0.0.1', 'curl/8.21.0', 0, '2026-09-26 19:35:19'),
+(240, 2, 'logout', 'user', 2, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36', 0, '2026-09-26 19:36:30'),
+(241, 3, 'login', 'user', 3, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36', 0, '2026-09-26 19:36:35'),
+(242, 1, 'login', 'user', 1, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', 0, '2026-10-10 08:15:39'),
+(243, 1, 'logout', 'user', 1, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', 0, '2026-10-10 08:20:08'),
+(244, 2, 'login', 'user', 2, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', 0, '2026-10-10 08:20:37'),
+(245, 2, 'logout', 'user', 2, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', 0, '2026-10-10 08:21:26'),
+(246, 3, 'login', 'user', 3, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', 0, '2026-10-10 08:21:39'),
+(247, 3, 'create', 'proposal', 10, 'Submitted program proposal: Test', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', 0, '2026-10-10 08:25:57'),
+(248, 3, 'create', 'proposal', 11, 'Submitted program proposal: test', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', 0, '2026-10-12 10:08:48'),
+(249, 3, 'create', 'proposal', 12, 'Submitted program proposal: test2', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36', 0, '2026-10-12 10:15:58'),
+(250, 3, 'create', 'proposal', 13, 'Submitted program proposal: test', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Linux; Android 16; Pixel 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Mobile Safari/537.36', 0, '2026-10-12 10:20:33'),
+(251, 3, 'create', 'proposal', 14, 'Submitted program proposal: test23', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Linux; Android 16; Pixel 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Mobile Safari/537.36', 0, '2026-10-12 10:20:50'),
+(252, 2, 'login', 'user', 2, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-20 14:25:35'),
+(253, 1, 'login', 'user', 1, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-23 07:29:38'),
+(254, 1, 'logout', 'user', 1, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-23 07:30:43'),
+(255, 3, 'login', 'user', 3, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-23 07:30:49'),
+(256, 3, 'logout', 'user', 3, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-23 07:33:13'),
+(257, 1, 'login', 'user', 1, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-23 07:33:17'),
+(258, 1, 'create', 'user', 8, 'Created user: qa_faculty_20261023', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-23 07:36:51'),
+(259, 1, 'logout', 'user', 1, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-23 07:46:18'),
+(260, 3, 'login', 'user', 3, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-23 07:46:22'),
+(261, 3, 'logout', 'user', 3, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-23 07:46:44'),
+(262, 1, 'login', 'user', 1, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-23 07:46:47'),
+(263, 1, 'logout', 'user', 1, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-23 07:49:06'),
+(264, 3, 'login', 'user', 3, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-23 07:49:11'),
+(265, 3, 'logout', 'user', 3, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-23 07:53:36'),
+(266, 1, 'login', 'user', 1, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-23 07:53:42');
+INSERT INTO `audit_logs` (`id`, `user_id`, `action`, `entity_type`, `entity_id`, `description`, `old_values`, `new_values`, `ip_address`, `user_agent`, `is_override`, `created_at`) VALUES
+(267, 1, 'create', 'report', 5, 'Created report: Q1 Accomplishment Report', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-23 07:55:26'),
+(268, 1, 'logout', 'user', 1, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-23 07:59:14'),
+(269, 3, 'login', 'user', 3, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-23 07:59:19'),
+(270, 3, 'logout', 'user', 3, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-23 07:59:46'),
+(271, 7, 'login', 'user', 7, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-23 07:59:57'),
+(272, 7, 'logout', 'user', 7, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-23 08:05:03'),
+(273, 1, 'login', 'user', 1, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-23 08:05:09'),
+(274, 1, 'logout', 'user', 1, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-23 08:09:34'),
+(275, 1, 'login', 'user', 1, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-23 08:09:50'),
+(276, 1, 'login', 'user', 1, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Mobile Safari/537.36', 0, '2026-10-23 08:09:58'),
+(277, 2, 'login', 'user', 2, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Linux; Android 16; SM-M336B Build/BP2A.250605.031.A3; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/155.0.8059.43 Mobile Safari/537.36 [FB_IAB/FB4A;FBAV/583.0.0.29.95;]', 0, '2026-10-23 08:14:04'),
+(278, 1, 'login', 'user', 1, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (iPad; CPU OS 26_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/23F77 [FBAN/FBIOS;FBAV/579.0.0.23.106;FBBV/1068430635;FBDV/iPad15,7;FBMD/iPad;FBSN/iPadOS;FBSV/26.5;FBSS/2;FBCR/;FBID/tablet;FBLC/en_PH;FBOP/80]', 0, '2026-10-23 08:15:28'),
+(279, 2, 'login', 'user', 2, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0', 0, '2026-10-23 08:18:55'),
+(280, 2, 'logout', 'user', 2, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0', 0, '2026-10-23 08:21:57'),
+(281, 3, 'login', 'user', 3, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0', 0, '2026-10-23 08:22:44'),
+(282, 3, 'create', 'proposal', 15, 'Submitted program proposal: nb bfxvf', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0', 0, '2026-10-23 08:24:34'),
+(283, 3, 'logout', 'user', 3, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0', 0, '2026-10-23 08:24:56'),
+(284, 1, 'login', 'user', 1, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0', 0, '2026-10-23 08:25:25'),
+(285, 1, 'returned', 'proposal', 15, 'Returned proposal', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0', 0, '2026-10-23 08:26:56'),
+(286, 1, 'logout', 'user', 1, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0', 0, '2026-10-23 08:27:31'),
+(287, 1, 'logout', 'user', 1, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0', 0, '2026-10-23 08:27:33'),
+(288, 1, 'logout', 'user', 1, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0', 0, '2026-10-23 08:27:35'),
+(289, 3, 'login', 'user', 3, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0', 0, '2026-10-23 08:28:04'),
+(290, 3, 'comment', 'proposal', 15, 'Added proposal comment', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0', 0, '2026-10-23 08:29:53'),
+(291, 3, 'logout', 'user', 3, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0', 0, '2026-10-23 08:32:26'),
+(292, 1, 'login', 'user', 1, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0', 0, '2026-10-23 08:32:38'),
+(293, 1, 'create', 'program', 7, 'Auto-created program from approved proposal: nb bfxvf', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0', 0, '2026-10-23 08:33:55'),
+(294, 1, 'approved', 'proposal', 15, 'Approved proposal', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0', 0, '2026-10-23 08:33:55'),
+(295, 1, 'create', 'project', 7, 'Created project: nb bfxvf', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0', 0, '2026-10-23 08:37:04'),
+(296, 2, 'create', 'document', 6, 'Uploaded document: scan-2026-10-23T00-39-41-590Z.jpg', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Linux; Android 16; SM-M336B Build/BP2A.250605.031.A3; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/155.0.8059.43 Mobile Safari/537.36 [FB_IAB/FB4A;FBAV/583.0.0.29.95;]', 0, '2026-10-23 08:39:40'),
+(297, 1, 'logout', 'user', 1, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (iPad; CPU OS 26_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/23F77 [FBAN/FBIOS;FBAV/579.0.0.23.106;FBBV/1068430635;FBDV/iPad15,7;FBMD/iPad;FBSN/iPadOS;FBSV/26.5;FBSS/2;FBCR/;FBID/tablet;FBLC/en_PH;FBOP/80]', 0, '2026-10-23 08:45:13'),
+(298, 1, 'logout', 'user', 1, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (iPad; CPU OS 26_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/23F77 [FBAN/FBIOS;FBAV/579.0.0.23.106;FBBV/1068430635;FBDV/iPad15,7;FBMD/iPad;FBSN/iPadOS;FBSV/26.5;FBSS/2;FBCR/;FBID/tablet;FBLC/en_PH;FBOP/80]', 0, '2026-10-23 08:45:15'),
+(299, NULL, 'logout', 'user', NULL, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (iPad; CPU OS 26_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/23F77 [FBAN/FBIOS;FBAV/579.0.0.23.106;FBBV/1068430635;FBDV/iPad15,7;FBMD/iPad;FBSN/iPadOS;FBSV/26.5;FBSS/2;FBCR/;FBID/tablet;FBLC/en_PH;FBOP/80]', 0, '2026-10-23 08:45:16'),
+(300, NULL, 'logout', 'user', NULL, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (iPad; CPU OS 26_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/23F77 [FBAN/FBIOS;FBAV/579.0.0.23.106;FBBV/1068430635;FBDV/iPad15,7;FBMD/iPad;FBSN/iPadOS;FBSV/26.5;FBSS/2;FBCR/;FBID/tablet;FBLC/en_PH;FBOP/80]', 0, '2026-10-23 08:45:17'),
+(301, NULL, 'logout', 'user', NULL, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (iPad; CPU OS 26_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/23F77 [FBAN/FBIOS;FBAV/579.0.0.23.106;FBBV/1068430635;FBDV/iPad15,7;FBMD/iPad;FBSN/iPadOS;FBSV/26.5;FBSS/2;FBCR/;FBID/tablet;FBLC/en_PH;FBOP/80]', 0, '2026-10-23 08:45:19'),
+(302, NULL, 'logout', 'user', NULL, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (iPad; CPU OS 26_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/23F77 [FBAN/FBIOS;FBAV/579.0.0.23.106;FBBV/1068430635;FBDV/iPad15,7;FBMD/iPad;FBSN/iPadOS;FBSV/26.5;FBSS/2;FBCR/;FBID/tablet;FBLC/en_PH;FBOP/80]', 0, '2026-10-23 08:45:19'),
+(303, NULL, 'logout', 'user', NULL, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (iPad; CPU OS 26_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/23F77 [FBAN/FBIOS;FBAV/579.0.0.23.106;FBBV/1068430635;FBDV/iPad15,7;FBMD/iPad;FBSN/iPadOS;FBSV/26.5;FBSS/2;FBCR/;FBID/tablet;FBLC/en_PH;FBOP/80]', 0, '2026-10-23 08:45:19'),
+(304, NULL, 'logout', 'user', NULL, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (iPad; CPU OS 26_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/23F77 [FBAN/FBIOS;FBAV/579.0.0.23.106;FBBV/1068430635;FBDV/iPad15,7;FBMD/iPad;FBSN/iPadOS;FBSV/26.5;FBSS/2;FBCR/;FBID/tablet;FBLC/en_PH;FBOP/80]', 0, '2026-10-23 08:45:20'),
+(305, NULL, 'logout', 'user', NULL, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (iPad; CPU OS 26_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/23F77 [FBAN/FBIOS;FBAV/579.0.0.23.106;FBBV/1068430635;FBDV/iPad15,7;FBMD/iPad;FBSN/iPadOS;FBSV/26.5;FBSS/2;FBCR/;FBID/tablet;FBLC/en_PH;FBOP/80]', 0, '2026-10-23 08:45:20'),
+(306, NULL, 'logout', 'user', NULL, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (iPad; CPU OS 26_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/23F77 [FBAN/FBIOS;FBAV/579.0.0.23.106;FBBV/1068430635;FBDV/iPad15,7;FBMD/iPad;FBSN/iPadOS;FBSV/26.5;FBSS/2;FBCR/;FBID/tablet;FBLC/en_PH;FBOP/80]', 0, '2026-10-23 08:45:21'),
+(307, NULL, 'logout', 'user', NULL, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (iPad; CPU OS 26_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/23F77 [FBAN/FBIOS;FBAV/579.0.0.23.106;FBBV/1068430635;FBDV/iPad15,7;FBMD/iPad;FBSN/iPadOS;FBSV/26.5;FBSS/2;FBCR/;FBID/tablet;FBLC/en_PH;FBOP/80]', 0, '2026-10-23 08:45:22'),
+(308, NULL, 'logout', 'user', NULL, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (iPad; CPU OS 26_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/23F77 [FBAN/FBIOS;FBAV/579.0.0.23.106;FBBV/1068430635;FBDV/iPad15,7;FBMD/iPad;FBSN/iPadOS;FBSV/26.5;FBSS/2;FBCR/;FBID/tablet;FBLC/en_PH;FBOP/80]', 0, '2026-10-23 08:45:23'),
+(309, NULL, 'logout', 'user', NULL, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (iPad; CPU OS 26_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/23F77 [FBAN/FBIOS;FBAV/579.0.0.23.106;FBBV/1068430635;FBDV/iPad15,7;FBMD/iPad;FBSN/iPadOS;FBSV/26.5;FBSS/2;FBCR/;FBID/tablet;FBLC/en_PH;FBOP/80]', 0, '2026-10-23 08:45:23'),
+(310, NULL, 'logout', 'user', NULL, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (iPad; CPU OS 26_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/23F77 [FBAN/FBIOS;FBAV/579.0.0.23.106;FBBV/1068430635;FBDV/iPad15,7;FBMD/iPad;FBSN/iPadOS;FBSV/26.5;FBSS/2;FBCR/;FBID/tablet;FBLC/en_PH;FBOP/80]', 0, '2026-10-23 08:45:25'),
+(311, 3, 'login', 'user', 3, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (iPad; CPU OS 26_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/23F77 [FBAN/FBIOS;FBAV/579.0.0.23.106;FBBV/1068430635;FBDV/iPad15,7;FBMD/iPad;FBSN/iPadOS;FBSV/26.5;FBSS/2;FBCR/;FBID/tablet;FBLC/en_PH;FBOP/80]', 0, '2026-10-23 08:46:25'),
+(312, 1, 'login', 'user', 1, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Mobile Safari/537.36', 0, '2026-10-23 08:51:43'),
+(313, 3, 'logout', 'user', 3, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (iPad; CPU OS 26_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/23F77 [FBAN/FBIOS;FBAV/579.0.0.23.106;FBBV/1068430635;FBDV/iPad15,7;FBMD/iPad;FBSN/iPadOS;FBSV/26.5;FBSS/2;FBCR/;FBID/tablet;FBLC/en_PH;FBOP/80]', 0, '2026-10-23 08:52:29'),
+(314, 1, 'login', 'user', 1, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (iPad; CPU OS 26_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/23F77 [FBAN/FBIOS;FBAV/579.0.0.23.106;FBBV/1068430635;FBDV/iPad15,7;FBMD/iPad;FBSN/iPadOS;FBSV/26.5;FBSS/2;FBCR/;FBID/tablet;FBLC/en_PH;FBOP/80]', 0, '2026-10-23 08:52:41'),
+(315, 1, 'create', 'moa', 5, 'Created MOA: Nb bfxvf', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-23 08:53:53'),
+(316, 1, 'create', 'report', 6, 'Created report: Q1 Accomplishment Report', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-23 08:57:15'),
+(317, 1, 'logout', 'user', 1, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-23 08:58:34'),
+(318, 3, 'login', 'user', 3, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-23 08:58:53'),
+(319, 3, 'logout', 'user', 3, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-23 09:00:35'),
+(320, 1, 'login', 'user', 1, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-23 09:01:00'),
+(321, 1, 'create', 'report', 7, 'Created report: Q2 Accomplishment Report', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-23 09:01:56'),
+(322, 1, 'logout', 'user', 1, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-23 09:02:03'),
+(323, 1, 'logout', 'user', 1, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0', 0, '2026-10-23 09:02:21'),
+(324, 3, 'login', 'user', 3, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0', 0, '2026-10-23 09:02:48'),
+(325, 3, 'login', 'user', 3, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-23 09:03:32'),
+(326, 3, 'logout', 'user', 3, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0', 0, '2026-10-23 09:03:54'),
+(327, 3, 'logout', 'user', 3, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-23 09:04:01'),
+(328, 1, 'login', 'user', 1, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-23 09:04:12'),
+(329, 1, 'create', 'certificate', 6, 'Generated certificate for: Ulep', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-23 09:04:52'),
+(330, 3, 'login', 'user', 3, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0', 0, '2026-10-23 09:05:19'),
+(331, 2, 'logout', 'user', 2, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-24 17:11:17'),
+(332, 3, 'login', 'user', 3, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-24 17:11:21'),
+(333, 1, 'login', 'user', 1, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-24 17:12:05'),
+(334, 1, 'logout', 'user', 1, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-24 17:12:44'),
+(335, 3, 'login', 'user', 3, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-24 17:12:47'),
+(336, 3, 'logout', 'user', 3, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-24 17:15:46'),
+(337, 1, 'login', 'user', 1, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-24 17:15:51'),
+(338, 1, 'logout', 'user', 1, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-24 17:16:34'),
+(339, 3, 'login', 'user', 3, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-24 17:16:37'),
+(340, 3, 'logout', 'user', 3, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-24 17:17:13'),
+(341, 3, 'login', 'user', 3, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36', 0, '2026-10-24 17:17:19'),
+(342, 2, 'login', 'user', 2, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36', 0, '2026-10-28 06:21:40'),
+(343, 1, 'login', 'user', 1, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36', 0, '2026-10-28 06:23:47'),
+(344, 1, 'logout', 'user', 1, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36', 0, '2026-10-28 06:24:17'),
+(345, 2, 'logout', 'user', 2, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36', 0, '2026-10-28 06:25:54'),
+(346, 1, 'login', 'user', 1, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36', 0, '2026-10-28 06:26:12'),
+(347, 2, 'login', 'user', 2, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36', 0, '2026-10-28 06:26:54'),
+(348, 2, 'logout', 'user', 2, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36', 0, '2026-10-28 06:28:22'),
+(349, 2, 'login', 'user', 2, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36', 0, '2026-10-28 06:28:36'),
+(350, 2, 'logout', 'user', 2, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36', 0, '2026-10-28 06:30:09'),
+(351, 2, 'login', 'user', 2, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36', 0, '2026-10-28 13:47:01'),
+(352, 2, 'edit', 'settings', NULL, 'Updated SMTP settings and email preferences', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36', 0, '2026-10-28 13:47:42'),
+(353, 2, 'logout', 'user', 2, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36', 0, '2026-10-28 13:48:48'),
+(354, 2, 'login', 'user', 2, 'User logged in', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36', 0, '2026-10-28 14:01:29'),
+(355, 2, 'email_test', 'settings', NULL, 'SMTP server accepted a test email for the signed-in administrator', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36', 0, '2026-10-28 14:01:52'),
+(356, 2, 'email_test', 'settings', NULL, 'SMTP server accepted a test email for the signed-in administrator', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36', 0, '2026-10-28 14:16:11'),
+(357, 2, 'edit', 'settings', NULL, 'Updated SMTP settings and email preferences', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36', 0, '2026-10-28 14:17:14'),
+(358, 2, 'email_test', 'settings', NULL, 'SMTP server accepted a test email for the signed-in administrator', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36', 0, '2026-10-28 14:17:20'),
+(359, 2, 'logout', 'user', 2, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36', 0, '2026-10-28 14:18:09'),
+(360, NULL, 'logout', 'user', NULL, 'User logged out', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36', 0, '2026-10-28 14:18:57');
 
 -- --------------------------------------------------------
 
@@ -603,7 +759,8 @@ INSERT INTO `certificates` (`id`, `certificate_number`, `template_id`, `activity
 (2, 'CERT-2026-0002', 1, 1, 'Maria Reyes', 'participant', '2026-03-17', 'CERT-QR002', NULL, '', 1, '2026-07-29 17:25:11'),
 (3, 'CERT-2026-0003', 1, 4, 'Ana Mendoza', 'participant', '2026-04-03', 'CERT-QR003', NULL, '', 1, '2026-07-29 17:25:11'),
 (4, 'CERT-2026-0004', 1, 6, 'Lorna Garcia', 'participant', '2026-03-05', 'CERT-QR004', NULL, '', 1, '2026-07-29 17:25:11'),
-(5, 'CERT-2026-0005', 4, 1, 'Dr. Elena Torres', 'resource_speaker', '2026-03-17', 'CERT-QR005', NULL, '', 1, '2026-07-29 17:25:11');
+(5, 'CERT-2026-0005', 4, 1, 'Dr. Elena Torres', 'resource_speaker', '2026-03-17', 'CERT-QR005', NULL, '', 1, '2026-07-29 17:25:11'),
+(6, 'CERT-2026-0006', NULL, 9, 'Ulep', 'participant', '2026-10-23', '2B4A25E1', NULL, 'generated', 1, '2026-10-23 09:04:52');
 
 -- --------------------------------------------------------
 
@@ -755,7 +912,8 @@ INSERT INTO `documents` (`id`, `title`, `category_id`, `entity_type`, `entity_id
 (2, 'MOA with City Agriculture', 2, 'project', 1, 'documents/moa_agriculture.pdf', 'moa_agriculture.pdf', 'pdf', NULL, 1, 'Memorandum of Agreement', 'approved', 1, NULL, NULL, '2026-07-29 17:25:11', '2026-07-29 17:25:11', NULL),
 (3, 'Training Attendance Sheet', 6, 'activity', 1, 'documents/attendance_training.pdf', 'attendance_training.pdf', 'pdf', NULL, 1, 'Attendance for organic farming training', 'approved', 3, NULL, NULL, '2026-07-29 17:25:11', '2026-07-29 17:25:11', NULL),
 (4, 'Q1 Report 2026', 3, 'project', 1, 'documents/q1_report.pdf', 'q1_report.pdf', 'pdf', NULL, 1, 'Quarterly accomplishment report', 'approved', 3, NULL, NULL, '2026-07-29 17:25:11', '2026-07-29 17:25:11', NULL),
-(5, 'HEHE', 12, 'program', 4, 'documents/private/6ab0a5190bbd8_1789961497.jpg', '803824453_1119679650387101_5441971826368791255_n (1).jpg', 'jpg', 223427, 1, 'Test', 'draft', 1, NULL, NULL, '2026-09-21 11:31:37', '2026-09-21 11:31:37', NULL);
+(5, 'HEHE', 12, 'program', 4, 'documents/private/6ab0a5190bbd8_1789961497.jpg', '803824453_1119679650387101_5441971826368791255_n (1).jpg', 'jpg', 223427, 1, 'Test', 'draft', 1, NULL, NULL, '2026-09-21 11:31:37', '2026-09-21 11:31:37', NULL),
+(6, 'scan-2026-10-23T00-39-41-590Z.jpg', 12, 'program', 7, 'documents/private/6adaaccc7deec_1792715980.jpg', 'scan-2026-10-23T00-39-41-590Z.jpg', 'jpg', 41672, 1, 'Ajjaja', 'draft', 2, NULL, NULL, '2026-10-23 08:39:40', '2026-10-23 08:39:40', NULL);
 
 -- --------------------------------------------------------
 
@@ -808,6 +966,43 @@ CREATE TABLE `email_queue` (
   `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Dumping data for table `email_queue`
+--
+
+INSERT INTO `email_queue` (`id`, `notification_id`, `category`, `status`, `attempts`, `available_at`, `last_error`, `sent_at`, `created_at`, `updated_at`) VALUES
+(1, 55, 'proposals', 'sent', 1, '2026-09-26 18:29:59', NULL, '2026-09-26 19:15:18', '2026-09-26 18:29:59', '2026-09-26 19:15:18'),
+(2, 56, 'proposals', 'sent', 1, '2026-09-26 18:29:59', NULL, '2026-09-26 19:15:22', '2026-09-26 18:29:59', '2026-09-26 19:15:22'),
+(3, 57, 'proposals', 'sent', 1, '2026-09-26 19:10:00', NULL, '2026-09-26 19:15:25', '2026-09-26 19:10:00', '2026-09-26 19:15:25'),
+(4, 58, 'proposals', 'sent', 1, '2026-09-26 19:10:13', NULL, '2026-09-26 19:15:28', '2026-09-26 19:10:13', '2026-09-26 19:15:28'),
+(5, 59, 'proposals', 'sent', 1, '2026-09-26 19:10:15', NULL, '2026-09-26 19:15:33', '2026-09-26 19:10:15', '2026-09-26 19:15:33'),
+(6, 60, 'proposals', 'sent', 1, '2026-09-26 19:15:15', NULL, '2026-09-26 19:15:39', '2026-09-26 19:15:15', '2026-09-26 19:15:39'),
+(7, 61, 'proposals', 'sent', 1, '2026-09-26 19:15:35', NULL, '2026-09-26 19:15:43', '2026-09-26 19:15:35', '2026-09-26 19:15:43'),
+(8, 62, 'proposals', 'sent', 1, '2026-09-26 19:18:54', NULL, '2026-09-26 19:18:57', '2026-09-26 19:18:54', '2026-09-26 19:18:57'),
+(9, 63, 'assignments', 'sent', 1, '2026-09-26 19:18:57', NULL, '2026-10-23 08:26:40', '2026-09-26 19:18:57', '2026-10-23 08:26:40'),
+(10, 64, 'proposals', 'sent', 1, '2026-10-10 08:25:57', NULL, '2026-10-23 08:26:44', '2026-10-10 08:25:57', '2026-10-23 08:26:44'),
+(11, 65, 'proposals', 'sent', 1, '2026-10-10 08:25:57', NULL, '2026-10-23 08:26:47', '2026-10-10 08:25:57', '2026-10-23 08:26:47'),
+(12, 66, 'proposals', 'sent', 1, '2026-10-12 10:08:48', NULL, '2026-10-23 08:26:52', '2026-10-12 10:08:48', '2026-10-23 08:26:52'),
+(13, 67, 'proposals', 'sent', 1, '2026-10-12 10:08:48', NULL, '2026-10-23 08:26:56', '2026-10-12 10:08:48', '2026-10-23 08:26:56'),
+(14, 68, 'proposals', 'sent', 1, '2026-10-12 10:15:58', NULL, '2026-10-23 08:27:02', '2026-10-12 10:15:58', '2026-10-23 08:27:02'),
+(15, 69, 'proposals', 'sent', 1, '2026-10-12 10:15:58', NULL, '2026-10-23 08:27:05', '2026-10-12 10:15:58', '2026-10-23 08:27:05'),
+(16, 70, 'proposals', 'sent', 2, '2026-10-28 13:47:50', NULL, '2026-10-28 13:47:53', '2026-10-12 10:20:33', '2026-10-28 13:47:53'),
+(17, 71, 'proposals', 'sent', 1, '2026-10-12 10:20:33', NULL, '2026-10-23 08:29:36', '2026-10-12 10:20:33', '2026-10-23 08:29:36'),
+(18, 72, 'proposals', 'sent', 1, '2026-10-12 10:20:50', NULL, '2026-10-23 08:29:41', '2026-10-12 10:20:50', '2026-10-23 08:29:41'),
+(19, 73, 'proposals', 'sent', 1, '2026-10-12 10:20:50', NULL, '2026-10-23 08:29:46', '2026-10-12 10:20:50', '2026-10-23 08:29:46'),
+(20, 74, 'proposals', 'sent', 1, '2026-10-23 08:24:34', NULL, '2026-10-23 08:29:49', '2026-10-23 08:24:34', '2026-10-23 08:29:49'),
+(21, 75, 'proposals', 'sent', 1, '2026-10-23 08:24:34', NULL, '2026-10-23 08:29:53', '2026-10-23 08:24:34', '2026-10-23 08:29:53'),
+(22, 76, 'proposals', 'sent', 1, '2026-10-23 08:26:35', NULL, '2026-10-23 08:30:00', '2026-10-23 08:26:35', '2026-10-23 08:30:00'),
+(23, 77, 'proposals', 'sent', 2, '2026-10-28 13:47:50', NULL, '2026-10-28 13:47:57', '2026-10-23 08:26:58', '2026-10-28 13:47:57'),
+(24, 78, 'proposals', 'sent', 1, '2026-10-23 08:29:32', NULL, '2026-10-23 08:33:36', '2026-10-23 08:29:32', '2026-10-23 08:33:36'),
+(25, 79, 'proposals', 'sent', 1, '2026-10-23 08:29:32', NULL, '2026-10-23 08:33:41', '2026-10-23 08:29:32', '2026-10-23 08:33:41'),
+(26, 80, 'proposals', 'sent', 1, '2026-10-23 08:29:55', NULL, '2026-10-23 08:33:45', '2026-10-23 08:29:55', '2026-10-23 08:33:45'),
+(27, 81, 'proposals', 'sent', 1, '2026-10-23 08:29:55', NULL, '2026-10-23 08:33:50', '2026-10-23 08:29:55', '2026-10-23 08:33:50'),
+(28, 82, 'proposals', 'sent', 1, '2026-10-23 08:30:51', NULL, '2026-10-23 08:33:55', '2026-10-23 08:30:51', '2026-10-23 08:33:55'),
+(29, 83, 'proposals', 'sent', 1, '2026-10-23 08:30:51', NULL, '2026-10-28 13:48:00', '2026-10-23 08:30:51', '2026-10-28 13:48:00'),
+(30, 84, 'proposals', 'sent', 1, '2026-10-23 08:33:32', NULL, '2026-10-28 13:48:04', '2026-10-23 08:33:32', '2026-10-28 13:48:04'),
+(31, 85, 'assignments', 'sent', 1, '2026-10-23 08:33:55', NULL, '2026-10-28 13:48:07', '2026-10-23 08:33:55', '2026-10-28 13:48:07');
+
 -- --------------------------------------------------------
 
 --
@@ -817,7 +1012,7 @@ CREATE TABLE `email_queue` (
 CREATE TABLE `explorer_migrations` (
   `version` varchar(100) NOT NULL,
   `applied_at` datetime NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
 --
 -- Dumping data for table `explorer_migrations`
@@ -1008,7 +1203,11 @@ INSERT INTO `faculty_profiles` (`id`, `user_id`, `employee_id`, `first_name`, `l
 (4, 4, 'EMP-004', 'Maria', 'Santos', 'Garcia', 6, 'Assistant Professor II', '09171234570', 'maria.santos@isu-cauayan.edu.ph', 'Information Technology, Digital Literacy', 1, NULL, '2026-07-29 17:25:11', '2026-07-29 17:25:11'),
 (5, 5, 'EMP-005', 'Pedro', 'Reyes', 'Cruz', 1, 'Associate Professor I', '09171234571', 'pedro.reyes@isu-cauayan.edu.ph', 'Animal Science, Livestock', 1, NULL, '2026-07-29 17:25:11', '2026-07-29 17:25:11'),
 (6, 6, 'EMP-006', 'Ana', 'Garcia', 'Lopez', 3, 'Instructor II', '09171234572', 'ana.garcia@isu-cauayan.edu.ph', 'Community Education, Literacy', 1, NULL, '2026-07-29 17:25:11', '2026-07-29 17:25:11'),
-(7, 7, 'EMP-007', 'Dean', 'Official', '', 4, 'College Dean', '09171234573', 'dean@isu-cauayan.edu.ph', '', 0, NULL, '2026-07-29 17:25:11', '2026-07-29 17:25:11');
+(7, 7, 'EMP-007', 'Dean', 'Official', '', 4, 'College Dean', '09171234573', 'dean@isu-cauayan.edu.ph', '', 0, NULL, '2026-07-29 17:25:11', '2026-07-29 17:25:11'),
+(8, 8, 'QA-2026-001', 'QA', 'Faculty', '', 1, 'QA Tester', '0000000000', 'qa.faculty@example.invalid', NULL, 0, NULL, '2026-10-23 07:36:51', '2026-10-23 07:36:51'),
+(9, 9, '12345', 'test', 'reg', NULL, 5, 'Faculty', NULL, 'testreg@gmail.com', NULL, 0, NULL, '2026-10-28 06:48:40', '2026-10-28 06:48:40'),
+(10, 10, '123321', 'Michael', 'de Leon', NULL, 5, 'Faculty', NULL, 'michael.deleon.rwds@gmail.com', NULL, 0, NULL, '2026-10-28 13:50:17', '2026-10-28 13:50:17'),
+(11, 11, 'r4221412', 'michaeld', 'michaeld', NULL, 3, 'ETS Head', NULL, 'michaeld000021@gmail.com', NULL, 0, NULL, '2026-10-28 16:29:12', '2026-10-28 16:29:12');
 
 -- --------------------------------------------------------
 
@@ -1052,6 +1251,7 @@ CREATE TABLE `moas` (
   `expiration_date` date DEFAULT NULL,
   `status` enum('pending','active','expired','terminated') NOT NULL DEFAULT 'pending',
   `attachment` varchar(255) DEFAULT NULL,
+  `attachments` longtext DEFAULT NULL,
   `remarks` text DEFAULT NULL,
   `created_by` int(11) NOT NULL,
   `created_at` datetime NOT NULL DEFAULT current_timestamp(),
@@ -1062,10 +1262,12 @@ CREATE TABLE `moas` (
 -- Dumping data for table `moas`
 --
 
-INSERT INTO `moas` (`id`, `moa_number`, `project_id`, `partner_agency_id`, `date_signed`, `expiration_date`, `status`, `attachment`, `remarks`, `created_by`, `created_at`, `updated_at`) VALUES
-(1, 'MOA-2026-0001', 1, 1, '2026-01-05', '2027-01-05', 'active', NULL, 'Partnership for organic farming project', 1, '2026-07-29 17:25:11', '2026-07-29 17:25:11'),
-(2, 'MOA-2026-0002', 3, 4, '2026-01-25', '2026-07-25', 'active', NULL, 'Venue partnership for digital literacy program', 1, '2026-07-29 17:25:11', '2026-07-29 17:25:11'),
-(3, 'MOA-2025-0003', 5, 3, '2025-05-20', '2025-11-20', 'expired', NULL, 'Health program partnership - expired', 1, '2026-07-29 17:25:11', '2026-07-29 17:25:11');
+INSERT INTO `moas` (`id`, `moa_number`, `project_id`, `partner_agency_id`, `date_signed`, `expiration_date`, `status`, `attachment`, `attachments`, `remarks`, `created_by`, `created_at`, `updated_at`) VALUES
+(1, 'MOA-2026-0001', 1, 1, '2026-01-05', '2027-01-05', 'active', NULL, NULL, 'Partnership for organic farming project', 1, '2026-07-29 17:25:11', '2026-07-29 17:25:11'),
+(2, 'MOA-2026-0002', 3, 4, '2026-01-25', '2026-07-25', 'active', NULL, NULL, 'Venue partnership for digital literacy program', 1, '2026-07-29 17:25:11', '2026-07-29 17:25:11'),
+(3, 'MOA-2025-0003', 5, 3, '2025-05-20', '2025-11-20', 'expired', NULL, NULL, 'Health program partnership - expired', 1, '2026-07-29 17:25:11', '2026-07-29 17:25:11'),
+(4, 'Test', 6, 2, '2026-09-21', '2027-01-14', 'pending', 'moa/6ab22406b84ba_1790059526.pdf', NULL, 'rrqwrq', 1, '2026-09-22 14:45:26', '2026-09-22 14:45:26'),
+(5, 'Nb bfxvf', 7, 2, NULL, NULL, 'pending', 'moa/6adab021e39a6_1792716833.jpg', '[\"moa\\/6adab021e39a6_1792716833.jpg\"]', 'Ok', 1, '2026-10-23 08:53:53', '2026-10-23 08:53:53');
 
 -- --------------------------------------------------------
 
@@ -1144,7 +1346,39 @@ INSERT INTO `notifications` (`id`, `user_id`, `title`, `message`, `type`, `entit
 (51, 4, 'Proposal Approved', 'Your proposal \'HAKDOG\' has been approved.', 'success', 'proposal', 9, '/index.php?module=proposals', 0, '2026-09-21 11:27:19'),
 (52, 4, 'Program Created', 'Your proposal has been approved and Program \'HAKDOG\' has been created.', 'success', 'program', 4, '/index.php?module=explorer', 0, '2026-09-21 11:27:19'),
 (53, 4, 'Proposal Approved', 'Your proposal \'test Propposal\' has been approved.', 'success', 'proposal', 8, '/index.php?module=proposals', 0, '2026-09-21 11:28:02'),
-(54, 4, 'Program Created', 'Your proposal has been approved and Program \'test Propposal\' has been created.', 'success', 'program', 5, '/index.php?module=explorer', 0, '2026-09-21 11:28:02');
+(54, 4, 'Program Created', 'Your proposal has been approved and Program \'test Propposal\' has been created.', 'success', 'program', 5, '/index.php?module=explorer', 0, '2026-09-21 11:28:02'),
+(55, 1, 'Proposal Resubmitted', 'A revised proposal \'Revised Proposal for Phase 2 Training\' is ready for review.', 'info', 'proposal', 5, '/index.php?module=proposals', 0, '2026-09-26 18:29:59'),
+(56, 2, 'Proposal Resubmitted', 'A revised proposal \'Revised Proposal for Phase 2 Training\' is ready for review.', 'info', 'proposal', 5, '/index.php?module=proposals', 0, '2026-09-26 18:29:59'),
+(57, 4, 'New Budget Comment', 'A budget comment was added to \'HAKDOG\'.', 'info', 'proposal', 9, '/index.php?module=proposals', 0, '2026-09-26 19:10:00'),
+(58, 4, 'New Proposal Comment', 'A comment was added to \'HAKDOG\'.', 'info', 'proposal', 9, '/index.php?module=proposals', 0, '2026-09-26 19:10:13'),
+(59, 4, 'New Proposal Comment', 'A comment was added to \'HAKDOG\'.', 'info', 'proposal', 9, '/index.php?module=proposals', 0, '2026-09-26 19:10:15'),
+(60, 3, 'Proposal Approved', 'Your proposal \'Revised Proposal for Phase 2 Training\' has been approved.', 'success', 'proposal', 5, '/index.php?module=proposals', 0, '2026-09-26 19:15:14'),
+(61, 3, 'Proposal Approved', 'Your proposal \'Revised Proposal for Phase 2 Training\' has been approved.', 'success', 'proposal', 5, '/index.php?module=proposals', 0, '2026-09-26 19:15:35'),
+(62, 4, 'Proposal Approved', 'Your proposal \'HAKDOG\' has been approved.', 'success', 'proposal', 9, '/index.php?module=proposals', 0, '2026-09-26 19:18:54'),
+(63, 4, 'Program Created', 'Your proposal has been approved and Program \'HAKDOG\' has been created.', 'success', 'program', 6, '/index.php?module=explorer', 0, '2026-09-26 19:18:57'),
+(64, 1, 'New Program Proposal', 'Faculty submitted a proposal: Test', 'info', 'proposal', 10, '/index.php?module=proposals', 0, '2026-10-10 08:25:57'),
+(65, 2, 'New Program Proposal', 'Faculty submitted a proposal: Test', 'info', 'proposal', 10, '/index.php?module=proposals', 0, '2026-10-10 08:25:57'),
+(66, 1, 'New Program Proposal', 'Faculty submitted a proposal: test', 'info', 'proposal', 11, '/index.php?module=proposals', 0, '2026-10-12 10:08:48'),
+(67, 2, 'New Program Proposal', 'Faculty submitted a proposal: test', 'info', 'proposal', 11, '/index.php?module=proposals', 0, '2026-10-12 10:08:48'),
+(68, 1, 'New Program Proposal', 'Faculty submitted a proposal: test2', 'info', 'proposal', 12, '/index.php?module=proposals', 0, '2026-10-12 10:15:58'),
+(69, 2, 'New Program Proposal', 'Faculty submitted a proposal: test2', 'info', 'proposal', 12, '/index.php?module=proposals', 0, '2026-10-12 10:15:58'),
+(70, 1, 'New Program Proposal', 'Faculty submitted a proposal: test', 'info', 'proposal', 13, '/index.php?module=proposals', 0, '2026-10-12 10:20:33'),
+(71, 2, 'New Program Proposal', 'Faculty submitted a proposal: test', 'info', 'proposal', 13, '/index.php?module=proposals', 0, '2026-10-12 10:20:33'),
+(72, 1, 'New Program Proposal', 'Faculty submitted a proposal: test23', 'info', 'proposal', 14, '/index.php?module=proposals', 0, '2026-10-12 10:20:50'),
+(73, 2, 'New Program Proposal', 'Faculty submitted a proposal: test23', 'info', 'proposal', 14, '/index.php?module=proposals', 0, '2026-10-12 10:20:50'),
+(74, 1, 'New Program Proposal', 'Faculty submitted a proposal: nb bfxvf', 'info', 'proposal', 15, '/index.php?module=proposals', 0, '2026-10-23 08:24:34'),
+(75, 2, 'New Program Proposal', 'Faculty submitted a proposal: nb bfxvf', 'info', 'proposal', 15, '/index.php?module=proposals', 0, '2026-10-23 08:24:34'),
+(76, 3, 'Proposal Returned', 'Your proposal \'nb bfxvf\' has been returned.', 'warning', 'proposal', 15, '/index.php?module=proposals', 0, '2026-10-23 08:26:35'),
+(77, 3, 'Proposal Returned', 'Your proposal \'nb bfxvf\' has been returned.', 'warning', 'proposal', 15, '/index.php?module=proposals', 0, '2026-10-23 08:26:58'),
+(78, 1, 'New Proposal Comment', 'Faculty added a comment to \'nb bfxvf\'.', 'info', 'proposal', 15, '/index.php?module=proposals', 0, '2026-10-23 08:29:32'),
+(79, 2, 'New Proposal Comment', 'Faculty added a comment to \'nb bfxvf\'.', 'info', 'proposal', 15, '/index.php?module=proposals', 0, '2026-10-23 08:29:32'),
+(80, 1, 'New Proposal Comment', 'Faculty added a comment to \'nb bfxvf\'.', 'info', 'proposal', 15, '/index.php?module=proposals', 0, '2026-10-23 08:29:55'),
+(81, 2, 'New Proposal Comment', 'Faculty added a comment to \'nb bfxvf\'.', 'info', 'proposal', 15, '/index.php?module=proposals', 0, '2026-10-23 08:29:55'),
+(82, 1, 'Proposal Resubmitted', 'A revised proposal \'nb bfxvf\' is ready for review.', 'info', 'proposal', 15, '/index.php?module=proposals', 0, '2026-10-23 08:30:50'),
+(83, 2, 'Proposal Resubmitted', 'A revised proposal \'nb bfxvf\' is ready for review.', 'info', 'proposal', 15, '/index.php?module=proposals', 0, '2026-10-23 08:30:51'),
+(84, 3, 'Proposal Approved', 'Your proposal \'nb bfxvf\' has been approved.', 'success', 'proposal', 15, '/index.php?module=proposals', 0, '2026-10-23 08:33:32'),
+(85, 3, 'Program Created', 'Your proposal has been approved and Program \'nb bfxvf\' has been created.', 'success', 'program', 7, '/index.php?module=explorer', 0, '2026-10-23 08:33:55'),
+(86, 3, 'New Designation', 'A designation file was assigned to you: scan-2026-10-23T00-39-41-590Z.jpg', 'info', 'document', 6, '/index.php?module=designations', 0, '2026-10-23 08:39:40');
 
 -- --------------------------------------------------------
 
@@ -1212,7 +1446,9 @@ INSERT INTO `programs` (`id`, `program_code`, `title`, `description`, `college`,
 (2, 'PROG-2026-0002', 'Digital Literacy and ICT Skills Development', 'Program to enhance digital literacy among community members and faculty.', 'College of Computing and Information Sciences', 'Cauayan Campus', '2026-02-01', '2027-12-31', 'active', 'To bridge the digital divide by providing ICT skills training to community members.', 'Digitally literate community members, trained faculty, online learning resources', 300000.00, 1, '2026-07-29 17:25:11', '2026-07-29 17:25:11', NULL),
 (3, 'PROG-2026-0003', 'Agricultural Technology Transfer Program', 'Transfer of modern agricultural technologies to local farmers.', 'College of Agriculture', 'Cauayan Campus', '2026-01-15', '2027-06-30', 'active', 'To increase agricultural productivity through adoption of modern farming technologies.', 'Adopted technologies, increased crop yields, trained farmers', 750000.00, 1, '2026-07-29 17:25:11', '2026-07-29 17:25:11', NULL),
 (4, 'PROG-2026-0004', 'HAKDOG', 'ABC', 'CCCISCT', 'Cauayan Campus', '2026-09-21', '2026-09-22', 'active', 'TESDT', '', 32110.00, 1, '2026-09-21 11:27:19', '2026-09-21 11:27:19', NULL),
-(5, 'PROG-2026-0005', 'test Propposal', 'Hakdog', 'CCSICT', 'Cauayan Campus', '2026-09-21', '2026-09-30', 'active', 'Hakdog', '', 50000.00, 1, '2026-09-21 11:28:02', '2026-09-21 11:28:02', NULL);
+(5, 'PROG-2026-0005', 'test Propposal', 'Hakdog', 'CCSICT', 'Cauayan Campus', '2026-09-21', '2026-09-30', 'active', 'Hakdog', '', 50000.00, 1, '2026-09-21 11:28:02', '2026-09-21 11:28:02', NULL),
+(6, 'PROG-2026-0006', 'HAKDOG', 'ABC', 'CCCISCT', 'Cauayan Campus', '2026-09-21', '2026-09-22', 'active', 'TESDT', '', 32110.00, 2, '2026-09-26 19:18:57', '2026-09-26 19:18:57', NULL),
+(7, 'PROG-2026-0007', 'nb bfxvf', '', '', 'Cauayan Campus', NULL, NULL, 'active', '', '', 0.00, 1, '2026-10-23 08:33:55', '2026-10-23 08:33:55', NULL);
 
 -- --------------------------------------------------------
 
@@ -1244,7 +1480,9 @@ INSERT INTO `program_assignments` (`id`, `program_id`, `faculty_id`, `assignment
 (16, 1, 3, 'member', 1, '2026-07-30 09:39:41', 0),
 (21, 3, 3, 'leader', 1, '2026-07-30 10:55:58', 1),
 (25, 4, 4, 'leader', 1, '2026-09-21 11:27:19', 1),
-(26, 5, 4, 'leader', 1, '2026-09-21 11:28:02', 1);
+(26, 5, 4, 'leader', 1, '2026-09-21 11:28:02', 1),
+(27, 6, 4, 'leader', 2, '2026-09-26 19:18:57', 1),
+(28, 7, 3, 'leader', 1, '2026-10-23 08:33:55', 1);
 
 -- --------------------------------------------------------
 
@@ -1285,7 +1523,8 @@ INSERT INTO `projects` (`id`, `project_code`, `program_id`, `title`, `descriptio
 (3, 'PROJ-2026-0003', 2, 'Digital Literacy Program for Senior Citizens', 'Workshop series teaching basic computer skills to senior citizens.', '2026-02-01', '2026-07-31', 80000.00, 5, 4, 2, 'Cauayan City Hall', 'To improve digital literacy among elderly residents.', 'Digitally literate seniors, training materials', 'ongoing', 60, 1, '2026-07-29 17:25:11', '2026-07-29 17:25:11', NULL),
 (4, 'PROJ-2026-0004', 3, 'Corn Production Technology Dissemination', 'Technology transfer for improved corn production techniques.', '2026-01-20', '2026-12-31', 350000.00, 4, 2, 7, 'Minante, Cauayan City', 'To increase corn yield through modern production techniques.', 'Improved farming practices, higher yields, trained farmers', 'ongoing', 50, 1, '2026-07-29 17:25:11', '2026-07-30 13:35:04', NULL),
 (5, 'PROJ-2025-0005', 1, 'Community Health and Nutrition Awareness', 'Health education and nutrition counseling for community members.', '2025-06-01', '2025-12-31', 95000.00, 6, 3, NULL, 'District I, Cauayan City', 'To improve health awareness and nutrition practices.', 'Health awareness materials, trained health advocates', 'completed', 100, 1, '2026-07-29 17:25:11', '2026-07-29 17:25:11', NULL),
-(6, 'PROJ-2026-0006', 5, 'Test Hakdog123', 'Test', '2026-09-21', '2026-09-21', 0.00, NULL, NULL, NULL, 'ISU Cauayan', 'TEST', 'TEST', 'draft', 0, 4, '2026-09-21 11:34:43', '2026-09-21 11:34:43', NULL);
+(6, 'PROJ-2026-0006', 5, 'Test Hakdog123', 'Test', '2026-09-21', '2026-09-21', 0.00, NULL, NULL, NULL, 'ISU Cauayan', 'TEST', 'TEST', 'draft', 0, 4, '2026-09-21 11:34:43', '2026-09-21 11:34:43', NULL),
+(7, 'PROJ-2026-0007', 7, 'nb bfxvf', 'smssnsn', NULL, NULL, 0.00, NULL, NULL, NULL, '', '', '', 'draft', 0, 1, '2026-10-23 08:37:04', '2026-10-23 08:37:04', NULL);
 
 -- --------------------------------------------------------
 
@@ -1329,6 +1568,7 @@ CREATE TABLE `proposals` (
   `proposal_number` varchar(30) NOT NULL,
   `project_id` int(11) DEFAULT NULL,
   `title` varchar(255) NOT NULL,
+  `proponent` varchar(255) DEFAULT NULL,
   `submitted_by` int(11) NOT NULL,
   `date_submitted` date DEFAULT NULL,
   `status` enum('draft','submitted','under_review','approved','returned','rejected') NOT NULL DEFAULT 'draft',
@@ -1336,6 +1576,7 @@ CREATE TABLE `proposals` (
   `reviewed_at` datetime DEFAULT NULL,
   `remarks` text DEFAULT NULL,
   `attachment` varchar(255) DEFAULT NULL,
+  `attachments` longtext DEFAULT NULL,
   `version` int(11) NOT NULL DEFAULT 1,
   `created_at` datetime NOT NULL DEFAULT current_timestamp(),
   `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
@@ -1345,15 +1586,21 @@ CREATE TABLE `proposals` (
 -- Dumping data for table `proposals`
 --
 
-INSERT INTO `proposals` (`id`, `proposal_number`, `project_id`, `title`, `submitted_by`, `date_submitted`, `status`, `reviewed_by`, `reviewed_at`, `remarks`, `attachment`, `version`, `created_at`, `updated_at`) VALUES
-(1, 'PROP-2026-0001', 1, 'Proposal for Organic Farming Technology Transfer', 3, '2026-01-10', 'approved', NULL, NULL, 'Approved by ETS. Well-structured proposal.', NULL, 1, '2026-07-29 17:25:11', '2026-07-29 17:25:11'),
-(2, 'PROP-2026-0002', 2, 'Proposal for Livelihood Skills Training', 3, '2026-02-15', 'approved', NULL, NULL, 'Approved with minor budget adjustments.', NULL, 1, '2026-07-29 17:25:11', '2026-07-29 17:25:11'),
-(3, 'PROP-2026-0003', 3, 'Proposal for Digital Literacy Program', 4, '2026-01-20', 'approved', NULL, NULL, 'Approved. Good community impact.', NULL, 1, '2026-07-29 17:25:11', '2026-07-29 17:25:11'),
-(4, 'PROP-2026-0004', 4, 'Proposal for Corn Production Technology', 5, '2026-01-25', 'approved', NULL, NULL, 'Approved. Strong partnership with DA.', NULL, 1, '2026-07-29 17:25:11', '2026-07-29 17:25:11'),
-(5, 'PROP-2026-0005', 1, 'Revised Proposal for Phase 2 Training', 3, '2026-06-01', 'returned', 1, '2026-09-08 17:45:30', 'test', NULL, 2, '2026-07-29 17:25:11', '2026-09-08 17:45:30'),
-(7, 'PROP-2026-0006', NULL, 'Test', 3, '2026-07-30', 'approved', 1, '2026-07-30 13:12:33', '', NULL, 1, '2026-07-30 12:49:55', '2026-07-30 13:12:33'),
-(8, 'PROP-2026-0007', NULL, 'test Propposal', 4, '2026-09-21', 'approved', 1, '2026-09-21 11:28:02', '{\"type\":\"program_proposal\",\"description\":\"Hakdog\",\"college\":\"CCSICT\",\"campus\":\"Cauayan Campus\",\"start_date\":\"2026-09-21\",\"end_date\":\"2026-09-30\",\"budget\":50000,\"funding_source\":\"Unknown\",\"objectives\":\"Hakdog\",\"beneficiaries\":\"PWD\",\"location\":\"Cauayan City\"}', 'proposals/6ab0a1642d18d_1789960548.docx', 1, '2026-09-21 11:15:48', '2026-09-21 11:28:02'),
-(9, 'PROP-2026-0008', NULL, 'HAKDOG', 4, '2026-09-21', 'approved', 1, '2026-09-21 11:27:19', '{\"type\":\"program_proposal\",\"description\":\"ABC\",\"college\":\"CCCISCT\",\"campus\":\"Cauayan Campus\",\"start_date\":\"2026-09-21\",\"end_date\":\"2026-09-22\",\"budget\":32110,\"funding_source\":\"ANY\",\"objectives\":\"TESDT\",\"beneficiaries\":\"PWD\",\"location\":\"CAUAYAN\"}', 'proposals/6ab0a273b05ca_1789960819.pdf', 1, '2026-09-21 11:20:19', '2026-09-21 11:27:19');
+INSERT INTO `proposals` (`id`, `proposal_number`, `project_id`, `title`, `proponent`, `submitted_by`, `date_submitted`, `status`, `reviewed_by`, `reviewed_at`, `remarks`, `attachment`, `attachments`, `version`, `created_at`, `updated_at`) VALUES
+(1, 'PROP-2026-0001', 1, 'Proposal for Organic Farming Technology Transfer', NULL, 3, '2026-01-10', 'approved', NULL, NULL, 'Approved by ETS. Well-structured proposal.', NULL, NULL, 1, '2026-07-29 17:25:11', '2026-07-29 17:25:11'),
+(2, 'PROP-2026-0002', 2, 'Proposal for Livelihood Skills Training', NULL, 3, '2026-02-15', 'approved', NULL, NULL, 'Approved with minor budget adjustments.', NULL, NULL, 1, '2026-07-29 17:25:11', '2026-07-29 17:25:11'),
+(3, 'PROP-2026-0003', 3, 'Proposal for Digital Literacy Program', NULL, 4, '2026-01-20', 'approved', NULL, NULL, 'Approved. Good community impact.', NULL, NULL, 1, '2026-07-29 17:25:11', '2026-07-29 17:25:11'),
+(4, 'PROP-2026-0004', 4, 'Proposal for Corn Production Technology', NULL, 5, '2026-01-25', 'approved', NULL, NULL, 'Approved. Strong partnership with DA.', NULL, NULL, 1, '2026-07-29 17:25:11', '2026-07-29 17:25:11'),
+(5, 'PROP-2026-0005', 1, 'Revised Proposal for Phase 2 Training', NULL, 3, '2026-09-26', 'approved', 2, '2026-09-26 19:15:35', '', 'proposals/6ab79ea79af79_1790418599.pdf', NULL, 3, '2026-07-29 17:25:11', '2026-09-26 19:15:35'),
+(7, 'PROP-2026-0006', NULL, 'Test', NULL, 3, '2026-07-30', 'approved', 1, '2026-07-30 13:12:33', '', NULL, NULL, 1, '2026-07-30 12:49:55', '2026-07-30 13:12:33'),
+(8, 'PROP-2026-0007', NULL, 'test Propposal', NULL, 4, '2026-09-21', 'approved', 1, '2026-09-21 11:28:02', '{\"type\":\"program_proposal\",\"description\":\"Hakdog\",\"college\":\"CCSICT\",\"campus\":\"Cauayan Campus\",\"start_date\":\"2026-09-21\",\"end_date\":\"2026-09-30\",\"budget\":50000,\"funding_source\":\"Unknown\",\"objectives\":\"Hakdog\",\"beneficiaries\":\"PWD\",\"location\":\"Cauayan City\"}', 'proposals/6ab0a1642d18d_1789960548.docx', NULL, 1, '2026-09-21 11:15:48', '2026-09-21 11:28:02'),
+(9, 'PROP-2026-0008', NULL, 'HAKDOG', NULL, 4, '2026-09-21', 'approved', 2, '2026-09-26 19:18:54', '{\"type\":\"program_proposal\",\"description\":\"ABC\",\"college\":\"CCCISCT\",\"campus\":\"Cauayan Campus\",\"start_date\":\"2026-09-21\",\"end_date\":\"2026-09-22\",\"budget\":32110,\"funding_source\":\"ANY\",\"objectives\":\"TESDT\",\"beneficiaries\":\"PWD\",\"location\":\"CAUAYAN\"}', 'proposals/6ab0a273b05ca_1789960819.pdf', NULL, 1, '2026-09-21 11:20:19', '2026-09-26 19:18:54'),
+(10, 'PROP-2026-0009', NULL, 'Test', NULL, 3, '2026-10-10', 'submitted', NULL, NULL, '{\"type\":\"program_proposal\",\"submission_mode\":\"Scanned proposal upload\",\"project_program\":\"test\",\"project_leader\":\"Duterte\",\"date_submitted\":\"2026-10-10\",\"description\":\"\",\"college\":\"\",\"campus\":\"Cauayan Campus\",\"start_date\":\"\",\"end_date\":\"\",\"budget\":0,\"funding_source\":\"\",\"objectives\":\"\",\"beneficiaries\":\"\",\"location\":\"\"}', 'proposals/6ac98613890fb_1791591955.pdf', NULL, 1, '2026-10-10 08:25:57', '2026-10-10 08:25:57'),
+(11, 'PROP-2026-0010', NULL, 'test', NULL, 3, '2026-10-12', 'submitted', NULL, NULL, '{\"type\":\"program_proposal\",\"submission_mode\":\"Scanned proposal upload\",\"project_program\":\"test\",\"project_leader\":\"test\",\"date_submitted\":\"2026-10-12\",\"description\":\"\",\"college\":\"\",\"campus\":\"Cauayan Campus\",\"start_date\":\"\",\"end_date\":\"\",\"budget\":0,\"funding_source\":\"\",\"objectives\":\"\",\"beneficiaries\":\"\",\"location\":\"\"}', 'proposals/6acc412e3facf_1791770926.docx', NULL, 1, '2026-10-12 10:08:48', '2026-10-12 10:08:48'),
+(12, 'PROP-2026-0011', NULL, 'test2', NULL, 3, '2026-10-12', 'submitted', NULL, NULL, '{\"type\":\"program_proposal\",\"submission_mode\":\"Scanned proposal upload\",\"project_program\":\"test2\",\"project_leader\":\"test\",\"date_submitted\":\"2026-10-12\",\"description\":\"\",\"college\":\"\",\"campus\":\"Cauayan Campus\",\"start_date\":\"\",\"end_date\":\"\",\"budget\":0,\"funding_source\":\"\",\"objectives\":\"\",\"beneficiaries\":\"\",\"location\":\"\"}', 'proposals/6acc42dc2f3da_1791771356.jpg', NULL, 1, '2026-10-12 10:15:58', '2026-10-12 10:15:58'),
+(13, 'PROP-2026-0012', NULL, 'test', NULL, 3, '2026-10-12', 'submitted', NULL, NULL, '{\"type\":\"program_proposal\",\"submission_mode\":\"Scanned proposal upload\",\"project_program\":\"test\",\"project_leader\":\"test\",\"date_submitted\":\"2026-10-12\",\"description\":\"\",\"college\":\"\",\"campus\":\"Cauayan Campus\",\"start_date\":\"\",\"end_date\":\"\",\"budget\":0,\"funding_source\":\"\",\"objectives\":\"\",\"beneficiaries\":\"\",\"location\":\"\"}', 'proposals/6acc43ef0fa71_1791771631.xlsx', NULL, 1, '2026-10-12 10:20:33', '2026-10-12 10:20:33'),
+(14, 'PROP-2026-0013', NULL, 'test23', NULL, 3, '2026-10-12', 'submitted', NULL, NULL, '{\"type\":\"program_proposal\",\"submission_mode\":\"Scanned proposal upload\",\"project_program\":\"test\",\"project_leader\":\"test\",\"date_submitted\":\"2026-10-12\",\"description\":\"\",\"college\":\"\",\"campus\":\"Cauayan Campus\",\"start_date\":\"\",\"end_date\":\"\",\"budget\":0,\"funding_source\":\"\",\"objectives\":\"\",\"beneficiaries\":\"\",\"location\":\"\"}', 'proposals/6acc440048862_1791771648.csv', NULL, 1, '2026-10-12 10:20:50', '2026-10-12 10:20:50'),
+(15, 'PROP-2026-0014', NULL, 'nb bfxvf', 'mnvb cv', 3, '2026-10-23', 'approved', 1, '2026-10-23 08:33:32', '{\"type\":\"program_proposal\",\"submission_mode\":\"Scanned proposal upload\",\"project_program\":\",mvmhgc\",\"project_leader\":\"bhmnvg\",\"date_submitted\":\"2026-10-23\",\"description\":\"\",\"college\":\"\",\"campus\":\"Cauayan Campus\",\"start_date\":\"\",\"end_date\":\"\",\"budget\":0,\"funding_source\":\"\",\"objectives\":\"\",\"beneficiaries\":\"\",\"location\":\"\"}', 'proposals/6adaaabae2819_1792715450.docx', '[\"proposals\\/6adaaabae2819_1792715450.docx\"]', 2, '2026-10-23 08:24:34', '2026-10-23 08:33:32');
 
 -- --------------------------------------------------------
 
@@ -1383,7 +1630,60 @@ INSERT INTO `proposal_approvals` (`id`, `proposal_id`, `approver_id`, `action`, 
 (7, 7, 1, 'approved', '', '2026-07-30 13:12:33'),
 (8, 5, 1, 'returned', 'test', '2026-09-08 17:45:30'),
 (9, 9, 1, 'approved', '', '2026-09-21 11:27:19'),
-(10, 8, 1, 'approved', '', '2026-09-21 11:28:02');
+(10, 8, 1, 'approved', '', '2026-09-21 11:28:02'),
+(11, 5, 3, 'submitted', 'test', '2026-09-26 18:29:59'),
+(12, 5, 2, 'approved', '', '2026-09-26 19:15:14'),
+(13, 5, 2, 'approved', '', '2026-09-26 19:15:35'),
+(14, 9, 2, 'approved', '', '2026-09-26 19:18:54'),
+(15, 15, 1, 'returned', 'oki na ba', '2026-10-23 08:26:35'),
+(16, 15, 1, 'returned', 'oki na ba', '2026-10-23 08:26:58'),
+(17, 15, 3, 'submitted', 'go go', '2026-10-23 08:30:50'),
+(18, 15, 1, 'approved', '', '2026-10-23 08:33:32');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `proposal_budget_comments`
+--
+
+CREATE TABLE `proposal_budget_comments` (
+  `id` int(11) NOT NULL,
+  `proposal_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `comment` text NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `proposal_budget_comments`
+--
+
+INSERT INTO `proposal_budget_comments` (`id`, `proposal_id`, `user_id`, `comment`, `created_at`) VALUES
+(1, 9, 2, 'test', '2026-09-26 19:10:00');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `proposal_comments`
+--
+
+CREATE TABLE `proposal_comments` (
+  `id` int(11) NOT NULL,
+  `proposal_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `comment` text NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `proposal_comments`
+--
+
+INSERT INTO `proposal_comments` (`id`, `proposal_id`, `user_id`, `comment`, `created_at`) VALUES
+(1, 9, 2, 'testing', '2026-09-26 19:10:13'),
+(2, 9, 2, 'testing', '2026-09-26 19:10:15'),
+(3, 15, 3, 'esmeringhoy', '2026-10-23 08:29:31'),
+(4, 15, 3, 'esmeringhoy', '2026-10-23 08:29:55');
 
 -- --------------------------------------------------------
 
@@ -1400,6 +1700,20 @@ CREATE TABLE `proposal_versions` (
   `uploaded_by` int(11) NOT NULL,
   `created_at` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `proposal_versions`
+--
+
+INSERT INTO `proposal_versions` (`id`, `proposal_id`, `version`, `attachment`, `remarks`, `uploaded_by`, `created_at`) VALUES
+(1, 5, 3, 'proposals/6ab79ea79af79_1790418599.pdf', 'test', 3, '2026-09-26 18:29:59'),
+(2, 10, 1, 'proposals/6ac98613890fb_1791591955.pdf', 'Initial submission', 3, '2026-10-10 08:25:57'),
+(3, 11, 1, 'proposals/6acc412e3facf_1791770926.docx', 'Initial submission', 3, '2026-10-12 10:08:48'),
+(4, 12, 1, 'proposals/6acc42dc2f3da_1791771356.jpg', 'Initial submission', 3, '2026-10-12 10:15:58'),
+(5, 13, 1, 'proposals/6acc43ef0fa71_1791771631.xlsx', 'Initial submission', 3, '2026-10-12 10:20:33'),
+(6, 14, 1, 'proposals/6acc440048862_1791771648.csv', 'Initial submission', 3, '2026-10-12 10:20:50'),
+(7, 15, 1, 'proposals/6adaa940804a9_1792715072.docx', 'Initial submission', 3, '2026-10-23 08:24:34'),
+(8, 15, 2, 'proposals/6adaaabae2819_1792715450.docx', 'go go', 3, '2026-10-23 08:30:50');
 
 -- --------------------------------------------------------
 
@@ -1455,18 +1769,19 @@ INSERT INTO `settings` (`id`, `setting_key`, `setting_value`, `setting_group`, `
 (8, 'mail_enabled', '1', 'mail', '2026-09-20 10:15:38', '2026-09-21 16:51:07'),
 (9, 'mail_host', 'smtp.gmail.com', 'mail', '2026-09-20 10:15:38', '2026-09-21 16:50:44'),
 (10, 'mail_port', '587', 'mail', '2026-09-20 10:15:38', '2026-09-20 10:15:38'),
-(11, 'mail_encryption', 'tls', 'mail', '2026-09-20 10:15:38', '2026-09-20 10:15:38'),
+(11, 'mail_encryption', 'tls_optional', 'mail', '2026-09-20 10:15:38', '2026-10-28 14:17:14'),
 (12, 'mail_auth', '1', 'mail', '2026-09-20 10:15:38', '2026-09-20 10:15:38'),
-(13, 'mail_username', 'etsoffice26@gmail.com', 'mail', '2026-09-20 10:15:38', '2026-09-21 16:50:44'),
-(14, 'mail_password', 'CaLBVrg4AKqC3MASQdXCc4JE6lEVkVuMoxCSl0cRTiRZ6OwESl9cJfZkF3KL2mM=', 'mail', '2026-09-20 10:15:38', '2026-09-21 16:50:44'),
+(13, 'mail_username', 'michaeld000021@gmail.com', 'mail', '2026-09-20 10:15:38', '2026-10-28 13:47:42'),
+(14, 'mail_password', 'TedytTZq0OadbpbmL7SZ+N8Rl9RrDUkjO7B8PHi8lLw+gpSSM2/rPtdOVCFLiHs=', 'mail', '2026-09-20 10:15:38', '2026-10-28 13:47:42'),
 (15, 'mail_from_email', 'etsoffice26@gmail.com', 'mail', '2026-09-20 10:15:38', '2026-09-21 16:50:44'),
 (16, 'mail_from_name', 'ISU-Cauayan Extension Services', 'mail', '2026-09-20 10:15:38', '2026-09-20 10:15:38'),
 (17, 'mail_reply_to', '', 'mail', '2026-09-20 10:15:38', '2026-09-20 10:15:38'),
-(18, 'mail_app_url', 'https://ets-project-hub.great-site.net', 'mail', '2026-09-20 10:15:38', '2026-09-21 16:51:07'),
+(18, 'mail_app_url', 'https://isu-proj-hub.test', 'mail', '2026-09-20 10:15:38', '2026-10-28 13:47:42'),
 (19, 'mail_proposals', '1', 'mail', '2026-09-20 10:15:38', '2026-09-20 10:15:38'),
 (20, 'mail_reports', '1', 'mail', '2026-09-20 10:15:38', '2026-09-21 16:51:11'),
 (21, 'mail_assignments', '1', 'mail', '2026-09-20 10:15:38', '2026-09-20 10:15:38'),
-(64, 'mail_worker_last_run', '2026-09-21 16:51:14', 'mail', '2026-09-21 16:51:14', '2026-09-21 16:51:14');
+(64, 'mail_worker_last_run', '2026-10-28 14:17:54', 'mail', '2026-09-21 16:51:14', '2026-10-28 14:17:54'),
+(101, 'mail_accounts', '1', 'mail', '2026-10-28 13:47:42', '2026-10-28 13:47:42');
 
 -- --------------------------------------------------------
 
@@ -1497,14 +1812,18 @@ CREATE TABLE `users` (
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `username`, `email`, `password`, `role`, `is_active`, `email_verified`, `last_login`, `last_password_change`, `created_at`, `updated_at`, `deleted_at`) VALUES
-(1, 'admin', 'admin@isu-cauayan.edu.ph', '$2y$12$9RyZgphPsFEARzNaZkT1o.vZBPubkt/10gwmH4n0MBp6rbm4KbVCu', 'admin', 1, 0, '2026-09-21 11:20:42', NULL, '2026-07-29 17:25:11', '2026-09-21 11:20:42', NULL),
-(2, 'etshead', 'ets.head@isu-cauayan.edu.ph', '$2y$12$9RyZgphPsFEARzNaZkT1o.vZBPubkt/10gwmH4n0MBp6rbm4KbVCu', 'admin', 1, 0, '2026-09-21 16:46:34', NULL, '2026-07-29 17:25:11', '2026-09-21 16:46:34', NULL),
-(3, 'faculty1', 'juan.delacruz@isu-cauayan.edu.ph', '$2y$12$9RyZgphPsFEARzNaZkT1o.vZBPubkt/10gwmH4n0MBp6rbm4KbVCu', 'faculty', 1, 0, '2026-09-21 11:19:01', NULL, '2026-07-29 17:25:11', '2026-09-21 11:19:01', NULL),
-(4, 'faculty2', 'maria.santos@isu-cauayan.edu.ph', '$2y$12$9RyZgphPsFEARzNaZkT1o.vZBPubkt/10gwmH4n0MBp6rbm4KbVCu', 'faculty', 1, 0, '2026-09-21 16:43:05', NULL, '2026-07-29 17:25:11', '2026-09-21 16:43:06', NULL),
-(5, 'faculty3', 'pedro.reyes@isu-cauayan.edu.ph', '$2y$12$9RyZgphPsFEARzNaZkT1o.vZBPubkt/10gwmH4n0MBp6rbm4KbVCu', 'faculty', 1, 0, '2026-09-08 16:58:48', NULL, '2026-07-29 17:25:11', '2026-09-08 16:58:48', NULL),
-(6, 'faculty4', 'ana.garcia@isu-cauayan.edu.ph', '$2y$12$9RyZgphPsFEARzNaZkT1o.vZBPubkt/10gwmH4n0MBp6rbm4KbVCu', 'faculty', 1, 0, NULL, NULL, '2026-07-29 17:25:11', '2026-07-29 17:25:11', NULL),
-(7, 'viewer', 'dean@isu-cauayan.edu.ph', '$2y$12$9RyZgphPsFEARzNaZkT1o.vZBPubkt/10gwmH4n0MBp6rbm4KbVCu', 'viewer', 1, 0, '2026-09-20 10:15:08', NULL, '2026-07-29 17:25:11', '2026-09-20 10:15:08', NULL);
+INSERT INTO `users` (`id`, `username`, `email`, `password`, `role`, `is_active`, `registration_status`, `registration_reviewed_by`, `registration_reviewed_at`, `registration_rejection_reason`, `email_verified`, `last_login`, `last_password_change`, `created_at`, `updated_at`, `deleted_at`) VALUES
+(1, 'admin', 'admin@isu-cauayan.edu.ph', '$2y$12$s8sOI3XDllkPnOiYHdYrLenfBA2G1SK/HfUO6MkEUYss2dPeli4eu', 'admin', 1, 'approved', NULL, NULL, NULL, 0, '2026-10-28 06:26:12', NULL, '2026-07-29 17:25:11', '2026-10-28 06:26:12', NULL),
+(2, 'etshead', 'ets.head@isu-cauayan.edu.ph', '$2y$12$s8sOI3XDllkPnOiYHdYrLenfBA2G1SK/HfUO6MkEUYss2dPeli4eu', 'admin', 1, 'approved', NULL, NULL, NULL, 0, '2026-10-28 14:01:29', NULL, '2026-07-29 17:25:11', '2026-10-28 14:01:29', NULL),
+(3, 'faculty1', 'juan.delacruz@isu-cauayan.edu.ph', '$2y$12$s8sOI3XDllkPnOiYHdYrLenfBA2G1SK/HfUO6MkEUYss2dPeli4eu', 'faculty', 1, 'approved', NULL, NULL, NULL, 0, '2026-10-24 17:17:19', NULL, '2026-07-29 17:25:11', '2026-10-24 17:17:19', NULL),
+(4, 'faculty2', 'michaeld000022@gmail.com', '$2y$12$KaxEyuT4SHF28qjcgqDJ3utvI/4x0Fd9yd5E8ljQvi4Iz3QUlewom', 'faculty', 1, 'approved', NULL, NULL, NULL, 0, '2026-09-22 07:33:19', NULL, '2026-07-29 17:25:11', '2026-10-28 16:28:38', NULL),
+(5, 'faculty3', 'pedro.reyes@isu-cauayan.edu.ph', '$2y$12$KaxEyuT4SHF28qjcgqDJ3utvI/4x0Fd9yd5E8ljQvi4Iz3QUlewom', 'faculty', 1, 'approved', NULL, NULL, NULL, 0, '2026-09-08 16:58:48', NULL, '2026-07-29 17:25:11', '2026-10-23 07:29:27', NULL),
+(6, 'faculty4', 'ana.garcia@isu-cauayan.edu.ph', '$2y$12$KaxEyuT4SHF28qjcgqDJ3utvI/4x0Fd9yd5E8ljQvi4Iz3QUlewom', 'faculty', 1, 'approved', NULL, NULL, NULL, 0, NULL, NULL, '2026-07-29 17:25:11', '2026-10-23 07:29:27', NULL),
+(7, 'viewer', 'dean@isu-cauayan.edu.ph', '$2y$12$s8sOI3XDllkPnOiYHdYrLenfBA2G1SK/HfUO6MkEUYss2dPeli4eu', 'viewer', 1, 'approved', NULL, NULL, NULL, 0, '2026-10-23 07:59:57', NULL, '2026-07-29 17:25:11', '2026-10-23 08:04:19', NULL),
+(8, 'qa_faculty_20261023', 'qa.faculty@example.invalid', '$2y$12$Cl5ceE7.y.meEVbwpHhsIOJEDgOxftFi4CzjyDL8WV35L1oNxP1ya', 'faculty', 0, 'approved', NULL, NULL, NULL, 0, NULL, NULL, '2026-10-23 07:36:51', '2026-10-23 07:41:50', '2026-10-23 07:41:50'),
+(9, 'testreg', 'testreg@gmail.com', '$2y$12$w7qfTwrgWSlGWSZE8n6VM.dBm9Cw.YzvIHBpCZfe0YMP.2EgMLdHO', 'faculty', 0, 'pending', NULL, NULL, NULL, 0, '2026-10-28 14:01:16', NULL, '2026-10-28 06:48:40', '2026-10-28 14:01:16', NULL),
+(10, 'mxdln', 'michael.deleon.rwds@gmail.com', '$2y$12$Rnoy3dggptEM1J7vj8Gtz.HN9YNn3kVMHfigqhLOA4jY9TOtzXU1S', 'faculty', 0, 'pending', NULL, NULL, NULL, 0, NULL, NULL, '2026-10-28 13:50:17', '2026-10-28 13:50:17', NULL),
+(11, 'michaeld', 'michaeld000021@gmail.com', '$2y$12$czumhVo5sWuaUrHPUI9nSedPLHokbGdZyzDhnku39tetHfCQpz2Wm', 'admin', 0, 'pending', NULL, NULL, NULL, 0, NULL, NULL, '2026-10-28 16:29:12', '2026-10-28 16:29:12', NULL);
 
 --
 -- Indexes for dumped tables
@@ -1770,6 +2089,22 @@ ALTER TABLE `proposal_approvals`
   ADD KEY `fk_pa_proposal` (`proposal_id`);
 
 --
+-- Indexes for table `proposal_budget_comments`
+--
+ALTER TABLE `proposal_budget_comments`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_proposal_budget_comments_proposal` (`proposal_id`),
+  ADD KEY `idx_proposal_budget_comments_user` (`user_id`);
+
+--
+-- Indexes for table `proposal_comments`
+--
+ALTER TABLE `proposal_comments`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_proposal_comments_proposal` (`proposal_id`),
+  ADD KEY `idx_proposal_comments_user` (`user_id`);
+
+--
 -- Indexes for table `proposal_versions`
 --
 ALTER TABLE `proposal_versions`
@@ -1796,7 +2131,9 @@ ALTER TABLE `settings`
 ALTER TABLE `users`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `username` (`username`),
-  ADD UNIQUE KEY `email` (`email`);
+  ADD UNIQUE KEY `email` (`email`),
+  ADD KEY `idx_users_registration_status` (`registration_status`),
+  ADD KEY `fk_users_registration_reviewer` (`registration_reviewed_by`);
 
 --
 -- AUTO_INCREMENT for dumped tables
@@ -1806,7 +2143,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `accomplishment_reports`
 --
 ALTER TABLE `accomplishment_reports`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `activity_assignments`
@@ -1860,7 +2197,7 @@ ALTER TABLE `activity_types`
 -- AUTO_INCREMENT for table `audit_logs`
 --
 ALTER TABLE `audit_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=211;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=361;
 
 --
 -- AUTO_INCREMENT for table `beneficiary_groups`
@@ -1872,7 +2209,7 @@ ALTER TABLE `beneficiary_groups`
 -- AUTO_INCREMENT for table `certificates`
 --
 ALTER TABLE `certificates`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `certificate_templates`
@@ -1902,7 +2239,7 @@ ALTER TABLE `departments`
 -- AUTO_INCREMENT for table `documents`
 --
 ALTER TABLE `documents`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `document_categories`
@@ -1914,7 +2251,7 @@ ALTER TABLE `document_categories`
 -- AUTO_INCREMENT for table `email_queue`
 --
 ALTER TABLE `email_queue`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=32;
 
 --
 -- AUTO_INCREMENT for table `explorer_nodes`
@@ -1932,7 +2269,7 @@ ALTER TABLE `extension_activities`
 -- AUTO_INCREMENT for table `faculty_profiles`
 --
 ALTER TABLE `faculty_profiles`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT for table `funding_sources`
@@ -1944,13 +2281,13 @@ ALTER TABLE `funding_sources`
 -- AUTO_INCREMENT for table `moas`
 --
 ALTER TABLE `moas`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `notifications`
 --
 ALTER TABLE `notifications`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=55;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=87;
 
 --
 -- AUTO_INCREMENT for table `partner_agencies`
@@ -1962,19 +2299,19 @@ ALTER TABLE `partner_agencies`
 -- AUTO_INCREMENT for table `programs`
 --
 ALTER TABLE `programs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `program_assignments`
 --
 ALTER TABLE `program_assignments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=29;
 
 --
 -- AUTO_INCREMENT for table `projects`
 --
 ALTER TABLE `projects`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `project_assignments`
@@ -1986,19 +2323,31 @@ ALTER TABLE `project_assignments`
 -- AUTO_INCREMENT for table `proposals`
 --
 ALTER TABLE `proposals`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT for table `proposal_approvals`
 --
 ALTER TABLE `proposal_approvals`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
+
+--
+-- AUTO_INCREMENT for table `proposal_budget_comments`
+--
+ALTER TABLE `proposal_budget_comments`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `proposal_comments`
+--
+ALTER TABLE `proposal_comments`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `proposal_versions`
 --
 ALTER TABLE `proposal_versions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `report_approvals`
@@ -2010,13 +2359,13 @@ ALTER TABLE `report_approvals`
 -- AUTO_INCREMENT for table `settings`
 --
 ALTER TABLE `settings`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=65;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=119;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- Constraints for dumped tables
@@ -2203,6 +2552,12 @@ ALTER TABLE `proposal_versions`
 --
 ALTER TABLE `report_approvals`
   ADD CONSTRAINT `fk_ra_report` FOREIGN KEY (`report_id`) REFERENCES `accomplishment_reports` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `users`
+--
+ALTER TABLE `users`
+  ADD CONSTRAINT `fk_users_registration_reviewer` FOREIGN KEY (`registration_reviewed_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

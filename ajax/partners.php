@@ -29,8 +29,17 @@ switch ($action) {
         break;
 
     case 'update':
-        $input = json_decode(file_get_contents('php://input'), true);
+        $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+        if (strpos($contentType, 'application/json') !== false) {
+            $input = json_decode(file_get_contents('php://input'), true);
+        } else {
+            $input = $_POST;
+        }
+        if (!$input) {
+            $input = json_decode(file_get_contents('php://input'), true) ?: $_POST;
+        }
         $id = intval($input['id'] ?? 0);
+        if (!$id) jsonResponse(['success' => false, 'message' => 'Invalid ID'], 400);
         Permissions::requirePermission(Permissions::canManagePartners());
         try {
             $fields = []; $params = [];

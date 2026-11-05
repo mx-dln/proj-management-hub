@@ -62,22 +62,47 @@ switch ($action) {
         break;
 
     case 'update':
-        $input = json_decode(file_get_contents('php://input'), true);
+        $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+        if (strpos($contentType, 'application/json') !== false) {
+            $input = json_decode(file_get_contents('php://input'), true);
+        } else {
+            $input = $_POST;
+        }
+        if (!$input) {
+            $input = json_decode(file_get_contents('php://input'), true) ?: $_POST;
+        }
         $id = intval($input['id'] ?? 0);
+        if (!$id) jsonResponse(['success' => false, 'message' => 'Invalid ID'], 400);
         Permissions::requirePermission(Permissions::canManageMoa());
         try {
             $fields = []; $params = [];
             foreach (['moa_number','remarks','status'] as $f) {
                 if (isset($input[$f])) { $fields[] = "$f = ?"; $params[] = sanitize($input[$f]); }
             }
-            if (isset($input['partner_agency_id'])) { $fields[] = "partner_agency_id = ?"; $params[] = intval($input['partner_agency_id']) ?: null; }
+            if (isset($input['project_id'])) {
+                $pid = intval($input['project_id']);
+                if ($pid) { $fields[] = "project_id = ?"; $params[] = $pid; }
+            }
+            if (array_key_exists('partner_agency_id', $input)) {
+                $fields[] = "partner_agency_id = ?";
+                $params[] = intval($input['partner_agency_id']) ?: null;
+            }
             foreach (['date_signed','expiration_date'] as $f) {
                 if (isset($input[$f])) { $fields[] = "$f = ?"; $params[] = $input[$f] ?: null; }
+            }
+            $files = $_FILES['attachments'] ?? $_FILES['attachment'] ?? [];
+            if (!empty($files['name']) && (!is_array($files['name']) || !empty(array_filter($files['name'])))) {
+                $uploads = uploadFiles($files, 'moa', ['pdf','doc','docx','jpg','jpeg','png','xls','xlsx','csv']);
+                if ($uploads && !isset($uploads['success'])) {
+                    $paths = array_map(fn($file) => $file['file_path'], $uploads);
+                    $fields[] = "attachment = ?"; $params[] = $paths[0];
+                    $fields[] = "attachments = ?"; $params[] = json_encode($paths);
+                }
             }
             if (!empty($fields)) { $params[] = $id; db()->prepare("UPDATE moas SET " . implode(', ', $fields) . " WHERE id = ?")->execute($params); }
             auditLog('edit', 'moa', $id, 'Updated MOA');
             jsonResponse(['success' => true, 'message' => 'MOA updated']);
-        } catch (Exception $e) { jsonResponse(['success' => false, 'message' => 'Failed'], 500); }
+        } catch (Exception $e) { jsonResponse(['success' => false, 'message' => 'Failed: ' . $e->getMessage()], 500); }
         break;
 
     case 'get':

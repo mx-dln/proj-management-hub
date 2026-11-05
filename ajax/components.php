@@ -44,6 +44,7 @@ switch ($action) {
             $stmt->execute([$id]);
             $data = $stmt->fetch();
             if (!$data) jsonResponse(['success' => false, 'message' => 'Not found'], 404);
+            $data['canEdit'] = Permissions::canEditComponent($id);
             jsonResponse($data);
         } catch (Exception $e) {
             jsonResponse(['success' => false, 'message' => 'Error: ' . $e->getMessage()], 500);
@@ -51,8 +52,17 @@ switch ($action) {
         break;
 
     case 'update':
-        $input = json_decode(file_get_contents('php://input'), true);
+        $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+        if (strpos($contentType, 'application/json') !== false) {
+            $input = json_decode(file_get_contents('php://input'), true);
+        } else {
+            $input = $_POST;
+        }
+        if (!$input) {
+            $input = json_decode(file_get_contents('php://input'), true) ?: $_POST;
+        }
         $id = intval($input['id'] ?? 0);
+        if (!$id) jsonResponse(['success' => false, 'message' => 'Invalid ID'], 400);
         Permissions::requirePermission(Permissions::canEditComponent($id));
         $comp = db()->prepare("SELECT project_id FROM components WHERE id = ?");
         $comp->execute([$id]);
@@ -70,11 +80,11 @@ switch ($action) {
             if (!empty($fields)) { $params[] = $id; db()->prepare("UPDATE components SET " . implode(', ', $fields) . " WHERE id = ?")->execute($params); }
             auditLog('edit', 'component', $id, 'Updated component', false, $compData['project_id']);
             jsonResponse(['success' => true, 'message' => 'Component updated']);
-        } catch (Exception $e) { jsonResponse(['success' => false, 'message' => 'Failed'], 500); }
+        } catch (Exception $e) { jsonResponse(['success' => false, 'message' => 'Failed: ' . $e->getMessage()], 500); }
         break;
 
     case 'assign_member':
-        $input = json_decode(file_get_contents('php://input'), true);
+        $input = json_decode(file_get_contents('php://input'), true) ?: $_POST;
         Permissions::requirePermission(Permissions::canAssignMembers());
         try {
             db()->prepare("INSERT INTO component_assignments (component_id, faculty_id, assignment_type, assigned_by) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE is_active = 1")
