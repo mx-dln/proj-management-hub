@@ -1,5 +1,8 @@
 uploads/*
 !uploads/.gitkeep
+!uploads/*/
+uploads/*/*
+!uploads/*/.gitkeep
 !uploads/explorer/
 uploads/explorer/*
 !uploads/explorer/.htaccess

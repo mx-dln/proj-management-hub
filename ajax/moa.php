@@ -53,12 +53,22 @@ switch ($action) {
                 $uploads = uploadFiles($_FILES['attachments'] ?? $_FILES['attachment'], 'moa', ['pdf','doc','docx','jpg','jpeg','png','xls','xlsx','csv']);
                 if ($uploads && !isset($uploads['success'])) {
                     $paths = array_map(fn($file) => $file['file_path'], $uploads);
-                    db()->prepare("UPDATE moas SET attachment = ?, attachments = ? WHERE id = ?")->execute([$paths[0], json_encode($paths), $id]);
+                    ensureSchemaUpdated();
+                    $checkCol = db()->prepare("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'moas' AND COLUMN_NAME = 'attachments'");
+                    $checkCol->execute();
+                    if ((int)$checkCol->fetchColumn() > 0) {
+                        db()->prepare("UPDATE moas SET attachment = ?, attachments = ? WHERE id = ?")->execute([$paths[0], json_encode($paths), $id]);
+                    } else {
+                        db()->prepare("UPDATE moas SET attachment = ? WHERE id = ?")->execute([$paths[0], $id]);
+                    }
                 }
             }
             auditLog('create', 'moa', $id, 'Created MOA: ' . $data['moa_number']);
             jsonResponse(['success' => true, 'message' => 'MOA created', 'id' => $id]);
-        } catch (Exception $e) { jsonResponse(['success' => false, 'message' => 'Failed: ' . $e->getMessage()], 500); }
+        } catch (Throwable $e) {
+            error_log("Failed to create MOA: " . $e->getMessage());
+            jsonResponse(['success' => false, 'message' => 'Failed: ' . $e->getMessage()], 500);
+        }
         break;
 
     case 'update':
@@ -96,13 +106,21 @@ switch ($action) {
                 if ($uploads && !isset($uploads['success'])) {
                     $paths = array_map(fn($file) => $file['file_path'], $uploads);
                     $fields[] = "attachment = ?"; $params[] = $paths[0];
-                    $fields[] = "attachments = ?"; $params[] = json_encode($paths);
+                    ensureSchemaUpdated();
+                    $checkCol = db()->prepare("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'moas' AND COLUMN_NAME = 'attachments'");
+                    $checkCol->execute();
+                    if ((int)$checkCol->fetchColumn() > 0) {
+                        $fields[] = "attachments = ?"; $params[] = json_encode($paths);
+                    }
                 }
             }
             if (!empty($fields)) { $params[] = $id; db()->prepare("UPDATE moas SET " . implode(', ', $fields) . " WHERE id = ?")->execute($params); }
             auditLog('edit', 'moa', $id, 'Updated MOA');
             jsonResponse(['success' => true, 'message' => 'MOA updated']);
-        } catch (Exception $e) { jsonResponse(['success' => false, 'message' => 'Failed: ' . $e->getMessage()], 500); }
+        } catch (Throwable $e) {
+            error_log("Failed to update MOA: " . $e->getMessage());
+            jsonResponse(['success' => false, 'message' => 'Failed: ' . $e->getMessage()], 500);
+        }
         break;
 
     case 'get':

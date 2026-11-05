@@ -135,6 +135,19 @@ switch ($action) {
     case 'create':
         $projectId = intval($_POST['project_id'] ?? 0);
         Permissions::requirePermission(Permissions::isAdmin());
+
+        // Resolve valid user ID for submitted_by to avoid fk_ar_submitter foreign key violations
+        $submittedBy = $user['id'] ?? ($_SESSION['user_id'] ?? null);
+        if ($submittedBy) {
+            $uStmt = db()->prepare("SELECT id FROM users WHERE id = ?");
+            $uStmt->execute([$submittedBy]);
+            if (!$uStmt->fetch()) $submittedBy = null;
+        }
+        if (!$submittedBy) {
+            $adminUser = db()->query("SELECT id FROM users WHERE role = 'admin' AND deleted_at IS NULL LIMIT 1")->fetch();
+            $submittedBy = $adminUser ? (int)$adminUser['id'] : 1;
+        }
+
         $data = [
             'report_number' => generateCode('AR', 'accomplishment_reports', 'report_number'),
             'report_type' => sanitize($_POST['report_type'] ?? 'quarterly'),
@@ -143,12 +156,17 @@ switch ($action) {
             'project_id' => $projectId,
             'title' => sanitize($_POST['title'] ?? ''),
             'summary' => sanitize($_POST['summary'] ?? ''),
-            'submitted_by' => $user['id'],
+            'submitted_by' => $submittedBy,
             'date_submitted' => date('Y-m-d'),
             'status' => 'submitted',
         ];
         if (empty($data['title'])) jsonResponse(['success' => false, 'message' => 'Title is required'], 400);
         if (!$data['project_id']) jsonResponse(['success' => false, 'message' => 'Project is required'], 400);
+        
+        $pStmt = db()->prepare("SELECT id FROM projects WHERE id = ? AND deleted_at IS NULL");
+        $pStmt->execute([$projectId]);
+        if (!$pStmt->fetch()) jsonResponse(['success' => false, 'message' => 'Selected project does not exist.'], 404);
+
         if ($data['report_type'] === 'quarterly' && empty($data['period_quarter'])) jsonResponse(['success' => false, 'message' => 'Quarter is required for quarterly reports'], 400);
         if ($data['period_year'] < 2021 || $data['period_year'] > (int)date('Y') + 1) jsonResponse(['success' => false, 'message' => 'Enter a valid report year'], 400);
         $files = $_FILES['attachments'] ?? $_FILES['attachment'] ?? [];
@@ -156,12 +174,26 @@ switch ($action) {
         if (!$uploads || (isset($uploads['success']) && !$uploads['success'])) jsonResponse(['success' => false, 'message' => $uploads['error'] ?? 'Report file is required'], 422);
         $paths = array_map(fn($file) => $file['file_path'], $uploads);
         try {
-            $sql = "INSERT INTO accomplishment_reports (report_number, report_type, period_quarter, period_year, project_id, title, summary, submitted_by, date_submitted, status, attachment, attachments) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-            db()->prepare($sql)->execute(array_merge(array_values($data), [$paths[0], json_encode($paths)]));
+            ensureSchemaUpdated();
+            $checkCol = db()->prepare("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'accomplishment_reports' AND COLUMN_NAME = 'attachments'");
+            $checkCol->execute();
+            $hasAttachmentsCol = (int)$checkCol->fetchColumn() > 0;
+
+            if ($hasAttachmentsCol) {
+                $sql = "INSERT INTO accomplishment_reports (report_number, report_type, period_quarter, period_year, project_id, title, summary, submitted_by, date_submitted, status, attachment, attachments) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                $params = array_merge(array_values($data), [$paths[0], json_encode($paths)]);
+            } else {
+                $sql = "INSERT INTO accomplishment_reports (report_number, report_type, period_quarter, period_year, project_id, title, summary, submitted_by, date_submitted, status, attachment) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                $params = array_merge(array_values($data), [$paths[0]]);
+            }
+            db()->prepare($sql)->execute($params);
             $id = db()->lastInsertId();
             auditLog('create', 'report', $id, 'Created report: ' . $data['title'], false, $projectId);
             jsonResponse(['success' => true, 'message' => 'Report created', 'id' => $id, 'attachment_count' => count($paths)]);
-        } catch (Exception $e) { jsonResponse(['success' => false, 'message' => 'Failed'], 500); }
+        } catch (Throwable $e) {
+            error_log("Report creation error: " . $e->getMessage());
+            jsonResponse(['success' => false, 'message' => 'Failed: ' . $e->getMessage()], 500);
+        }
         break;
 
     case 'submit':
@@ -185,7 +217,10 @@ switch ($action) {
             
             auditLog('edit', 'report', $id, 'Submitted report');
             jsonResponse(['success' => true, 'message' => 'Report submitted']);
-        } catch (Exception $e) { jsonResponse(['success' => false, 'message' => 'Failed'], 500); }
+        } catch (Throwable $e) {
+            error_log("Failed to submit report: " . $e->getMessage());
+            jsonResponse(['success' => false, 'message' => 'Failed: ' . $e->getMessage()], 500);
+        }
         break;
 
     case 'review':
@@ -210,7 +245,10 @@ switch ($action) {
             
             auditLog($action, 'report', $id, ucfirst($action) . ' report');
             jsonResponse(['success' => true, 'message' => 'Report ' . $action]);
-        } catch (Exception $e) { jsonResponse(['success' => false, 'message' => 'Failed'], 500); }
+        } catch (Throwable $e) {
+            error_log("Failed to review report: " . $e->getMessage());
+            jsonResponse(['success' => false, 'message' => 'Failed: ' . $e->getMessage()], 500);
+        }
         break;
 
     case 'get':

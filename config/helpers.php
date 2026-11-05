@@ -4,7 +4,11 @@ session_start();
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/Database.php';
 
-function db() { return Database::getInstance()->getConnection(); }
+function db() {
+    $pdo = Database::getInstance()->getConnection();
+    ensureSchemaUpdated();
+    return $pdo;
+}
 
 function isLoggedIn() { return isset($_SESSION['user_id']); }
 
@@ -35,13 +39,67 @@ function sanitize($input) {
 
 function e($str) { return htmlspecialchars($str ?? '', ENT_QUOTES, 'UTF-8'); }
 
+function ensureSchemaUpdated() {
+    static $done = false;
+    if ($done) return;
+    $done = true;
+
+    try {
+        $pdo = db();
+        $columns = [
+            ['proposals', 'proponent', 'VARCHAR(255) NULL AFTER title'],
+            ['proposals', 'attachments', 'LONGTEXT NULL AFTER attachment'],
+            ['accomplishment_reports', 'attachments', 'LONGTEXT NULL AFTER attachment'],
+            ['moas', 'attachments', 'LONGTEXT NULL AFTER attachment'],
+            ['users', 'registration_status', "ENUM('approved','pending','rejected') NOT NULL DEFAULT 'approved' AFTER is_active"],
+            ['users', 'registration_reviewed_by', 'INT NULL AFTER registration_status'],
+            ['users', 'registration_reviewed_at', 'DATETIME NULL AFTER registration_reviewed_by'],
+            ['users', 'registration_rejection_reason', 'VARCHAR(500) NULL AFTER registration_reviewed_at'],
+        ];
+
+        foreach ($columns as [$table, $column, $definition]) {
+            try {
+                $check = $pdo->prepare("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?");
+                $check->execute([$table, $column]);
+                if (!(int)$check->fetchColumn()) {
+                    $pdo->exec("ALTER TABLE `{$table}` ADD COLUMN `{$column}` {$definition}");
+                }
+            } catch (Throwable $inner) {
+                // Table might not exist yet or user lacks ALTER permission; ignore
+            }
+        }
+    } catch (Throwable $e) {
+        error_log("Schema update check warning: " . $e->getMessage());
+    }
+}
+
 function generateCode($prefix, $table, $column) {
     $year = date('Y');
-    $sql = "SELECT COUNT(*) as count FROM {$table} WHERE YEAR(created_at) = ?";
-    $stmt = db()->prepare($sql);
-    $stmt->execute([$year]);
-    $count = $stmt->fetch()['count'] + 1;
-    return $prefix . '-' . $year . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+    try {
+        $sql = "SELECT COUNT(*) as count FROM {$table} WHERE YEAR(created_at) = ?";
+        $stmt = db()->prepare($sql);
+        $stmt->execute([$year]);
+        $count = max(1, (int)($stmt->fetch()['count'] ?? 0) + 1);
+    } catch (Throwable $e) {
+        $count = 1;
+    }
+
+    // Ensure code uniqueness to avoid integrity constraint violations (1062 Duplicate entry)
+    do {
+        $code = $prefix . '-' . $year . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+        try {
+            $check = db()->prepare("SELECT COUNT(*) FROM {$table} WHERE {$column} = ?");
+            $check->execute([$code]);
+            $exists = (int)$check->fetchColumn() > 0;
+            if ($exists) {
+                $count++;
+            }
+        } catch (Throwable $e) {
+            $exists = false;
+        }
+    } while ($exists);
+
+    return $code;
 }
 
 function uploadFile($file, $directory, $allowedTypes = []) {
@@ -49,7 +107,12 @@ function uploadFile($file, $directory, $allowedTypes = []) {
         return ['success' => false, 'error' => 'No file uploaded'];
     }
     $uploadDir = UPLOAD_PATH . $directory . '/';
-    if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+    if (!is_dir($uploadDir)) {
+        @mkdir($uploadDir, 0755, true);
+    }
+    if (!is_dir($uploadDir) || !is_writable($uploadDir)) {
+        @chmod($uploadDir, 0777);
+    }
     $fileType = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
     if (!empty($allowedTypes) && !in_array($fileType, $allowedTypes)) {
         return ['success' => false, 'error' => 'File type not allowed'];
@@ -58,7 +121,7 @@ function uploadFile($file, $directory, $allowedTypes = []) {
     if (move_uploaded_file($file['tmp_name'], $uploadDir . $fileName)) {
         return ['success' => true, 'file_name' => $fileName, 'file_path' => $directory . '/' . $fileName, 'original_name' => $file['name']];
     }
-    return ['success' => false, 'error' => 'Upload failed'];
+    return ['success' => false, 'error' => 'Upload failed. Please check folder permissions for ' . $directory];
 }
 
 function uploadFiles($files, $directory, $allowedTypes = []) {
