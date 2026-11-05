@@ -18,7 +18,7 @@
     </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="<?= SITE_URL ?>/assets/vendor/zrimo/styles.css">
-    <link rel="stylesheet" href="<?= SITE_URL ?>/assets/css/app.css">
+    <link rel="stylesheet" href="<?= SITE_URL ?>/assets/css/app.css?v=<?= e(filemtime(__DIR__ . '/../assets/css/app.css')) ?>">
     <script type="importmap">
         {
             "imports": {

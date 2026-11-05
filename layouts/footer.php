@@ -32,10 +32,10 @@
         </div>
     </div>
 
-    <script src="<?= SITE_URL ?>/assets/js/app.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/slideover.js"></script>
-    <script src="<?= SITE_URL ?>/assets/js/camera-scanner.js?v=20261023"></script>
-    <script src="<?= SITE_URL ?>/assets/js/assignments.js"></script>
+    <script src="<?= SITE_URL ?>/assets/js/app.js?v=<?= e(filemtime(__DIR__ . '/../assets/js/app.js')) ?>"></script>
+    <script src="<?= SITE_URL ?>/assets/js/slideover.js?v=<?= e(filemtime(__DIR__ . '/../assets/js/slideover.js')) ?>"></script>
+    <script src="<?= SITE_URL ?>/assets/js/camera-scanner.js?v=<?= e(filemtime(__DIR__ . '/../assets/js/camera-scanner.js')) ?>"></script>
+    <script src="<?= SITE_URL ?>/assets/js/assignments.js?v=<?= e(filemtime(__DIR__ . '/../assets/js/assignments.js')) ?>"></script>
     <script src="<?= SITE_URL ?>/assets/js/explorer.js?v=<?= e(filemtime(__DIR__ . '/../assets/js/explorer.js')) ?>"></script>
     <script type="module" src="<?= SITE_URL ?>/assets/js/document-viewer.js?v=<?= e(filemtime(__DIR__ . '/../assets/js/document-viewer.js')) ?>"></script>
 </body>

@@ -84,8 +84,8 @@ $canManageMoa = Permissions::canManageMoa();
 <script>
 const siteUrl = <?= json_encode(SITE_URL) ?>;
 const canManageMoa = <?= $canManageMoa ? 'true' : 'false' ?>;
-const projectOptions = <?= json_encode(array_map(fn($p) => ['value'=>$p['id'],'label'=>$p['title']], $projectOptions)) ?>;
-const partnerOptions = <?= json_encode(array_map(fn($p) => ['value'=>$p['id'],'label'=>$p['name']], $partnerOptions)) ?>;
+const projectOptions = <?= json_encode(array_map(fn($p) => ['value'=>$p['id'],'label'=>$p['title']], $projectOptions), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE) ?: '[]' ?>;
+const partnerOptions = <?= json_encode(array_map(fn($p) => ['value'=>$p['id'],'label'=>$p['name']], $partnerOptions), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE) ?: '[]' ?>;
 function focusMoaForm(){ document.querySelector('#moaInlineForm input[name="moa_number"]')?.focus(); }
 const moaForm = document.getElementById('moaInlineForm');
 if (moaForm && window.bindCameraScanner) bindCameraScanner(moaForm, document.getElementById('moa-file'), {prefix:'moa'});
