@@ -145,7 +145,11 @@ switch ($action) {
         }
         if (!$submittedBy) {
             $adminUser = db()->query("SELECT id FROM users WHERE role = 'admin' AND deleted_at IS NULL LIMIT 1")->fetch();
-            $submittedBy = $adminUser ? (int)$adminUser['id'] : 1;
+            $submittedBy = $adminUser ? (int)$adminUser['id'] : null;
+            if (!$submittedBy) {
+                $anyUser = db()->query("SELECT id FROM users ORDER BY id ASC LIMIT 1")->fetch();
+                $submittedBy = $anyUser ? (int)$anyUser['id'] : 1;
+            }
         }
 
         $data = [
@@ -173,18 +177,19 @@ switch ($action) {
         $uploads = uploadFiles($files, 'reports', ['pdf','doc','docx','jpg','jpeg','png','xls','xlsx','csv']);
         if (!$uploads || (isset($uploads['success']) && !$uploads['success'])) jsonResponse(['success' => false, 'message' => $uploads['error'] ?? 'Report file is required'], 422);
         $paths = array_map(fn($file) => $file['file_path'], $uploads);
+        $firstPath = !empty($paths) ? $paths[0] : null;
+        $encodedPaths = !empty($paths) ? json_encode($paths) : null;
         try {
             ensureSchemaUpdated();
-            $checkCol = db()->prepare("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'accomplishment_reports' AND COLUMN_NAME = 'attachments'");
-            $checkCol->execute();
-            $hasAttachmentsCol = (int)$checkCol->fetchColumn() > 0;
+            $checkCol = db()->query("SHOW COLUMNS FROM accomplishment_reports LIKE 'attachments'");
+            $hasAttachmentsCol = $checkCol && (bool)$checkCol->fetch();
 
             if ($hasAttachmentsCol) {
                 $sql = "INSERT INTO accomplishment_reports (report_number, report_type, period_quarter, period_year, project_id, title, summary, submitted_by, date_submitted, status, attachment, attachments) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                $params = array_merge(array_values($data), [$paths[0], json_encode($paths)]);
+                $params = array_merge(array_values($data), [$firstPath, $encodedPaths]);
             } else {
                 $sql = "INSERT INTO accomplishment_reports (report_number, report_type, period_quarter, period_year, project_id, title, summary, submitted_by, date_submitted, status, attachment) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                $params = array_merge(array_values($data), [$paths[0]]);
+                $params = array_merge(array_values($data), [$firstPath]);
             }
             db()->prepare($sql)->execute($params);
             $id = db()->lastInsertId();

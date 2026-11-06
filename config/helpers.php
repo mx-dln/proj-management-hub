@@ -6,7 +6,7 @@ require_once __DIR__ . '/Database.php';
 
 function db() {
     $pdo = Database::getInstance()->getConnection();
-    ensureSchemaUpdated();
+    ensureSchemaUpdated($pdo);
     return $pdo;
 }
 
@@ -14,8 +14,12 @@ function isLoggedIn() { return isset($_SESSION['user_id']); }
 
 function requireLogin() {
     if (!isLoggedIn()) {
-        if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
-            jsonResponse(['success' => false, 'message' => 'Unauthorized'], 401);
+        $isAjax = (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest')
+            || (strpos($_SERVER['REQUEST_URI'] ?? '', '/ajax/') !== false)
+            || (strpos($_SERVER['SCRIPT_NAME'] ?? '', '/ajax/') !== false)
+            || (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false);
+        if ($isAjax) {
+            jsonResponse(['success' => false, 'message' => 'Your session has expired. Please refresh the page and log in again.'], 401);
         }
         header('Location: ' . SITE_URL . '/login.php');
         exit;
@@ -39,13 +43,13 @@ function sanitize($input) {
 
 function e($str) { return htmlspecialchars($str ?? '', ENT_QUOTES, 'UTF-8'); }
 
-function ensureSchemaUpdated() {
+function ensureSchemaUpdated($pdo = null) {
     static $done = false;
     if ($done) return;
     $done = true;
 
     try {
-        $pdo = db();
+        if (!$pdo) $pdo = Database::getInstance()->getConnection();
         $columns = [
             ['proposals', 'proponent', 'VARCHAR(255) NULL AFTER title'],
             ['proposals', 'attachments', 'LONGTEXT NULL AFTER attachment'],
@@ -59,9 +63,8 @@ function ensureSchemaUpdated() {
 
         foreach ($columns as [$table, $column, $definition]) {
             try {
-                $check = $pdo->prepare("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?");
-                $check->execute([$table, $column]);
-                if (!(int)$check->fetchColumn()) {
+                $check = $pdo->query("SHOW COLUMNS FROM `{$table}` LIKE '{$column}'");
+                if (!$check || !$check->fetch()) {
                     $pdo->exec("ALTER TABLE `{$table}` ADD COLUMN `{$column}` {$definition}");
                 }
             } catch (Throwable $inner) {
@@ -85,6 +88,7 @@ function generateCode($prefix, $table, $column) {
     }
 
     // Ensure code uniqueness to avoid integrity constraint violations (1062 Duplicate entry)
+    $attempts = 0;
     do {
         $code = $prefix . '-' . $year . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
         try {
@@ -97,7 +101,8 @@ function generateCode($prefix, $table, $column) {
         } catch (Throwable $e) {
             $exists = false;
         }
-    } while ($exists);
+        $attempts++;
+    } while ($exists && $attempts < 1000);
 
     return $code;
 }

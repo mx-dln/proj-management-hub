@@ -335,7 +335,15 @@ async function submitSlideOverForm(slideover, url, formData, refreshCallback) {
 
     try {
         const response = await fetch(url, { method: 'POST', body: formData });
-        const data = await response.json();
+        const rawText = await response.text();
+        let data;
+        try {
+            data = JSON.parse(rawText);
+        } catch (e) {
+            console.error('Non-JSON response from server:', rawText);
+            showToast('Server returned an invalid response. Please check server error log.', 'error');
+            return;
+        }
 
         if (data.success) {
             showToast(data.message || 'Saved successfully');
@@ -349,7 +357,8 @@ async function submitSlideOverForm(slideover, url, formData, refreshCallback) {
             showToast(data.message || 'Save failed', 'error');
         }
     } catch (err) {
-        showToast('An error occurred', 'error');
+        console.error('Submit error:', err);
+        showToast(err.message || 'An error occurred', 'error');
     } finally {
         slideover.setLoading(false);
     }

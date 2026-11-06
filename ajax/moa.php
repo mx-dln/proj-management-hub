@@ -54,9 +54,8 @@ switch ($action) {
                 if ($uploads && !isset($uploads['success'])) {
                     $paths = array_map(fn($file) => $file['file_path'], $uploads);
                     ensureSchemaUpdated();
-                    $checkCol = db()->prepare("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'moas' AND COLUMN_NAME = 'attachments'");
-                    $checkCol->execute();
-                    if ((int)$checkCol->fetchColumn() > 0) {
+                    $checkCol = db()->query("SHOW COLUMNS FROM moas LIKE 'attachments'");
+                    if ($checkCol && $checkCol->fetch()) {
                         db()->prepare("UPDATE moas SET attachment = ?, attachments = ? WHERE id = ?")->execute([$paths[0], json_encode($paths), $id]);
                     } else {
                         db()->prepare("UPDATE moas SET attachment = ? WHERE id = ?")->execute([$paths[0], $id]);
@@ -107,9 +106,8 @@ switch ($action) {
                     $paths = array_map(fn($file) => $file['file_path'], $uploads);
                     $fields[] = "attachment = ?"; $params[] = $paths[0];
                     ensureSchemaUpdated();
-                    $checkCol = db()->prepare("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'moas' AND COLUMN_NAME = 'attachments'");
-                    $checkCol->execute();
-                    if ((int)$checkCol->fetchColumn() > 0) {
+                    $checkCol = db()->query("SHOW COLUMNS FROM moas LIKE 'attachments'");
+                    if ($checkCol && $checkCol->fetch()) {
                         $fields[] = "attachments = ?"; $params[] = json_encode($paths);
                     }
                 }
