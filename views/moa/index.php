@@ -33,7 +33,10 @@ $canManageMoa = Permissions::canManageMoa();
                                 <div class="moa-row-actions">
                                     <button onclick="viewMoa(<?= (int)$m['id'] ?>, this)" class="action-btn" title="View" aria-label="View"><i class="fas fa-eye"></i></button>
                                     <button onclick="printMoa(<?= (int)$m['id'] ?>, <?= !empty($m['attachment']) ? 'true' : 'false' ?>)" class="action-btn" title="Print" aria-label="Print"><i class="fas fa-print"></i></button>
-                                    <?php if ($canManageMoa): ?><button onclick="editMoa(<?= (int)$m['id'] ?>, this)" class="action-btn" title="Edit" aria-label="Edit"><i class="fas fa-pen"></i></button><?php endif; ?>
+                                    <?php if ($canManageMoa): ?>
+                                        <button onclick="editMoa(<?= (int)$m['id'] ?>, this)" class="action-btn" title="Edit" aria-label="Edit"><i class="fas fa-pen"></i></button>
+                                        <button onclick="deleteMoa(<?= (int)$m['id'] ?>, this)" class="action-btn action-btn-danger" title="Delete" aria-label="Delete"><i class="fas fa-trash"></i></button>
+                                    <?php endif; ?>
                                 </div>
                             </td>
                         </tr>
@@ -215,4 +218,24 @@ async function printMoaDetails(id){
         showToast(error.message || 'Failed to print MOA.', 'error');
     }
 }
+
+window.deleteMoa = async function(id, btn) {
+    if (!confirm('Are you sure you want to delete this MOA?')) return;
+    setButtonLoading(btn, true);
+    try {
+        const response = await fetch(`${siteUrl}/ajax/moa.php?action=delete`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({id})
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || 'Delete failed.');
+        showToast(data.message || 'MOA deleted.');
+        setTimeout(() => location.reload(), 700);
+    } catch (error) {
+        showToast(error.message || 'Could not delete MOA.', 'error');
+    } finally {
+        setButtonLoading(btn, false);
+    }
+};
 </script>

@@ -24,6 +24,9 @@
                             <h3 class="text-sm font-semibold text-[#F9FAFB] truncate"><?= e($f['last_name'].', '.$f['first_name']) ?></h3>
                             <p class="text-xs text-[#9CA3AF]"><?= e($f['position'] ?? '') ?></p>
                         </div>
+                        <?php if (Permissions::canDeleteFaculty()): ?>
+                            <button onclick="event.stopPropagation(); deleteFaculty(<?= (int)$f['id'] ?>, this)" class="action-btn action-btn-danger text-xs p-1 opacity-70 hover:opacity-100" title="Delete Faculty"><i class="fas fa-trash"></i></button>
+                        <?php endif; ?>
                     </div>
                     <div class="space-y-1">
                         <p class="text-xs text-[#9CA3AF]"><i class="fas fa-building mr-2 w-4"></i><?= e($f['department_name'] ?? '-') ?></p>
@@ -77,10 +80,31 @@ async function viewFaculty(id, btn) {
             <div class="form-section">
                 <h4 class="form-section-title">Faculty Activity Timeline</h4>
                 <div class="faculty-timeline">${timelineRows}</div>
-            </div>`;
+            </div>
+            <?= Permissions::canDeleteFaculty() ? '`<div class="mt-4 pt-3 border-t border-[#374151] flex justify-end"><button onclick="deleteFaculty(${id}, this)" class="btn-danger text-xs"><i class="fas fa-trash mr-1"></i> Delete Faculty Profile</button></div>`' : '""' ?>`;
         sl.openView(`${data.first_name} ${data.last_name}`, data.employee_id, content, { size: 'lg' });
     } catch (err) { console.error('Error:', err); showToast(err.message || 'Failed to load', 'error'); sl.close(true); }
 }
+
+window.deleteFaculty = async function(id, btn) {
+    if (!confirm('Are you sure you want to delete this faculty member?')) return;
+    setButtonLoading(btn, true);
+    try {
+        const response = await fetch(`${siteUrl}/ajax/faculty.php?action=delete`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({id})
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || 'Delete failed.');
+        showToast(data.message || 'Faculty member deleted.');
+        setTimeout(() => location.reload(), 700);
+    } catch (error) {
+        showToast(error.message || 'Could not delete faculty member.', 'error');
+    } finally {
+        setButtonLoading(btn, false);
+    }
+};
 </script>
 
 <style>

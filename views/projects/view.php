@@ -1,5 +1,10 @@
 <?php $canEdit = Permissions::canEditProject($project['id']); ?>
-<div class="mb-6"><a href="<?= SITE_URL ?>/index.php?module=projects" class="text-[#86EFAC] hover:underline text-sm"><i class="fas fa-arrow-left mr-1"></i> Back to Projects</a></div>
+<div class="mb-6 flex items-center justify-between">
+    <a href="<?= SITE_URL ?>/index.php?module=projects" class="text-[#86EFAC] hover:underline text-sm"><i class="fas fa-arrow-left mr-1"></i> Back to Projects</a>
+    <?php if (Permissions::canDeleteProject($project['id'])): ?>
+        <button onclick="deleteProject(<?= (int)$project['id'] ?>, this)" class="btn-danger text-sm"><i class="fas fa-trash mr-1"></i> Delete Project</button>
+    <?php endif; ?>
+</div>
 <div class="card mb-6"><div class="card-body">
     <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
         <div class="flex-1">
@@ -162,4 +167,24 @@ function openProjectReportUpload(q, year){
     bindCameraScanner(reportForm, reportForm.querySelector('#project-report-file'), {prefix:'project-report', slideover:sl});
     reportForm.addEventListener('submit', async e => { e.preventDefault(); await submitSlideOverForm(sl, `<?= SITE_URL ?>/ajax/reports.php?action=create`, new FormData(e.target), () => location.reload()); });
 }
+
+window.deleteProject = async function(id, btn) {
+    if (!confirm('Are you sure you want to delete this project?')) return;
+    setButtonLoading(btn, true);
+    try {
+        const response = await fetch(`<?= SITE_URL ?>/ajax/projects.php?action=delete`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({id})
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || 'Delete failed.');
+        showToast(data.message || 'Project deleted.');
+        setTimeout(() => location.href = `<?= SITE_URL ?>/index.php?module=projects`, 700);
+    } catch (error) {
+        showToast(error.message || 'Could not delete project.', 'error');
+    } finally {
+        setButtonLoading(btn, false);
+    }
+};
 </script>

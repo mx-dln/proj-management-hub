@@ -100,5 +100,26 @@ switch ($action) {
         jsonResponse($stmt->fetchAll());
         break;
 
+    case 'delete':
+        $id = intval($_GET['id'] ?? ($_POST['id'] ?? 0));
+        if (!$id) {
+            $input = json_decode(file_get_contents('php://input'), true);
+            $id = intval($input['id'] ?? 0);
+        }
+        if (!$id) jsonResponse(['success' => false, 'message' => 'Invalid ID'], 400);
+        Permissions::requirePermission(Permissions::canDeleteComponent($id));
+        try {
+            $comp = db()->prepare("SELECT project_id, title FROM components WHERE id = ?");
+            $comp->execute([$id]);
+            $c = $comp->fetch();
+            if (!$c) jsonResponse(['success' => false, 'message' => 'Component not found'], 404);
+            db()->prepare("UPDATE components SET deleted_at = NOW() WHERE id = ?")->execute([$id]);
+            auditLog('delete', 'component', $id, 'Deleted component: ' . ($c['title'] ?? ''), false, $c['project_id'] ?? null);
+            jsonResponse(['success' => true, 'message' => 'Component deleted']);
+        } catch (Throwable $e) {
+            jsonResponse(['success' => false, 'message' => 'Failed: ' . $e->getMessage()], 500);
+        }
+        break;
+
     default: jsonResponse(['success' => false, 'message' => 'Invalid action'], 400);
 }

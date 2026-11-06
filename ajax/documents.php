@@ -19,6 +19,20 @@ try {
         $ids = DocumentModel::uploadMany($_POST, $files);
         jsonResponse(['success' => true, 'message' => count($ids) > 1 ? count($ids) . ' files uploaded.' : 'File uploaded.', 'id' => $ids[0] ?? null, 'ids' => $ids]);
     }
+    if ($action === 'delete') {
+        $id = intval($_GET['id'] ?? ($_POST['id'] ?? 0));
+        if (!$id) {
+            $input = json_decode(file_get_contents('php://input'), true);
+            $id = intval($input['id'] ?? 0);
+        }
+        if (!$id) throw new RuntimeException('Invalid ID.', 400);
+        if ($_SESSION['role'] !== 'admin') throw new RuntimeException('Forbidden.', 403);
+        $doc = DocumentModel::find($id);
+        if (!$doc) throw new RuntimeException('Document not found.', 404);
+        db()->prepare("UPDATE documents SET deleted_at = NOW() WHERE id = ?")->execute([$id]);
+        auditLog('delete', 'document', $id, 'Deleted document: ' . ($doc['title'] ?? ''));
+        jsonResponse(['success' => true, 'message' => 'Document deleted.']);
+    }
     if (!in_array($action, ['get', 'file'], true)) throw new RuntimeException('Invalid action.', 400);
     $document = DocumentModel::find((int)($_GET['id'] ?? 0));
     if (!DocumentModel::canRead($document)) throw new RuntimeException('Document not found or access denied.', 404);

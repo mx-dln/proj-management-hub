@@ -99,5 +99,37 @@ switch ($action) {
         }
         break;
 
+    case 'delete':
+        $id = intval($_GET['id'] ?? ($_POST['id'] ?? 0));
+        if (!$id) {
+            $input = json_decode(file_get_contents('php://input'), true);
+            $id = intval($input['id'] ?? 0);
+        }
+        if (!$id) jsonResponse(['success' => false, 'message' => 'Invalid ID'], 400);
+        Permissions::requirePermission(Permissions::canDeletePartner($id));
+        try {
+            $partnerStmt = db()->prepare("SELECT * FROM partner_agencies WHERE id = ?");
+            $partnerStmt->execute([$id]);
+            $partner = $partnerStmt->fetch();
+            if (!$partner) jsonResponse(['success' => false, 'message' => 'Partner not found'], 404);
+            
+            // Check if active projects or MOAs reference this partner
+            $projCount = (int)db()->query("SELECT COUNT(*) FROM projects WHERE partner_agency_id = {$id}")->fetchColumn();
+            $moaCount = (int)db()->query("SELECT COUNT(*) FROM moas WHERE partner_agency_id = {$id}")->fetchColumn();
+            if ($projCount > 0 || $moaCount > 0) {
+                // Safely soft-deactivate to preserve historical integrity
+                db()->prepare("UPDATE partner_agencies SET is_active = 0 WHERE id = ?")->execute([$id]);
+                auditLog('delete', 'partner_agency', $id, 'Deactivated partner (referenced in records): ' . $partner['name']);
+                jsonResponse(['success' => true, 'message' => 'Partner deactivated because it is linked to projects/MOAs']);
+            } else {
+                db()->prepare("DELETE FROM partner_agencies WHERE id = ?")->execute([$id]);
+                auditLog('delete', 'partner_agency', $id, 'Deleted partner: ' . $partner['name']);
+                jsonResponse(['success' => true, 'message' => 'Partner deleted']);
+            }
+        } catch (Throwable $e) {
+            jsonResponse(['success' => false, 'message' => 'Failed: ' . $e->getMessage()], 500);
+        }
+        break;
+
     default: jsonResponse(['success' => false, 'message' => 'Invalid action'], 400);
 }

@@ -470,5 +470,29 @@ switch ($action) {
         }
         break;
 
+    case 'delete':
+        $id = intval($_GET['id'] ?? ($_POST['id'] ?? 0));
+        if (!$id) {
+            $input = json_decode(file_get_contents('php://input'), true);
+            $id = intval($input['id'] ?? 0);
+        }
+        if (!$id) jsonResponse(['success' => false, 'message' => 'Invalid ID'], 400);
+        $propStmt = db()->prepare("SELECT * FROM proposals WHERE id = ?");
+        $propStmt->execute([$id]);
+        $prop = $propStmt->fetch();
+        if (!$prop) jsonResponse(['success' => false, 'message' => 'Proposal not found'], 404);
+        
+        $canDelete = Permissions::isAdmin() || ($prop['status'] === 'draft' && $prop['submitted_by'] === $user['id']);
+        if (!$canDelete) jsonResponse(['success' => false, 'message' => 'Forbidden: You cannot delete this proposal'], 403);
+        
+        try {
+            db()->prepare("DELETE FROM proposals WHERE id = ?")->execute([$id]);
+            auditLog('delete', 'proposal', $id, 'Deleted proposal: ' . ($prop['title'] ?? ''), false, $prop['project_id'] ?? null);
+            jsonResponse(['success' => true, 'message' => 'Proposal deleted']);
+        } catch (Throwable $e) {
+            jsonResponse(['success' => false, 'message' => 'Failed: ' . $e->getMessage()], 500);
+        }
+        break;
+
     default: jsonResponse(['success' => false, 'message' => 'Invalid action'], 400);
 }

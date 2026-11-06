@@ -138,13 +138,18 @@ switch ($action) {
         break;
 
     case 'delete':
-        $id = intval($_GET['id'] ?? 0);
+        $id = intval($_GET['id'] ?? ($_POST['id'] ?? 0));
+        if (!$id) {
+            $input = json_decode(file_get_contents('php://input'), true);
+            $id = intval($input['id'] ?? 0);
+        }
+        if (!$id) jsonResponse(['success' => false, 'message' => 'Invalid ID'], 400);
         Permissions::requirePermission(Permissions::canManageMoa());
         try {
             db()->prepare("DELETE FROM moas WHERE id = ?")->execute([$id]);
             auditLog('delete', 'moa', $id, 'Deleted MOA');
             jsonResponse(['success' => true, 'message' => 'MOA deleted']);
-        } catch (Exception $e) { jsonResponse(['success' => false, 'message' => 'Failed'], 500); }
+        } catch (Exception $e) { jsonResponse(['success' => false, 'message' => 'Failed: ' . $e->getMessage()], 500); }
         break;
 
     default: jsonResponse(['success' => false, 'message' => 'Invalid action'], 400);

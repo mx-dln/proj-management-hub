@@ -160,5 +160,26 @@ switch ($action) {
         jsonResponse($stmt->fetchAll());
         break;
 
+    case 'delete':
+        $id = intval($_GET['id'] ?? ($_POST['id'] ?? 0));
+        if (!$id) {
+            $input = json_decode(file_get_contents('php://input'), true);
+            $id = intval($input['id'] ?? 0);
+        }
+        if (!$id) jsonResponse(['success' => false, 'message' => 'Invalid ID'], 400);
+        Permissions::requirePermission(Permissions::canDeleteActivity($id));
+        try {
+            $act = db()->prepare("SELECT a.id, a.title, c.project_id FROM extension_activities a LEFT JOIN components c ON a.component_id = c.id WHERE a.id = ?");
+            $act->execute([$id]);
+            $a = $act->fetch();
+            if (!$a) jsonResponse(['success' => false, 'message' => 'Activity not found'], 404);
+            db()->prepare("UPDATE extension_activities SET deleted_at = NOW() WHERE id = ?")->execute([$id]);
+            auditLog('delete', 'activity', $id, 'Deleted activity: ' . ($a['title'] ?? ''), false, $a['project_id'] ?? null);
+            jsonResponse(['success' => true, 'message' => 'Activity deleted']);
+        } catch (Throwable $e) {
+            jsonResponse(['success' => false, 'message' => 'Failed: ' . $e->getMessage()], 500);
+        }
+        break;
+
     default: jsonResponse(['success' => false, 'message' => 'Invalid action'], 400);
 }

@@ -273,5 +273,29 @@ switch ($action) {
         }
         break;
 
+    case 'delete':
+        $id = intval($_GET['id'] ?? ($_POST['id'] ?? 0));
+        if (!$id) {
+            $input = json_decode(file_get_contents('php://input'), true);
+            $id = intval($input['id'] ?? 0);
+        }
+        if (!$id) jsonResponse(['success' => false, 'message' => 'Invalid ID'], 400);
+        $repStmt = db()->prepare("SELECT * FROM accomplishment_reports WHERE id = ?");
+        $repStmt->execute([$id]);
+        $rep = $repStmt->fetch();
+        if (!$rep) jsonResponse(['success' => false, 'message' => 'Report not found'], 404);
+        
+        $canDelete = Permissions::isAdmin() || ($rep['submitted_by'] === $user['id'] && in_array($rep['status'], ['draft', 'returned']));
+        if (!$canDelete) jsonResponse(['success' => false, 'message' => 'Forbidden: You cannot delete this report'], 403);
+        
+        try {
+            db()->prepare("DELETE FROM accomplishment_reports WHERE id = ?")->execute([$id]);
+            auditLog('delete', 'report', $id, 'Deleted accomplishment report: ' . ($rep['title'] ?? ''), false, $rep['project_id'] ?? null);
+            jsonResponse(['success' => true, 'message' => 'Report deleted']);
+        } catch (Throwable $e) {
+            jsonResponse(['success' => false, 'message' => 'Failed: ' . $e->getMessage()], 500);
+        }
+        break;
+
     default: jsonResponse(['success' => false, 'message' => 'Invalid action'], 400);
 }

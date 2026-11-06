@@ -191,3 +191,23 @@ function printDocument(id) {
     }
     win.addEventListener('load', () => win.print(), { once: true });
 }
+
+window.deleteDocument = async function(id, btn) {
+    if (!confirm('Are you sure you want to delete this document?')) return;
+    setButtonLoading(btn, true);
+    try {
+        const response = await fetch(`${SITE_URL}/ajax/documents.php?action=delete`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({id})
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || 'Delete failed.');
+        showToast(data.message || 'Document deleted.');
+        setTimeout(() => location.reload(), 700);
+    } catch (error) {
+        showToast(error.message || 'Could not delete document.', 'error');
+    } finally {
+        setButtonLoading(btn, false);
+    }
+};

@@ -46,6 +46,9 @@ $activityComponentOptions = Permissions::isAdmin()
                                 <?php if (Permissions::canAssignMembers()): ?>
                                     <button onclick="openAssignments('activity', <?= $a['id'] ?>, '<?= e(addslashes($a['title'])) ?>')" class="action-btn" title="Assign"><i class="fas fa-users text-sm"></i></button>
                                 <?php endif; ?>
+                                <?php if (Permissions::canDeleteActivity($a['id'])): ?>
+                                    <button onclick="deleteActivity(<?= $a['id'] ?>, this)" class="action-btn action-btn-danger" title="Delete" aria-label="Delete"><i class="fas fa-trash text-sm"></i></button>
+                                <?php endif; ?>
                             </div>
                         </td>
                     </tr>
@@ -216,6 +219,26 @@ async function editActivity(id, btn) {
         });
     } catch (err) { console.error('Error:', err); showToast(err.message || 'Failed to load', 'error'); sl.close(true); }
 }
+
+window.deleteActivity = async function(id, btn) {
+    if (!confirm('Are you sure you want to delete this activity?')) return;
+    setButtonLoading(btn, true);
+    try {
+        const response = await fetch(`${siteUrl}/ajax/activities.php?action=delete`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({id})
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || 'Delete failed.');
+        showToast(data.message || 'Activity deleted.');
+        setTimeout(() => refreshActivitiesTable(), 700);
+    } catch (error) {
+        showToast(error.message || 'Could not delete activity.', 'error');
+    } finally {
+        setButtonLoading(btn, false);
+    }
+};
 
 window.refreshActivitiesTable = refreshActivitiesTable;
 window.openCreateActivity = openCreateActivity;

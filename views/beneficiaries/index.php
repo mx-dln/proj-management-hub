@@ -18,7 +18,12 @@
                         <td data-label="Municipality"><span class="text-[#D1D5DB]"><?= e($b['municipality'] ?? '-') ?></span></td>
                         <td data-label="Contact"><span class="text-[#D1D5DB]"><?= e($b['contact_person'] ?? '-') ?></span></td>
                         <td data-label="Actions">
-                            <button onclick="viewBeneficiary(<?= $b['id'] ?>, this)" class="action-btn" data-loading title="View"><i class="fas fa-eye text-sm"></i></button>
+                            <div class="flex items-center justify-end gap-1">
+                                <button onclick="viewBeneficiary(<?= $b['id'] ?>, this)" class="action-btn" data-loading title="View"><i class="fas fa-eye text-sm"></i></button>
+                                <?php if (Permissions::canManageBeneficiaries()): ?>
+                                    <button onclick="deleteBeneficiary(<?= (int)$b['id'] ?>, this)" class="action-btn action-btn-danger" title="Delete" aria-label="Delete"><i class="fas fa-trash text-sm"></i></button>
+                                <?php endif; ?>
+                            </div>
                         </td>
                     </tr>
                 <?php endforeach; ?>
@@ -80,4 +85,24 @@ async function viewBeneficiary(id, btn) {
         sl.openView(data.name, '', content, { size: 'md' });
     } catch (err) { console.error('Error:', err); showToast(err.message || 'Failed to load', 'error'); sl.close(true); }
 }
+
+window.deleteBeneficiary = async function(id, btn) {
+    if (!confirm('Are you sure you want to delete this beneficiary group?')) return;
+    setButtonLoading(btn, true);
+    try {
+        const response = await fetch(`${siteUrl}/ajax/beneficiaries.php?action=delete`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({id})
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || 'Delete failed.');
+        showToast(data.message || 'Beneficiary deleted.');
+        setTimeout(() => refreshBeneficiariesTable(), 700);
+    } catch (error) {
+        showToast(error.message || 'Could not delete beneficiary.', 'error');
+    } finally {
+        setButtonLoading(btn, false);
+    }
+};
 </script>

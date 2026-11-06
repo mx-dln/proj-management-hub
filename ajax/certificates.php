@@ -111,5 +111,26 @@ switch ($action) {
         }
         break;
 
+    case 'delete':
+        $id = intval($_GET['id'] ?? ($_POST['id'] ?? 0));
+        if (!$id) {
+            $input = json_decode(file_get_contents('php://input'), true);
+            $id = intval($input['id'] ?? 0);
+        }
+        if (!$id) jsonResponse(['success' => false, 'message' => 'Invalid ID'], 400);
+        Permissions::requirePermission(Permissions::canGenerateCertificate());
+        try {
+            $certStmt = db()->prepare("SELECT * FROM certificates WHERE id = ?");
+            $certStmt->execute([$id]);
+            $cert = $certStmt->fetch();
+            if (!$cert) jsonResponse(['success' => false, 'message' => 'Certificate not found'], 404);
+            db()->prepare("DELETE FROM certificates WHERE id = ?")->execute([$id]);
+            auditLog('delete', 'certificate', $id, 'Deleted certificate: ' . ($cert['certificate_number'] ?? ''));
+            jsonResponse(['success' => true, 'message' => 'Certificate deleted']);
+        } catch (Throwable $e) {
+            jsonResponse(['success' => false, 'message' => 'Failed: ' . $e->getMessage()], 500);
+        }
+        break;
+
     default: jsonResponse(['success' => false, 'message' => 'Invalid action'], 400);
 }

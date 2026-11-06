@@ -46,6 +46,9 @@
                                     <button onclick="showReturnModal(<?= $p['id'] ?>)" class="action-btn" title="Return"><i class="fas fa-undo text-sm"></i></button>
                                     <button onclick="reviewProposal(<?= $p['id'] ?>, 'rejected', this)" class="action-btn action-btn-danger" title="Reject"><i class="fas fa-times text-sm"></i></button>
                                 <?php endif; ?>
+                                <?php if (Permissions::canDeleteProposal() || ($_SESSION['role'] === 'faculty' && $p['submitted_by'] == $_SESSION['user_id'] && $p['status'] === 'draft')): ?>
+                                    <button onclick="deleteProposal(<?= $p['id'] ?>, this)" class="action-btn action-btn-danger" title="Delete" aria-label="Delete"><i class="fas fa-trash text-sm"></i></button>
+                                <?php endif; ?>
                             </div>
                         </td>
                     </tr>
@@ -428,4 +431,24 @@ function bindProposalBudgetCommentForm(id, sl) {
         viewProposal(id, null);
     });
 }
+
+window.deleteProposal = async function(id, btn) {
+    if (!confirm('Are you sure you want to delete this proposal?')) return;
+    setButtonLoading(btn, true);
+    try {
+        const response = await fetch(`${siteUrl}/ajax/proposals.php?action=delete`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({id})
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || 'Delete failed.');
+        showToast(data.message || 'Proposal deleted.');
+        setTimeout(() => location.reload(), 700);
+    } catch (error) {
+        showToast(error.message || 'Could not delete proposal.', 'error');
+    } finally {
+        setButtonLoading(btn, false);
+    }
+};
 </script>

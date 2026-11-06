@@ -20,6 +20,9 @@
                                 <button onclick="viewPartner(<?= $p['id'] ?>, this)" class="action-btn" data-loading title="View"><i class="fas fa-eye text-sm"></i></button>
                                 <button onclick="openPartnerEmail(<?= $p['id'] ?>, this)" class="action-btn" data-loading title="Send Email"><i class="fas fa-envelope text-sm"></i></button>
                                 <button onclick="editPartner(<?= $p['id'] ?>, this)" class="action-btn" data-loading title="Edit"><i class="fas fa-edit text-sm"></i></button>
+                                <?php if (Permissions::canDeletePartner()): ?>
+                                    <button onclick="deletePartner(<?= (int)$p['id'] ?>, this)" class="action-btn action-btn-danger" title="Delete" aria-label="Delete"><i class="fas fa-trash text-sm"></i></button>
+                                <?php endif; ?>
                             </div>
                         </td>
                     </tr>
@@ -125,4 +128,24 @@ async function editPartner(id, btn) {
         form.addEventListener('submit', async (e) => { e.preventDefault(); await submitSlideOverForm(sl, `${siteUrl}/ajax/partners.php?action=update`, new FormData(form), () => refreshPartnersTable()); });
     } catch (err) { console.error('Error:', err); showToast(err.message || 'Failed to load', 'error'); sl.close(true); }
 }
+
+window.deletePartner = async function(id, btn) {
+    if (!confirm('Are you sure you want to delete this partner agency?')) return;
+    setButtonLoading(btn, true);
+    try {
+        const response = await fetch(`${siteUrl}/ajax/partners.php?action=delete`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({id})
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || 'Delete failed.');
+        showToast(data.message || 'Partner deleted.');
+        setTimeout(() => refreshPartnersTable(), 700);
+    } catch (error) {
+        showToast(error.message || 'Could not delete partner.', 'error');
+    } finally {
+        setButtonLoading(btn, false);
+    }
+};
 </script>

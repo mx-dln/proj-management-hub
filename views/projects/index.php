@@ -23,11 +23,16 @@
                 <div class="sketch-empty">No projects yet</div>
             <?php else: ?>
                 <?php foreach($result['data'] as $p): ?>
-                    <button type="button" class="sketch-project-row" onclick="viewProject(<?= (int)$p['id'] ?>, this)">
-                        <i class="fas fa-caret-right"></i>
-                        <span><?= e($p['title']) ?></span>
-                        <small><?= e($p['project_code']) ?></small>
-                    </button>
+                    <div class="flex items-center justify-between gap-1 group">
+                        <button type="button" class="sketch-project-row flex-1" onclick="viewProject(<?= (int)$p['id'] ?>, this)">
+                            <i class="fas fa-caret-right"></i>
+                            <span><?= e($p['title']) ?></span>
+                            <small><?= e($p['project_code']) ?></small>
+                        </button>
+                        <?php if (Permissions::canDeleteProject($p['id'])): ?>
+                            <button onclick="event.stopPropagation(); deleteProject(<?= (int)$p['id'] ?>, this)" class="action-btn action-btn-danger text-xs p-1 opacity-70 hover:opacity-100" title="Delete Project"><i class="fas fa-trash"></i></button>
+                        <?php endif; ?>
+                    </div>
                 <?php endforeach; ?>
             <?php endif; ?>
         </aside>
@@ -98,7 +103,7 @@ document.getElementById('inlineProjectForm')?.addEventListener('submit', async (
 function openCreateProject(){ document.querySelector('#inlineProjectForm input[name="title"]')?.focus(); }
 async function viewProject(id, btn){
     const data = await fetchWithLoading(`${siteUrl}/ajax/projects.php?action=get&id=${id}`, btn);
-    getSlideOver({size:'md'}).openView(data.title, data.project_code, viewSectionHtml('Project Information', [
+    const content = viewSectionHtml('Project Information', [
         viewFieldHtml('Project Title', escapeHtml(data.title || '-')),
         viewFieldHtml('Project Leader', 'Assign members'),
         viewFieldHtml('Description', escapeHtml(data.description || '-')),
@@ -108,6 +113,30 @@ async function viewProject(id, btn){
         viewFieldHtml('End Date', formatDate(data.end_date)),
         viewFieldHtml('Objectives', escapeHtml(data.objectives || '-')),
         viewFieldHtml('Expected Output', escapeHtml(data.expected_outputs || '-')),
-    ]), {size:'md'});
+    ]) + `<div class="flex items-center justify-between gap-2 mt-4 pt-3 border-t border-[#374151]">
+        <a href="${siteUrl}/index.php?module=projects&action=view&id=${id}" class="btn-ghost text-xs"><i class="fas fa-external-link-alt mr-1"></i> Open Project Details</a>
+        ${data.canEdit ? `<button onclick="deleteProject(${id}, this)" class="action-btn action-btn-danger text-xs px-2 py-1"><i class="fas fa-trash mr-1"></i> Delete</button>` : ''}
+    </div>`;
+    getSlideOver({size:'md'}).openView(data.title, data.project_code, content, {size:'md'});
 }
+
+window.deleteProject = async function(id, btn) {
+    if (!confirm('Are you sure you want to delete this project?')) return;
+    setButtonLoading(btn, true);
+    try {
+        const response = await fetch(`${siteUrl}/ajax/projects.php?action=delete`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({id})
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || 'Delete failed.');
+        showToast(data.message || 'Project deleted.');
+        setTimeout(() => location.href = `${siteUrl}/index.php?module=projects`, 700);
+    } catch (error) {
+        showToast(error.message || 'Could not delete project.', 'error');
+    } finally {
+        setButtonLoading(btn, false);
+    }
+};
 </script>

@@ -88,5 +88,27 @@ switch ($action) {
         }
         break;
 
+    case 'delete':
+        $id = intval($_GET['id'] ?? ($_POST['id'] ?? 0));
+        if (!$id) {
+            $input = json_decode(file_get_contents('php://input'), true);
+            $id = intval($input['id'] ?? 0);
+        }
+        if (!$id) jsonResponse(['success' => false, 'message' => 'Invalid ID'], 400);
+        Permissions::requirePermission(Permissions::canDeleteFaculty($id));
+        try {
+            $fStmt = db()->prepare("SELECT fp.*, u.id as uid FROM faculty_profiles fp JOIN users u ON fp.user_id = u.id WHERE fp.id = ?");
+            $fStmt->execute([$id]);
+            $f = $fStmt->fetch();
+            if (!$f) jsonResponse(['success' => false, 'message' => 'Faculty member not found'], 404);
+            if ((int)$f['uid'] === (int)($_SESSION['user_id'] ?? 0)) jsonResponse(['success' => false, 'message' => 'You cannot delete your own account'], 400);
+            db()->prepare("UPDATE users SET deleted_at = NOW(), is_active = 0 WHERE id = ?")->execute([$f['uid']]);
+            auditLog('delete', 'faculty', $id, 'Deleted faculty member: ' . $f['first_name'] . ' ' . $f['last_name']);
+            jsonResponse(['success' => true, 'message' => 'Faculty member deleted']);
+        } catch (Throwable $e) {
+            jsonResponse(['success' => false, 'message' => 'Failed: ' . $e->getMessage()], 500);
+        }
+        break;
+
     default: jsonResponse(['success' => false, 'message' => 'Invalid action'], 400);
 }

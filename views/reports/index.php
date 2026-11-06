@@ -68,6 +68,9 @@ $reportYears = range((int)date('Y'), 2021);
             <td><?= getStatusBadge($r['status']) ?></td>
             <td>
                 <?php if(!empty($r['attachment'])): ?><button onclick="previewReport(<?= (int)$r['id'] ?>, <?= htmlspecialchars(json_encode($r['title'] ?? 'Report'), ENT_QUOTES, 'UTF-8') ?>)" class="action-btn" title="View" aria-label="View"><i class="fas fa-eye"></i></button><button onclick="printReport(<?= (int)$r['id'] ?>)" class="action-btn" title="Print" aria-label="Print"><i class="fas fa-print"></i></button><?php endif; ?>
+                <?php if (Permissions::canDeleteReport() || ($r['submitted_by'] == $_SESSION['user_id'] && in_array($r['status'], ['draft', 'returned']))): ?>
+                    <button onclick="deleteReport(<?= (int)$r['id'] ?>, this)" class="action-btn action-btn-danger" title="Delete" aria-label="Delete"><i class="fas fa-trash"></i></button>
+                <?php endif; ?>
             </td>
         </tr><?php endforeach; ?>
         <?php if(empty($reports)): ?><tr><td colspan="7" class="text-center text-[#6B7280] py-8">No accomplishment files yet</td></tr><?php endif; ?>
@@ -160,4 +163,24 @@ function printReport(id){
     if (!win) { showToast('Allow pop-ups to print this file.', 'error'); return; }
     win.addEventListener('load', () => win.print(), { once: true });
 }
+
+window.deleteReport = async function(id, btn) {
+    if (!confirm('Are you sure you want to delete this accomplishment report?')) return;
+    setButtonLoading(btn, true);
+    try {
+        const response = await fetch(`${siteUrl}/ajax/reports.php?action=delete`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({id})
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || 'Delete failed.');
+        showToast(data.message || 'Report deleted.');
+        setTimeout(() => location.reload(), 700);
+    } catch (error) {
+        showToast(error.message || 'Could not delete report.', 'error');
+    } finally {
+        setButtonLoading(btn, false);
+    }
+};
 </script>

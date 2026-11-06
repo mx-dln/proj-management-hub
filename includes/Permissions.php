@@ -239,6 +239,7 @@ class Permissions {
     }
 
     public static function canApproveReport() { return self::isAdmin(); }
+    public static function canDeleteReport($id = null) { return self::isAdmin(); }
 
     // ============================================
     // MOA PERMISSIONS (Admin only)
@@ -246,12 +247,14 @@ class Permissions {
 
     public static function canManageMoa() { return self::isAdmin(); }
     public static function canViewMoa() { return true; }
+    public static function canDeleteMoa($id = null) { return self::canManageMoa(); }
 
     // ============================================
     // CERTIFICATE PERMISSIONS (Admin only)
     // ============================================
 
     public static function canGenerateCertificate() { return self::isAdmin(); }
+    public static function canDeleteCertificate($id = null) { return self::isAdmin(); }
 
     // ============================================
     // SYSTEM PERMISSIONS (Admin only)
@@ -261,7 +264,12 @@ class Permissions {
     public static function canManageSettings() { return self::isAdmin(); }
     public static function canViewAuditLogs() { return self::isAdmin(); }
     public static function canManagePartners() { return self::isAdmin(); }
+    public static function canDeletePartner($id = null) { return self::canManagePartners(); }
     public static function canManageBeneficiaries() { return self::isAdmin(); }
+    public static function canDeleteBeneficiary($id = null) { return self::canManageBeneficiaries(); }
+    public static function canDeleteProposal($id = null) { return self::isAdmin(); }
+    public static function canDeleteDocument($id = null) { return self::isAdmin(); }
+    public static function canDeleteFaculty($id = null) { return self::isAdmin(); }
 
     // ============================================
     // REPORT ACCESS

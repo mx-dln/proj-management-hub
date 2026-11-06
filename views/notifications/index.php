@@ -8,8 +8,22 @@
         <div class="flex items-start gap-4 p-4 <?= !$n['is_read']?'bg-[#0F643A]/5':'' ?> hover:bg-[#324152] transition-colors">
             <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 <?= !$n['is_read']?'bg-[#1E3A8A]':'bg-[#374151]' ?>"><i class="fas fa-bell <?= !$n['is_read']?'text-[#BFDBFE]':'text-[#6B7280]' ?> text-sm"></i></div>
             <div class="flex-1 min-w-0"><div class="flex items-center gap-2"><p class="text-sm font-medium text-[#F9FAFB]"><?= e($n['title']) ?></p><?php if(!$n['is_read']): ?><span class="w-2 h-2 bg-[#3B82F6] rounded-full"></span><?php endif; ?></div><p class="text-sm text-[#9CA3AF] mt-1"><?= e($n['message']) ?></p><p class="text-xs text-[#6B7280] mt-2"><?= timeAgo($n['created_at']) ?></p></div>
-            <?php if($n['action_url']): ?><a href="<?= SITE_URL . $n['action_url'] ?>" class="action-btn flex-shrink-0"><i class="fas fa-external-link-alt text-sm"></i></a><?php endif; ?>
+            <div class="flex items-center gap-1 flex-shrink-0">
+                <?php if($n['action_url']): ?><a href="<?= SITE_URL . $n['action_url'] ?>" class="action-btn"><i class="fas fa-external-link-alt text-sm"></i></a><?php endif; ?>
+                <button onclick="deleteNotification(<?= (int)$n['id'] ?>, this)" class="action-btn action-btn-danger" title="Delete"><i class="fas fa-trash text-sm"></i></button>
+            </div>
         </div>
     <?php endforeach; ?></div><?php endif; ?>
 </div>
-<script>function markAllRead(){fetch('<?= SITE_URL ?>/ajax/notifications.php?action=mark_all_read').then(r=>r.json()).then(()=>{showToast('All marked as read');setTimeout(()=>location.reload(),1000)})}</script>
+<script>
+function markAllRead(){fetch('<?= SITE_URL ?>/ajax/notifications.php?action=mark_all_read').then(r=>r.json()).then(()=>{showToast('All marked as read');setTimeout(()=>location.reload(),1000)})}
+async function deleteNotification(id, btn){
+    if(!confirm('Delete this notification?')) return;
+    setButtonLoading(btn, true);
+    try {
+        const r = await fetch('<?= SITE_URL ?>/ajax/notifications.php?action=delete', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id})}).then(res=>res.json());
+        if(r.success) { showToast('Notification deleted'); setTimeout(()=>location.reload(), 700); }
+        else throw new Error(r.message || 'Failed');
+    } catch(e) { showToast(e.message, 'error'); setButtonLoading(btn, false); }
+}
+</script>

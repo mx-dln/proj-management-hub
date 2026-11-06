@@ -23,9 +23,12 @@
                         <td data-label="Type"><span class="badge badge-submitted"><?= ucfirst($c['recipient_type']) ?></span></td>
                         <td data-label="Issued"><span class="table-date"><?= formatDate($c['date_issued']) ?></span></td>
                         <td data-label="Actions">
-                            <div class="flex gap-2 justify-end">
+                            <div class="flex gap-2 justify-end items-center">
                                 <button onclick="viewCertificate(<?= $c['id'] ?>, this)" class="btn-ghost">View</button>
                                 <button onclick="viewCertificate(<?= $c['id'] ?>, this)" class="btn-primary"><i class="fas fa-print mr-1"></i> Print</button>
+                                <?php if (Permissions::canGenerateCertificate()): ?>
+                                    <button onclick="deleteCertificate(<?= (int)$c['id'] ?>, this)" class="action-btn action-btn-danger" title="Delete" aria-label="Delete"><i class="fas fa-trash text-sm"></i></button>
+                                <?php endif; ?>
                             </div>
                         </td>
                     </tr>
@@ -302,4 +305,23 @@ function waitForFrameImages(frame) {
     })));
 }
 
+window.deleteCertificate = async function(id, btn) {
+    if (!confirm('Are you sure you want to delete this certificate?')) return;
+    setButtonLoading(btn, true);
+    try {
+        const response = await fetch(`${siteUrl}/ajax/certificates.php?action=delete`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({id})
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || 'Delete failed.');
+        showToast(data.message || 'Certificate deleted.');
+        setTimeout(() => location.reload(), 700);
+    } catch (error) {
+        showToast(error.message || 'Could not delete certificate.', 'error');
+    } finally {
+        setButtonLoading(btn, false);
+    }
+};
 </script>

@@ -38,6 +38,9 @@
                                 <?php if(Permissions::canAssignMembers()): ?>
                                     <button onclick="openAssignments('program', <?= $p['id'] ?>, '<?= e(addslashes($p['title'])) ?>')" class="action-btn" title="Assign"><i class="fas fa-users text-sm"></i></button>
                                 <?php endif; ?>
+                                <?php if(Permissions::canDeleteProgram($p['id'])): ?>
+                                    <button onclick="deleteProgram(<?= $p['id'] ?>, this)" class="action-btn action-btn-danger" title="Delete" aria-label="Delete"><i class="fas fa-trash text-sm"></i></button>
+                                <?php endif; ?>
                             </div>
                         </td>
                     </tr>
@@ -168,4 +171,24 @@ async function editProgram(id, btn) {
         });
     } catch (err) { console.error('Edit program error:', err); showToast(err.message || 'Failed to load', 'error'); sl.close(true); }
 }
+
+window.deleteProgram = async function(id, btn) {
+    if (!confirm('Are you sure you want to delete this program?')) return;
+    setButtonLoading(btn, true);
+    try {
+        const response = await fetch(`${siteUrl}/ajax/programs.php?action=delete`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({id})
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || 'Delete failed.');
+        showToast(data.message || 'Program deleted.');
+        setTimeout(() => location.reload(), 700);
+    } catch (error) {
+        showToast(error.message || 'Could not delete program.', 'error');
+    } finally {
+        setButtonLoading(btn, false);
+    }
+};
 </script>

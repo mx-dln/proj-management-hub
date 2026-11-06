@@ -24,5 +24,12 @@ switch ($action) {
         jsonResponse(['success' => true]);
         break;
 
+    case 'delete':
+        $input = json_decode(file_get_contents('php://input'), true);
+        $id = intval($input['id'] ?? ($_GET['id'] ?? 0));
+        db()->prepare("DELETE FROM notifications WHERE id = ? AND user_id = ?")->execute([$id, $user['id']]);
+        jsonResponse(['success' => true, 'message' => 'Notification deleted']);
+        break;
+
     default: jsonResponse(['success' => false, 'message' => 'Invalid action'], 400);
 }

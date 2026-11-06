@@ -75,7 +75,12 @@
                         <td data-label="File"><span class="file-extension-pill"><?= e(strtoupper($d['file_type'] ?? pathinfo($d['file_name'] ?? '', PATHINFO_EXTENSION))) ?></span></td>
                         <td data-label="Status"><?= getStatusBadge($d['status']) ?></td>
                         <td data-label="Actions">
-                            <button onclick="viewDocument(<?= (int)$d['id'] ?>, this)" class="action-btn" aria-label="View <?= e($d['title']) ?>" title="View"><i class="fas fa-eye text-sm" aria-hidden="true"></i></button>
+                            <div class="flex items-center gap-1">
+                                <button onclick="viewDocument(<?= (int)$d['id'] ?>, this)" class="action-btn" aria-label="View <?= e($d['title']) ?>" title="View"><i class="fas fa-eye text-sm" aria-hidden="true"></i></button>
+                                <?php if (Permissions::canDeleteDocument()): ?>
+                                    <button onclick="deleteDocument(<?= (int)$d['id'] ?>, this)" class="action-btn action-btn-danger" aria-label="Delete <?= e($d['title']) ?>" title="Delete"><i class="fas fa-trash text-sm" aria-hidden="true"></i></button>
+                                <?php endif; ?>
+                            </div>
                         </td>
                     </tr>
                 <?php endforeach; ?>

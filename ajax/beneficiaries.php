@@ -72,5 +72,47 @@ switch ($action) {
         }
         break;
 
+    case 'delete':
+        $id = intval($_GET['id'] ?? ($_POST['id'] ?? 0));
+        if (!$id) {
+            $input = json_decode(file_get_contents('php://input'), true);
+            $id = intval($input['id'] ?? 0);
+        }
+        if (!$id) jsonResponse(['success' => false, 'message' => 'Invalid ID'], 400);
+        Permissions::requirePermission(Permissions::canDeleteBeneficiary($id));
+        try {
+            $bStmt = db()->prepare("SELECT * FROM beneficiary_groups WHERE id = ?");
+            $bStmt->execute([$id]);
+            $b = $bStmt->fetch();
+            if (!$b) jsonResponse(['success' => false, 'message' => 'Beneficiary not found'], 404);
+            
+            // Check if projects or participants reference this beneficiary
+            $projCount = (int)db()->query("SELECT COUNT(*) FROM projects WHERE beneficiary_group_id = {$id}")->fetchColumn();
+            $partCount = (int)db()->query("SELECT COUNT(*) FROM activity_participants WHERE beneficiary_group_id = {$id}")->fetchColumn();
+            if ($projCount > 0 || $partCount > 0) {
+                // If the table has an is_active column or foreign keys, let's check
+                $checkActive = db()->query("SHOW COLUMNS FROM beneficiary_groups LIKE 'is_active'");
+                if ($checkActive && $checkActive->fetch()) {
+                    db()->prepare("UPDATE beneficiary_groups SET is_active = 0 WHERE id = ?")->execute([$id]);
+                    auditLog('delete', 'beneficiary_group', $id, 'Deactivated beneficiary (in use): ' . $b['name']);
+                    jsonResponse(['success' => true, 'message' => 'Beneficiary deactivated because it is linked to projects/activities']);
+                } else {
+                    // Set references to NULL or delete
+                    db()->prepare("UPDATE projects SET beneficiary_group_id = NULL WHERE beneficiary_group_id = ?")->execute([$id]);
+                    db()->prepare("UPDATE activity_participants SET beneficiary_group_id = NULL WHERE beneficiary_group_id = ?")->execute([$id]);
+                    db()->prepare("DELETE FROM beneficiary_groups WHERE id = ?")->execute([$id]);
+                    auditLog('delete', 'beneficiary_group', $id, 'Deleted beneficiary: ' . $b['name']);
+                    jsonResponse(['success' => true, 'message' => 'Beneficiary deleted']);
+                }
+            } else {
+                db()->prepare("DELETE FROM beneficiary_groups WHERE id = ?")->execute([$id]);
+                auditLog('delete', 'beneficiary_group', $id, 'Deleted beneficiary: ' . $b['name']);
+                jsonResponse(['success' => true, 'message' => 'Beneficiary deleted']);
+            }
+        } catch (Throwable $e) {
+            jsonResponse(['success' => false, 'message' => 'Failed: ' . $e->getMessage()], 500);
+        }
+        break;
+
     default: jsonResponse(['success' => false, 'message' => 'Invalid action'], 400);
 }
