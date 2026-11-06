@@ -115,7 +115,7 @@ async function viewProject(id, btn){
         viewFieldHtml('Expected Output', escapeHtml(data.expected_outputs || '-')),
     ]) + `<div class="flex items-center justify-between gap-2 mt-4 pt-3 border-t border-[#374151]">
         <a href="${siteUrl}/index.php?module=projects&action=view&id=${id}" class="btn-ghost text-xs"><i class="fas fa-external-link-alt mr-1"></i> Open Project Details</a>
-        ${data.canEdit ? `<button onclick="deleteProject(${id}, this)" class="action-btn action-btn-danger text-xs px-2 py-1"><i class="fas fa-trash mr-1"></i> Delete</button>` : ''}
+        ${<?= Permissions::isAdmin() ? 'true' : 'false' ?> ? `<button onclick="deleteProject(${id}, this)" class="action-btn action-btn-danger text-xs px-2 py-1"><i class="fas fa-trash mr-1"></i> Delete</button>` : ''}
     </div>`;
     getSlideOver({size:'md'}).openView(data.title, data.project_code, content, {size:'md'});
 }

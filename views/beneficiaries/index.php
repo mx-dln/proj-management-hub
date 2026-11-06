@@ -20,7 +20,7 @@
                         <td data-label="Actions">
                             <div class="flex items-center justify-end gap-1">
                                 <button onclick="viewBeneficiary(<?= $b['id'] ?>, this)" class="action-btn" data-loading title="View"><i class="fas fa-eye text-sm"></i></button>
-                                <?php if (Permissions::canManageBeneficiaries()): ?>
+                                <?php if (Permissions::canDeleteBeneficiary()): ?>
                                     <button onclick="deleteBeneficiary(<?= (int)$b['id'] ?>, this)" class="action-btn action-btn-danger" title="Delete" aria-label="Delete"><i class="fas fa-trash text-sm"></i></button>
                                 <?php endif; ?>
                             </div>

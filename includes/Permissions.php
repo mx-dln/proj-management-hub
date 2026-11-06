@@ -132,10 +132,7 @@ class Permissions {
         if (self::isAdmin()) return true;
         return self::isFaculty() && self::isAssignedToProgram($id);
     }
-    public static function canDeleteProgram($id) {
-        if (self::isAdmin()) return true;
-        return self::isFaculty() && self::isAssignedToProgram($id);
-    }
+    public static function canDeleteProgram($id = null) { return self::isAdmin(); }
 
     // ============================================
     // PROJECT PERMISSIONS
@@ -158,10 +155,7 @@ class Permissions {
         }
         return false;
     }
-    public static function canDeleteProject($id) {
-        if (self::isAdmin()) return true;
-        return self::isFaculty() && self::canAccessProject($id);
-    }
+    public static function canDeleteProject($id = null) { return self::isAdmin(); }
 
     // ============================================
     // COMPONENT PERMISSIONS
@@ -176,10 +170,7 @@ class Permissions {
         if (self::isAdmin()) return true;
         return self::isFaculty() && self::canAccessComponent($id);
     }
-    public static function canDeleteComponent($id) {
-        if (self::isAdmin()) return true;
-        return self::isFaculty() && self::canAccessComponent($id);
-    }
+    public static function canDeleteComponent($id = null) { return self::isAdmin(); }
 
     // ============================================
     // ACTIVITY PERMISSIONS
@@ -194,10 +185,7 @@ class Permissions {
         if (self::isAdmin()) return true;
         return self::isFaculty() && self::canAccessActivity($id);
     }
-    public static function canDeleteActivity($id) {
-        if (self::isAdmin()) return true;
-        return self::isFaculty() && self::canAccessActivity($id);
-    }
+    public static function canDeleteActivity($id = null) { return self::isAdmin(); }
     public static function canAddActivityParticipants($activityId) {
         return self::isFaculty() && self::canAccessActivity($activityId);
     }
@@ -251,15 +239,7 @@ class Permissions {
     }
 
     public static function canApproveReport() { return self::isAdmin(); }
-    public static function canDeleteReport($id = null) {
-        if (self::isAdmin()) return true;
-        if (!self::isFaculty()) return false;
-        if (!$id) return true;
-        $stmt = db()->prepare("SELECT project_id, submitted_by FROM accomplishment_reports WHERE id = ?");
-        $stmt->execute([(int)$id]);
-        $r = $stmt->fetch();
-        return $r && ($r['submitted_by'] == self::getUserId() || self::canAccessProject($r['project_id']));
-    }
+    public static function canDeleteReport($id = null) { return self::isAdmin(); }
 
     // ============================================
     // MOA PERMISSIONS (Admin only)
@@ -267,7 +247,7 @@ class Permissions {
 
     public static function canManageMoa() { return self::isAdmin(); }
     public static function canViewMoa() { return true; }
-    public static function canDeleteMoa($id = null) { return self::canManageMoa(); }
+    public static function canDeleteMoa($id = null) { return self::isAdmin(); }
 
     // ============================================
     // CERTIFICATE PERMISSIONS (Admin only)
@@ -284,27 +264,11 @@ class Permissions {
     public static function canManageSettings() { return self::isAdmin(); }
     public static function canViewAuditLogs() { return self::isAdmin(); }
     public static function canManagePartners() { return self::isAdmin(); }
-    public static function canDeletePartner($id = null) { return self::canManagePartners(); }
+    public static function canDeletePartner($id = null) { return self::isAdmin(); }
     public static function canManageBeneficiaries() { return self::isAdmin(); }
-    public static function canDeleteBeneficiary($id = null) { return self::canManageBeneficiaries(); }
-    public static function canDeleteProposal($id = null) {
-        if (self::isAdmin()) return true;
-        if (!self::isFaculty()) return false;
-        if (!$id) return true;
-        $stmt = db()->prepare("SELECT project_id, submitted_by FROM proposals WHERE id = ?");
-        $stmt->execute([(int)$id]);
-        $p = $stmt->fetch();
-        return $p && ($p['submitted_by'] == self::getUserId() || self::canAccessProject($p['project_id']));
-    }
-    public static function canDeleteDocument($id = null) {
-        if (self::isAdmin()) return true;
-        if (!self::isFaculty()) return false;
-        if (!$id) return true;
-        $stmt = db()->prepare("SELECT uploaded_by FROM documents WHERE id = ?");
-        $stmt->execute([(int)$id]);
-        $d = $stmt->fetch();
-        return $d && $d['uploaded_by'] == self::getUserId();
-    }
+    public static function canDeleteBeneficiary($id = null) { return self::isAdmin(); }
+    public static function canDeleteProposal($id = null) { return self::isAdmin(); }
+    public static function canDeleteDocument($id = null) { return self::isAdmin(); }
     public static function canDeleteFaculty($id = null) { return self::isAdmin(); }
 
     // ============================================

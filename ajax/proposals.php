@@ -482,8 +482,7 @@ switch ($action) {
         $prop = $propStmt->fetch();
         if (!$prop) jsonResponse(['success' => false, 'message' => 'Proposal not found'], 404);
         
-        $canDelete = Permissions::isAdmin() || ($prop['status'] === 'draft' && $prop['submitted_by'] === $user['id']);
-        if (!$canDelete) jsonResponse(['success' => false, 'message' => 'Forbidden: You cannot delete this proposal'], 403);
+        Permissions::requirePermission(Permissions::isAdmin());
         
         try {
             db()->prepare("DELETE FROM proposals WHERE id = ?")->execute([$id]);

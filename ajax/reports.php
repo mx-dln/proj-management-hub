@@ -285,8 +285,7 @@ switch ($action) {
         $rep = $repStmt->fetch();
         if (!$rep) jsonResponse(['success' => false, 'message' => 'Report not found'], 404);
         
-        $canDelete = Permissions::isAdmin() || ($rep['submitted_by'] === $user['id'] && in_array($rep['status'], ['draft', 'returned']));
-        if (!$canDelete) jsonResponse(['success' => false, 'message' => 'Forbidden: You cannot delete this report'], 403);
+        Permissions::requirePermission(Permissions::isAdmin());
         
         try {
             db()->prepare("DELETE FROM accomplishment_reports WHERE id = ?")->execute([$id]);

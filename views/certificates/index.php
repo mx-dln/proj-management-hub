@@ -26,7 +26,7 @@
                             <div class="flex gap-2 justify-end items-center">
                                 <button onclick="viewCertificate(<?= $c['id'] ?>, this)" class="btn-ghost">View</button>
                                 <button onclick="viewCertificate(<?= $c['id'] ?>, this)" class="btn-primary"><i class="fas fa-print mr-1"></i> Print</button>
-                                <?php if (Permissions::canGenerateCertificate()): ?>
+                                <?php if (Permissions::canDeleteCertificate()): ?>
                                     <button onclick="deleteCertificate(<?= (int)$c['id'] ?>, this)" class="action-btn action-btn-danger" title="Delete" aria-label="Delete"><i class="fas fa-trash text-sm"></i></button>
                                 <?php endif; ?>
                             </div>

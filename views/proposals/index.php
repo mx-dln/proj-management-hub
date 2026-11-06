@@ -46,7 +46,7 @@
                                     <button onclick="showReturnModal(<?= $p['id'] ?>)" class="action-btn" title="Return"><i class="fas fa-undo text-sm"></i></button>
                                     <button onclick="reviewProposal(<?= $p['id'] ?>, 'rejected', this)" class="action-btn action-btn-danger" title="Reject"><i class="fas fa-times text-sm"></i></button>
                                 <?php endif; ?>
-                                <?php if (Permissions::canDeleteProposal() || ($_SESSION['role'] === 'faculty' && $p['submitted_by'] == $_SESSION['user_id'] && $p['status'] === 'draft')): ?>
+                                <?php if (Permissions::canDeleteProposal()): ?>
                                     <button onclick="deleteProposal(<?= $p['id'] ?>, this)" class="action-btn action-btn-danger" title="Delete" aria-label="Delete"><i class="fas fa-trash text-sm"></i></button>
                                 <?php endif; ?>
                             </div>
