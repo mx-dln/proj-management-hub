@@ -1,12 +1,16 @@
 <?php
-define('DB_HOST', 'localhost');
-define('DB_NAME', 'isu-proj-hub');
-define('DB_USER', 'root');
-define('DB_PASS', '');
+// Load local/server configuration overrides if present
+if (file_exists(__DIR__ . '/config.local.php')) {
+    require_once __DIR__ . '/config.local.php';
+}
 
+if (!defined('DB_HOST')) define('DB_HOST', 'localhost');
+if (!defined('DB_NAME')) define('DB_NAME', 'isu-proj-hub');
+if (!defined('DB_USER')) define('DB_USER', 'root');
+if (!defined('DB_PASS')) define('DB_PASS', '');
 
-define('DB_CHARSET', 'utf8mb4');
-define('SITE_NAME', 'ETS Project Management Hub');
+if (!defined('DB_CHARSET')) define('DB_CHARSET', 'utf8mb4');
+if (!defined('SITE_NAME')) define('SITE_NAME', 'ETS Project Management Hub');
 if (!defined('SITE_URL')) {
     $forwardedProto = $_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '';
     $scheme = $forwardedProto ? explode(',', $forwardedProto)[0] : ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http');

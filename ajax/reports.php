@@ -133,53 +133,54 @@ switch ($action) {
         break;
 
     case 'create':
-        $projectId = intval($_POST['project_id'] ?? 0);
-        Permissions::requirePermission(Permissions::isAdmin());
-
-        // Resolve valid user ID for submitted_by to avoid fk_ar_submitter foreign key violations
-        $submittedBy = $user['id'] ?? ($_SESSION['user_id'] ?? null);
-        if ($submittedBy) {
-            $uStmt = db()->prepare("SELECT id FROM users WHERE id = ?");
-            $uStmt->execute([$submittedBy]);
-            if (!$uStmt->fetch()) $submittedBy = null;
-        }
-        if (!$submittedBy) {
-            $adminUser = db()->query("SELECT id FROM users WHERE role = 'admin' AND deleted_at IS NULL LIMIT 1")->fetch();
-            $submittedBy = $adminUser ? (int)$adminUser['id'] : null;
-            if (!$submittedBy) {
-                $anyUser = db()->query("SELECT id FROM users ORDER BY id ASC LIMIT 1")->fetch();
-                $submittedBy = $anyUser ? (int)$anyUser['id'] : 1;
-            }
-        }
-
-        $data = [
-            'report_number' => generateCode('AR', 'accomplishment_reports', 'report_number'),
-            'report_type' => sanitize($_POST['report_type'] ?? 'quarterly'),
-            'period_quarter' => sanitize($_POST['period_quarter'] ?? '') ?: null,
-            'period_year' => intval($_POST['period_year'] ?? date('Y')),
-            'project_id' => $projectId,
-            'title' => sanitize($_POST['title'] ?? ''),
-            'summary' => sanitize($_POST['summary'] ?? ''),
-            'submitted_by' => $submittedBy,
-            'date_submitted' => date('Y-m-d'),
-            'status' => 'submitted',
-        ];
-        if (empty($data['title'])) jsonResponse(['success' => false, 'message' => 'Title is required'], 400);
-        if (!$data['project_id']) jsonResponse(['success' => false, 'message' => 'Project is required'], 400);
-        
-        $pStmt = db()->prepare("SELECT id FROM projects WHERE id = ? AND deleted_at IS NULL");
-        $pStmt->execute([$projectId]);
-        if (!$pStmt->fetch()) jsonResponse(['success' => false, 'message' => 'Selected project does not exist.'], 404);
-
-        if ($data['report_type'] === 'quarterly' && empty($data['period_quarter'])) jsonResponse(['success' => false, 'message' => 'Quarter is required for quarterly reports'], 400);
-        if ($data['period_year'] < 2021 || $data['period_year'] > (int)date('Y') + 1) jsonResponse(['success' => false, 'message' => 'Enter a valid report year'], 400);
-        $files = $_FILES['attachments'] ?? $_FILES['attachment'] ?? [];
-        $uploads = uploadFiles($files, 'reports', ['pdf','doc','docx','jpg','jpeg','png','xls','xlsx','csv']);
-        if (!$uploads || (isset($uploads['success']) && !$uploads['success'])) jsonResponse(['success' => false, 'message' => $uploads['error'] ?? 'Report file is required'], 422);
-        $paths = array_map(fn($file) => $file['file_path'], $uploads);
-        $firstPath = !empty($paths) ? $paths[0] : null;
-        $encodedPaths = !empty($paths) ? json_encode($paths) : null;
         try {
+            $projectId = intval($_POST['project_id'] ?? 0);
+            Permissions::requirePermission(Permissions::isAdmin());
+
+            // Resolve valid user ID for submitted_by to avoid fk_ar_submitter foreign key violations
+            $submittedBy = $user['id'] ?? ($_SESSION['user_id'] ?? null);
+            if ($submittedBy) {
+                $uStmt = db()->prepare("SELECT id FROM users WHERE id = ?");
+                $uStmt->execute([$submittedBy]);
+                if (!$uStmt->fetch()) $submittedBy = null;
+            }
+            if (!$submittedBy) {
+                $adminUser = db()->query("SELECT id FROM users WHERE role = 'admin' AND deleted_at IS NULL LIMIT 1")->fetch();
+                $submittedBy = $adminUser ? (int)$adminUser['id'] : null;
+                if (!$submittedBy) {
+                    $anyUser = db()->query("SELECT id FROM users ORDER BY id ASC LIMIT 1")->fetch();
+                    $submittedBy = $anyUser ? (int)$anyUser['id'] : 1;
+                }
+            }
+
+            $data = [
+                'report_number' => generateCode('AR', 'accomplishment_reports', 'report_number'),
+                'report_type' => sanitize($_POST['report_type'] ?? 'quarterly'),
+                'period_quarter' => sanitize($_POST['period_quarter'] ?? '') ?: null,
+                'period_year' => intval($_POST['period_year'] ?? date('Y')),
+                'project_id' => $projectId,
+                'title' => sanitize($_POST['title'] ?? ''),
+                'summary' => sanitize($_POST['summary'] ?? ''),
+                'submitted_by' => $submittedBy,
+                'date_submitted' => date('Y-m-d'),
+                'status' => 'submitted',
+            ];
+            if (empty($data['title'])) jsonResponse(['success' => false, 'message' => 'Title is required'], 400);
+            if (!$data['project_id']) jsonResponse(['success' => false, 'message' => 'Project is required'], 400);
+            
+            $pStmt = db()->prepare("SELECT id FROM projects WHERE id = ? AND deleted_at IS NULL");
+            $pStmt->execute([$projectId]);
+            if (!$pStmt->fetch()) jsonResponse(['success' => false, 'message' => 'Selected project does not exist.'], 404);
+
+            if ($data['report_type'] === 'quarterly' && empty($data['period_quarter'])) jsonResponse(['success' => false, 'message' => 'Quarter is required for quarterly reports'], 400);
+            if ($data['period_year'] < 2021 || $data['period_year'] > (int)date('Y') + 1) jsonResponse(['success' => false, 'message' => 'Enter a valid report year'], 400);
+            $files = $_FILES['attachments'] ?? $_FILES['attachment'] ?? [];
+            $uploads = uploadFiles($files, 'reports', ['pdf','doc','docx','jpg','jpeg','png','xls','xlsx','csv']);
+            if (!$uploads || (isset($uploads['success']) && !$uploads['success'])) jsonResponse(['success' => false, 'message' => $uploads['error'] ?? 'Report file is required'], 422);
+            $paths = array_map(fn($file) => $file['file_path'], $uploads);
+            $firstPath = !empty($paths) ? $paths[0] : null;
+            $encodedPaths = !empty($paths) ? json_encode($paths) : null;
+
             ensureSchemaUpdated();
             $checkCol = db()->query("SHOW COLUMNS FROM accomplishment_reports LIKE 'attachments'");
             $hasAttachmentsCol = $checkCol && (bool)$checkCol->fetch();
