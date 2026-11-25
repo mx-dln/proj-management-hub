@@ -94,7 +94,7 @@ switch ($action) {
                     <dt>Program</dt><dd><?= e($project['program_title'] ?? '-') ?></dd>
                     <dt>Partner Agency</dt><dd><?= e($project['partner_name'] ?? '-') ?></dd>
                     <dt>Beneficiaries</dt><dd><?= e($project['beneficiary_name'] ?? '-') ?></dd>
-                    <dt>MOA</dt><dd><?= e($moa ? (($moa['moa_number'] ?? '-') . ' · ' . ($moa['status'] ?? '-')) : 'No MOA recorded') ?></dd>
+                    <dt>Accomplished MOA</dt><dd><?= e($moa ? ($moa['moa_number'] . ' · ' . ucfirst($moa['status']) . (!empty($moa['date_signed']) ? ' (Signed: ' . formatDate($moa['date_signed']) . ')' : ' (Pending Signature)')) : 'No MOA recorded') ?></dd>
                     <dt>Project Report</dt><dd><?= e($report['title'] ?? 'No uploaded/generated report yet') ?></dd>
                 </dl>
                 <h3>Project Summary</h3>

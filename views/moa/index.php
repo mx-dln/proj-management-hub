@@ -18,7 +18,7 @@ $canManageMoa = Permissions::canManageMoa();
             </form>
             <div class="moa-table-wrap">
                 <table class="moa-table">
-                    <thead><tr><th>MOA</th><th>Project</th><th>File</th><th>Status</th><th>Actions</th></tr></thead>
+                    <thead><tr><th>MOA</th><th>Project</th><th>Date Signed</th><th>File</th><th>Status</th><th>Actions</th></tr></thead>
                     <tbody>
                     <?php foreach($moas as $m): ?>
                         <tr>
@@ -27,6 +27,16 @@ $canManageMoa = Permissions::canManageMoa();
                                 <small><?= e($m['partner_name'] ?? '-') ?></small>
                             </td>
                             <td><?= e($m['project_title'] ?? '-') ?></td>
+                            <td>
+                                <?php if (!empty($m['date_signed'])): ?>
+                                    <span class="text-xs font-semibold text-[#86EFAC] flex items-center gap-1"><i class="fas fa-calendar-check text-[10px]"></i> <?= e(formatDate($m['date_signed'])) ?></span>
+                                <?php else: ?>
+                                    <span class="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-yellow-900/40 text-yellow-300 border border-yellow-700/50">Pending Signature</span>
+                                <?php endif; ?>
+                                <?php if ($canManageMoa): ?>
+                                    <button onclick="openUpdateDateSigned(<?= (int)$m['id'] ?>, '<?= e(addslashes($m['moa_number'])) ?>', '<?= e($m['date_signed'] ?? '') ?>', '<?= e($m['expiration_date'] ?? '') ?>', '<?= e($m['status'] ?? 'pending') ?>')" class="text-[11px] text-[#60A5FA] hover:underline block mt-0.5"><i class="fas fa-edit text-[10px] mr-1"></i><?= !empty($m['date_signed']) ? 'Change' : 'Set Date' ?></button>
+                                <?php endif; ?>
+                            </td>
                             <td><?php if(!empty($m['attachment'])): ?><span class="file-extension-pill"><?= e(strtoupper(pathinfo($m['attachment'], PATHINFO_EXTENSION))) ?></span><?php else: ?><span class="text-[#6B7280]">-</span><?php endif; ?></td>
                             <td><?= getStatusBadge($m['status']) ?></td>
                             <td>
@@ -34,6 +44,7 @@ $canManageMoa = Permissions::canManageMoa();
                                     <button onclick="viewMoa(<?= (int)$m['id'] ?>, this)" class="action-btn" title="View" aria-label="View"><i class="fas fa-eye"></i></button>
                                     <button onclick="printMoa(<?= (int)$m['id'] ?>, <?= !empty($m['attachment']) ? 'true' : 'false' ?>)" class="action-btn" title="Print" aria-label="Print"><i class="fas fa-print"></i></button>
                                     <?php if ($canManageMoa): ?>
+                                        <button onclick="openUpdateDateSigned(<?= (int)$m['id'] ?>, '<?= e(addslashes($m['moa_number'])) ?>', '<?= e($m['date_signed'] ?? '') ?>', '<?= e($m['expiration_date'] ?? '') ?>', '<?= e($m['status'] ?? 'pending') ?>')" class="action-btn text-[#86EFAC]" title="Update Date Signed" aria-label="Update Date Signed"><i class="fas fa-calendar-check"></i></button>
                                         <button onclick="editMoa(<?= (int)$m['id'] ?>, this)" class="action-btn" title="Edit" aria-label="Edit"><i class="fas fa-pen"></i></button>
                                         <button onclick="deleteMoa(<?= (int)$m['id'] ?>, this)" class="action-btn action-btn-danger" title="Delete" aria-label="Delete"><i class="fas fa-trash"></i></button>
                                     <?php endif; ?>
@@ -41,7 +52,7 @@ $canManageMoa = Permissions::canManageMoa();
                             </td>
                         </tr>
                     <?php endforeach; ?>
-                    <?php if(empty($moas)): ?><tr><td colspan="5" class="moa-empty">No MOA records found</td></tr><?php endif; ?>
+                    <?php if(empty($moas)): ?><tr><td colspan="6" class="moa-empty">No MOA records found</td></tr><?php endif; ?>
                     </tbody>
                 </table>
             </div>
@@ -66,8 +77,11 @@ $canManageMoa = Permissions::canManageMoa();
                 <label>Partner Agency:
                     <select name="partner_agency_id"><option value="">Select partner</option><?php foreach($partnerOptions as $p): ?><option value="<?= (int)$p['id'] ?>"><?= e($p['name']) ?></option><?php endforeach; ?></select>
                 </label>
-                <label>Date Signed:<input type="date" name="date_signed"></label>
-                <label>End Date:<input type="date" name="expiration_date"></label>
+                <div class="full p-2.5 rounded-lg bg-[#111827] border border-[#374151] text-xs text-[#9CA3AF] flex items-center gap-2">
+                    <i class="fas fa-info-circle text-[#F5D20C]"></i>
+                    <span><strong>Date Signed:</strong> Recorded after agreement is signed. Status begins as <em>Pending</em>.</span>
+                </div>
+                <label class="full">Target End Date (Optional):<input type="date" name="expiration_date"></label>
                 <label class="full">Remarks:<textarea name="remarks" rows="3"></textarea></label>
                 <label class="full">MOA File:<input id="moa-file" type="file" name="attachments[]" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xls,.xlsx,.csv" multiple></label>
                 <p class="text-xs text-[#9CA3AF]">You may select multiple scanned pages.</p>
@@ -112,7 +126,8 @@ async function viewMoa(id, btn){
     try {
         const data = await fetchWithLoading(`${siteUrl}/ajax/moa.php?action=get&id=${id}`, btn);
         const downloadAction = canManageMoa ? `<a href="${siteUrl}/ajax/moa.php?action=file&id=${Number(data.id)}&download=1" class="btn-primary"><i class="fas fa-download" aria-hidden="true"></i> Download</a>` : '';
-        const fileActions = `<div class="flex flex-wrap gap-2 mb-4">${data.attachment ? `<button type="button" onclick="previewMoa(${Number(data.id)}, this.dataset.title)" data-title="${escapeHtml(data.moa_number || 'MOA')}" class="btn-ghost"><i class="fas fa-eye" aria-hidden="true"></i> Preview</button>` : ''}<button type="button" onclick="printMoa(${Number(data.id)}, ${data.attachment ? 'true' : 'false'})" class="btn-ghost"><i class="fas fa-print" aria-hidden="true"></i> Print</button>${downloadAction}</div>`;
+        const updateDateSignedBtn = canManageMoa ? `<button type="button" onclick="openUpdateDateSigned(${Number(data.id)}, '${escapeHtml(data.moa_number || 'MOA')}', '${data.date_signed || ''}', '${data.expiration_date || ''}', '${data.status || 'pending'}')" class="btn-ghost text-[#86EFAC] border border-[#1E7A4B]"><i class="fas fa-calendar-check mr-1"></i> Update Date Signed</button>` : '';
+        const fileActions = `<div class="flex flex-wrap gap-2 mb-4">${data.attachment ? `<button type="button" onclick="previewMoa(${Number(data.id)}, this.dataset.title)" data-title="${escapeHtml(data.moa_number || 'MOA')}" class="btn-ghost"><i class="fas fa-eye" aria-hidden="true"></i> Preview</button>` : ''}<button type="button" onclick="printMoa(${Number(data.id)}, ${data.attachment ? 'true' : 'false'})" class="btn-ghost"><i class="fas fa-print" aria-hidden="true"></i> Print</button>${updateDateSignedBtn}${downloadAction}</div>`;
         getSlideOver({size:'md'}).openView(data.moa_number, data.project_title || '', fileActions + viewSectionHtml('MOA Information', [
             viewFieldHtml('MOA #', escapeHtml(data.moa_number || '-')),
             viewFieldHtml('Project', escapeHtml(data.project_title || '-')),
@@ -218,6 +233,56 @@ async function printMoaDetails(id){
         showToast(error.message || 'Failed to print MOA.', 'error');
     }
 }
+
+window.openUpdateDateSigned = function(id, moaNumber, currentDateSigned, currentEndDate, currentStatus) {
+    const sl = getSlideOver({size:'md'});
+    const today = new Date().toISOString().split('T')[0];
+    const formHtml = `
+        <input type="hidden" name="id" value="${id}">
+        <div class="form-section">
+            <h4 class="form-section-title"><i class="fas fa-calendar-check mr-2 text-[#86EFAC]"></i>Record Date Signed</h4>
+            <p class="text-xs text-[#9CA3AF] mb-4">Record the official date the Memorandum of Agreement was signed by the university and partner agency. Updating this will activate the agreement.</p>
+            <div class="form-grid">
+                <div class="form-group full-width">
+                    <label class="form-label">MOA Number</label>
+                    <input type="text" class="form-input bg-[#111827] text-[#9CA3AF]" value="${escapeHtml(moaNumber)}" readonly>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Date Signed *</label>
+                    <input type="date" name="date_signed" class="form-input" value="${currentDateSigned ? currentDateSigned.substring(0,10) : today}" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">End / Expiration Date</label>
+                    <input type="date" name="expiration_date" class="form-input" value="${currentEndDate ? currentEndDate.substring(0,10) : ''}">
+                </div>
+                <div class="form-group full-width">
+                    <label class="form-label">MOA Status</label>
+                    <select name="status" class="form-select">
+                        <option value="active" ${currentStatus === 'active' || (!currentStatus || currentStatus === 'pending') ? 'selected' : ''}>Active (Signed & Effectual)</option>
+                        <option value="pending" ${currentStatus === 'pending' ? 'selected' : ''}>Pending Signature</option>
+                        <option value="expired" ${currentStatus === 'expired' ? 'selected' : ''}>Expired</option>
+                        <option value="terminated" ${currentStatus === 'terminated' ? 'selected' : ''}>Terminated</option>
+                    </select>
+                </div>
+                <div class="form-group full-width">
+                    <label class="form-label">Upload Signed MOA Document (Optional)
+                        <input id="signed-moa-file" type="file" name="attachments[]" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xls,.xlsx,.csv" class="form-input" multiple>
+                        <p class="text-xs text-[#9CA3AF] mt-1">Attach the scanned signed copy of the agreement.</p>
+                    </label>
+                </div>
+                <div class="form-group full-width">
+                    <label class="form-label">Remarks</label>
+                    <textarea name="remarks" class="form-input" rows="2" placeholder="Optional notes regarding the signing..."></textarea>
+                </div>
+            </div>
+        </div>`;
+    sl.openForm('Update Date Signed', moaNumber, formHtml, {showSaveAnother:false, submitText:'Save Date Signed'});
+    const form = document.getElementById('slideoverForm');
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await submitSlideOverForm(sl, `${siteUrl}/ajax/moa.php?action=update_date_signed`, new FormData(e.target), () => location.reload());
+    });
+};
 
 window.deleteMoa = async function(id, btn) {
     if (!confirm('Are you sure you want to delete this MOA?')) return;

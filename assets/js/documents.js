@@ -192,6 +192,26 @@ function printDocument(id) {
     win.addEventListener('load', () => win.print(), { once: true });
 }
 
+window.sendDesignationToFaculty = async function(id, btn) {
+    if (!confirm('Send this designation order to assigned faculty via email and portal notification?')) return;
+    setButtonLoading(btn, true);
+    try {
+        const baseUrl = typeof SITE_URL !== 'undefined' ? SITE_URL : (window.APP_BASE_URL || '');
+        const response = await fetch(`${baseUrl}/ajax/documents.php?action=send_designation&id=${Number(id)}`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({id: Number(id)})
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || 'Failed to send designation.');
+        showToast(data.message || 'Designation sent to faculty successfully!', 'success');
+    } catch (err) {
+        showToast(err.message || 'Could not send designation.', 'error');
+    } finally {
+        setButtonLoading(btn, false);
+    }
+};
+
 window.deleteDocument = async function(id, btn) {
     if (!confirm('Are you sure you want to delete this document?')) return;
     setButtonLoading(btn, true);
@@ -211,3 +231,12 @@ window.deleteDocument = async function(id, btn) {
         setButtonLoading(btn, false);
     }
 };
+
+// Auto-open document viewer if view_doc parameter is present
+document.addEventListener('DOMContentLoaded', () => {
+    const docParams = new URLSearchParams(window.location.search);
+    const viewDocId = docParams.get('view_doc');
+    if (viewDocId && typeof viewDocument === 'function') {
+        setTimeout(() => viewDocument(parseInt(viewDocId, 10)), 300);
+    }
+});

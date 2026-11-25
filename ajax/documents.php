@@ -33,6 +33,26 @@ try {
         auditLog('delete', 'document', $id, 'Deleted document: ' . ($doc['title'] ?? ''));
         jsonResponse(['success' => true, 'message' => 'Document deleted.']);
     }
+    if ($action === 'send_designation') {
+        $id = intval($_GET['id'] ?? ($_POST['id'] ?? 0));
+        if (!$id) {
+            $input = json_decode(file_get_contents('php://input'), true);
+            $id = intval($input['id'] ?? 0);
+        }
+        if (!$id) throw new RuntimeException('Invalid ID.', 400);
+        if ($_SESSION['role'] !== 'admin') throw new RuntimeException('Only administrators can send designations.', 403);
+        $doc = DocumentModel::find($id);
+        if (!$doc) throw new RuntimeException('Designation file not found.', 404);
+        
+        $notified = DocumentModel::notifyDesignationRecipients($doc['entity_type'], (int)$doc['entity_id'], $doc['title'], $id);
+        if (empty($notified)) {
+            jsonResponse(['success' => true, 'message' => 'No active faculty members currently assigned to this record.']);
+        }
+        $count = count($notified);
+        $names = implode(', ', $notified);
+        auditLog('send', 'designation', $id, "Sent designation to {$count} faculty ({$names})");
+        jsonResponse(['success' => true, 'message' => "Designation order sent to {$count} faculty member(s): {$names}.", 'recipients' => $notified]);
+    }
     if (!in_array($action, ['get', 'file'], true)) throw new RuntimeException('Invalid action.', 400);
     $document = DocumentModel::find((int)($_GET['id'] ?? 0));
     if (!DocumentModel::canRead($document)) throw new RuntimeException('Document not found or access denied.', 404);

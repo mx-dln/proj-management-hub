@@ -70,6 +70,47 @@ switch ($action) {
         }
         break;
 
+    case 'update_date_signed':
+        Permissions::requirePermission(Permissions::canManageMoa());
+        $input = json_decode(file_get_contents('php://input'), true) ?: $_POST;
+        $id = intval($input['id'] ?? ($_GET['id'] ?? 0));
+        if (!$id) jsonResponse(['success' => false, 'message' => 'Invalid MOA ID'], 400);
+        $dateSigned = !empty($input['date_signed']) ? $input['date_signed'] : null;
+        if (!$dateSigned) jsonResponse(['success' => false, 'message' => 'Date Signed is required.'], 422);
+
+        $stmt = db()->prepare("SELECT * FROM moas WHERE id = ?");
+        $stmt->execute([$id]);
+        $moa = $stmt->fetch();
+        if (!$moa) jsonResponse(['success' => false, 'message' => 'MOA not found.'], 404);
+
+        $expirationDate = !empty($input['expiration_date']) ? $input['expiration_date'] : $moa['expiration_date'];
+        $newStatus = !empty($input['status']) ? sanitize($input['status']) : ($moa['status'] === 'pending' ? 'active' : $moa['status']);
+        $remarks = isset($input['remarks']) ? sanitize($input['remarks']) : $moa['remarks'];
+
+        $fields = ["date_signed = ?", "expiration_date = ?", "status = ?", "remarks = ?"];
+        $params = [$dateSigned, $expirationDate, $newStatus, $remarks];
+
+        // Optional signed MOA file upload
+        $files = $_FILES['attachments'] ?? $_FILES['attachment'] ?? [];
+        if (!empty($files['name']) && (!is_array($files['name']) || !empty(array_filter($files['name'])))) {
+            $uploads = uploadFiles($files, 'moa', ['pdf','doc','docx','jpg','jpeg','png','xls','xlsx','csv']);
+            if ($uploads && !isset($uploads['success'])) {
+                $paths = array_map(fn($file) => $file['file_path'], $uploads);
+                $fields[] = "attachment = ?"; $params[] = $paths[0];
+                ensureSchemaUpdated();
+                $checkCol = db()->query("SHOW COLUMNS FROM moas LIKE 'attachments'");
+                if ($checkCol && $checkCol->fetch()) {
+                    $fields[] = "attachments = ?"; $params[] = json_encode($paths);
+                }
+            }
+        }
+
+        $params[] = $id;
+        db()->prepare("UPDATE moas SET " . implode(', ', $fields) . " WHERE id = ?")->execute($params);
+        auditLog('edit', 'moa', $id, "Updated MOA {$moa['moa_number']} date signed to {$dateSigned}");
+        jsonResponse(['success' => true, 'message' => 'MOA Date Signed recorded successfully. Status set to ' . ucfirst($newStatus) . '.']);
+        break;
+
     case 'update':
         $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
         if (strpos($contentType, 'application/json') !== false) {

@@ -9,6 +9,8 @@ class EmailQueue {
         'project' => 'assignments',
         'component' => 'assignments',
         'activity' => 'assignments',
+        'designation' => 'assignments',
+        'document' => 'assignments',
     ];
 
     public function __construct(private PDO $db, private ?Mailer $mailer = null) {

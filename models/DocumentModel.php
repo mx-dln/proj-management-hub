@@ -127,29 +127,75 @@ class DocumentModel {
         return $uploaded;
     }
 
-    private static function notifyDesignationRecipients($type, $id, $title, $documentId) {
+    public static function sendDesignationEmailDirect($recipient, $title, $type, $entityTitle, $documentId) {
+        $email = !empty($recipient['user_email']) && filter_var($recipient['user_email'], FILTER_VALIDATE_EMAIL)
+            ? $recipient['user_email']
+            : ($recipient['faculty_email'] ?? '');
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) return false;
+
+        $name = trim(($recipient['first_name'] ?? '') . ' ' . ($recipient['last_name'] ?? '')) ?: ($recipient['username'] ?? 'Faculty');
+        $subject = "Designation Order: {$title} - ISU Project Hub";
+        $typeLabel = ucfirst($type);
+        $message = "Dear {$name},\n\nYou have been issued an official designation order for {$typeLabel}" . ($entityTitle ? " ({$entityTitle})" : "") . ".\n\nDesignation File: {$title}\n\nYou may view, print, or download your designation order in the ISU Project Management Hub.";
+        $actionUrl = '/index.php?module=designations&view_doc=' . $documentId;
+
+        try {
+            require_once __DIR__ . '/../includes/Mailer.php';
+            $mailer = new Mailer(db());
+            $settings = $mailer->settings();
+            if (($settings['mail_enabled'] ?? '0') === '1') {
+                $mailer->send($email, $name, $subject, $message, $actionUrl);
+                return true;
+            }
+        } catch (Throwable $e) {
+            error_log("Failed to send designation email to {$email}: " . $e->getMessage());
+        }
+        return false;
+    }
+
+    public static function notifyDesignationRecipients($type, $id, $title, $documentId) {
         $assignmentTable = $type === 'activity' ? 'activity_assignments' : $type . '_assignments';
         $entityColumn = $type === 'activity' ? 'activity_id' : $type . '_id';
-        if (!in_array($type, array_keys(self::ENTITY_TABLES), true)) return;
+        if (!in_array($type, array_keys(self::ENTITY_TABLES), true)) return [];
 
         $stmt = db()->prepare("
-            SELECT DISTINCT fp.user_id
+            SELECT DISTINCT fp.user_id, fp.first_name, fp.last_name, fp.email as faculty_email, u.email as user_email, u.username
             FROM {$assignmentTable} a
             JOIN faculty_profiles fp ON a.faculty_id = fp.id
             JOIN users u ON fp.user_id = u.id
             WHERE a.{$entityColumn} = ? AND a.is_active = 1 AND u.is_active = 1 AND u.deleted_at IS NULL
         ");
         $stmt->execute([$id]);
-        foreach ($stmt->fetchAll() as $recipient) {
+        $recipients = $stmt->fetchAll();
+
+        $entityTitle = '';
+        try {
+            $table = self::ENTITY_TABLES[$type] ?? null;
+            if ($table) {
+                $eStmt = db()->prepare("SELECT title FROM {$table} WHERE id = ?");
+                $eStmt->execute([$id]);
+                $entityTitle = $eStmt->fetchColumn() ?: '';
+            }
+        } catch (Throwable $e) {}
+
+        $notified = [];
+        foreach ($recipients as $recipient) {
+            $notificationTitle = 'New Designation Issued';
+            $notificationMsg = "A designation file has been issued to you for " . ucfirst($type) . ($entityTitle ? " ({$entityTitle})" : "") . ": {$title}";
             createNotification(
                 (int)$recipient['user_id'],
-                'New Designation',
-                "A designation file was assigned to you: {$title}",
+                $notificationTitle,
+                $notificationMsg,
                 'info',
-                'document',
+                'designation',
                 $documentId,
-                '/index.php?module=designations'
+                '/index.php?module=designations&view_doc=' . $documentId
             );
+
+            // Attempt direct email
+            self::sendDesignationEmailDirect($recipient, $title, $type, $entityTitle, $documentId);
+            $notified[] = trim(($recipient['first_name'] ?? '') . ' ' . ($recipient['last_name'] ?? '')) ?: $recipient['username'];
         }
+        return $notified;
     }
 }

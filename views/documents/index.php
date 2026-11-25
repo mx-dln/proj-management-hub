@@ -22,6 +22,9 @@
                         <button onclick="event.stopPropagation(); viewDocument(<?= (int)$latest['id'] ?>, this)" class="btn-ghost">View</button>
                         <button onclick="event.stopPropagation(); printDocument(<?= (int)$latest['id'] ?>)" class="btn-ghost"><i class="fas fa-print mr-1"></i> Print</button>
                         <a href="<?= SITE_URL ?>/ajax/documents.php?action=file&amp;id=<?= (int)$latest['id'] ?>&amp;download=1" onclick="event.stopPropagation()" class="btn-primary"><i class="fas fa-download mr-1"></i> Download</a>
+                        <?php if (Permissions::isAdmin()): ?>
+                            <button onclick="event.stopPropagation(); sendDesignationToFaculty(<?= (int)$latest['id'] ?>, this)" class="btn-ghost text-[#86EFAC] border border-[#1E7A4B]/40 hover:bg-[#14532D]" title="Email and Notify Assigned Faculty"><i class="fas fa-paper-plane mr-1"></i> Send to Faculty</button>
+                        <?php endif; ?>
                     <?php else: ?>
                         <button class="btn-ghost" disabled>View</button>
                         <?php if ($canUpload): ?><button onclick="event.stopPropagation(); openDocumentUpload('<?= e($targetType) ?>', <?= $targetId ?>)" class="btn-primary"><i class="fas fa-upload mr-1"></i> Upload</button><?php endif; ?>
@@ -33,7 +36,12 @@
             <?php if (!array_filter($uploadTargets, function($t) use ($d) { $type = $t['type'] ?? ''; $id = $t['id'] ?? null; if ((!$type || !$id) && !empty($t['value']) && str_contains($t['value'], ':')) { [$type, $id] = explode(':', $t['value'], 2); } return $type === $d['entity_type'] && (int)$id === (int)$d['entity_id']; })): ?>
             <div class="designation-row has-file" onclick="viewDocument(<?= (int)$d['id'] ?>, this)" tabindex="0" role="button">
                 <div class="designation-name"><button type="button" class="designation-caret" onclick="event.stopPropagation(); viewDocument(<?= (int)$d['id'] ?>, this)" aria-label="View file"><i class="fas fa-caret-right"></i></button><span><?= e($d['title']) ?></span><small><?= e($d['file_name']) ?></small></div>
-                <div class="designation-actions"><button onclick="event.stopPropagation(); viewDocument(<?= (int)$d['id'] ?>, this)" class="btn-ghost">View</button></div>
+                <div class="designation-actions">
+                    <button onclick="event.stopPropagation(); viewDocument(<?= (int)$d['id'] ?>, this)" class="btn-ghost">View</button>
+                    <?php if (Permissions::isAdmin()): ?>
+                        <button onclick="event.stopPropagation(); sendDesignationToFaculty(<?= (int)$d['id'] ?>, this)" class="btn-ghost text-[#86EFAC] border border-[#1E7A4B]/40 hover:bg-[#14532D]" title="Email and Notify Assigned Faculty"><i class="fas fa-paper-plane mr-1"></i> Send to Faculty</button>
+                    <?php endif; ?>
+                </div>
             </div>
             <?php endif; ?>
         <?php endforeach; ?>
@@ -77,6 +85,9 @@
                         <td data-label="Actions">
                             <div class="flex items-center gap-1">
                                 <button onclick="viewDocument(<?= (int)$d['id'] ?>, this)" class="action-btn" aria-label="View <?= e($d['title']) ?>" title="View"><i class="fas fa-eye text-sm" aria-hidden="true"></i></button>
+                                <?php if (Permissions::isAdmin() && $isDesignation): ?>
+                                    <button onclick="sendDesignationToFaculty(<?= (int)$d['id'] ?>, this)" class="action-btn text-[#86EFAC]" title="Send to Assigned Faculty via Email and Portal" aria-label="Send to Faculty"><i class="fas fa-paper-plane text-sm" aria-hidden="true"></i></button>
+                                <?php endif; ?>
                                 <?php if (Permissions::canDeleteDocument()): ?>
                                     <button onclick="deleteDocument(<?= (int)$d['id'] ?>, this)" class="action-btn action-btn-danger" aria-label="Delete <?= e($d['title']) ?>" title="Delete"><i class="fas fa-trash text-sm" aria-hidden="true"></i></button>
                                 <?php endif; ?>
