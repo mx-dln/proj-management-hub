@@ -194,7 +194,14 @@ class AssignmentVisibility {
         if ($search) { $where .= " AND (ar.title LIKE ? OR ar.report_number LIKE ?)"; $params[] = "%$search%"; $params[] = "%$search%"; }
         if ($type) { $where .= " AND ar.report_type = ?"; $params[] = $type; }
         if ($year) { $where .= " AND ar.period_year = ?"; $params[] = (int)$year; }
-        if ($quarter) { $where .= " AND ar.period_quarter = ?"; $params[] = $quarter; }
+        if ($quarter) {
+            if ($quarter === 'annual') {
+                $where .= " AND (ar.period_quarter IS NULL OR ar.period_quarter = '' OR ar.report_type = 'annual')";
+            } else {
+                $where .= " AND ar.period_quarter = ?";
+                $params[] = $quarter;
+            }
+        }
         
         if ($facultyId) {
             $where .= " AND ar.project_id IN (SELECT project_id FROM project_assignments WHERE faculty_id = ? AND is_active = 1)";

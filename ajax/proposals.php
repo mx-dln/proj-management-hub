@@ -40,6 +40,18 @@ function ensureProposalBudgetCommentsTable() {
     $ready = true;
 }
 
+function ensureProposalVersionsAttachments() {
+    static $ready = false;
+    if ($ready) return;
+    try {
+        $cols = db()->query("SHOW COLUMNS FROM proposal_versions LIKE 'attachments'")->fetchAll();
+        if (empty($cols)) {
+            db()->exec("ALTER TABLE proposal_versions ADD COLUMN attachments TEXT DEFAULT NULL AFTER attachment");
+        }
+    } catch (Throwable $e) {}
+    $ready = true;
+}
+
 function canAccessProposalRow(array $proposal, array $user) {
     if (($user['role'] ?? '') === 'admin') return true;
     if ((int)$proposal['submitted_by'] === (int)$user['id']) return true;
@@ -84,6 +96,23 @@ switch ($action) {
         if (!$canRead) jsonResponse(['success' => false, 'message' => 'Permission denied'], 403);
         $base = realpath(UPLOAD_PATH);
         $attachments = attachmentPaths($proposal);
+        $versionId = intval($_GET['version_id'] ?? 0);
+        $versionNum = intval($_GET['version'] ?? 0);
+        if ($versionId) {
+            $vStmt = db()->prepare("SELECT attachment, attachments FROM proposal_versions WHERE id = ? AND proposal_id = ?");
+            $vStmt->execute([$versionId, $id]);
+            $vRow = $vStmt->fetch();
+            if ($vRow && (!empty($vRow['attachment']) || !empty($vRow['attachments']))) {
+                $attachments = attachmentPaths($vRow);
+            }
+        } elseif ($versionNum) {
+            $vStmt = db()->prepare("SELECT attachment, attachments FROM proposal_versions WHERE version = ? AND proposal_id = ?");
+            $vStmt->execute([$versionNum, $id]);
+            $vRow = $vStmt->fetch();
+            if ($vRow && (!empty($vRow['attachment']) || !empty($vRow['attachments']))) {
+                $attachments = attachmentPaths($vRow);
+            }
+        }
         $attachmentIndex = max(0, (int)($_GET['attachment_index'] ?? 0));
         $relativePath = $attachments[$attachmentIndex] ?? ($attachments[0] ?? '');
         $file = realpath(UPLOAD_PATH . $relativePath);
@@ -152,8 +181,11 @@ switch ($action) {
                 $data['submitted_by'], $data['date_submitted'], $data['status'], $data['remarks'], $paths[0], json_encode($paths)
             ]);
             $id = db()->lastInsertId();
-            db()->prepare("INSERT INTO proposal_versions (proposal_id, version, attachment, remarks, uploaded_by) VALUES (?, 1, ?, ?, ?)")
-                ->execute([$id, $paths[0], 'Initial submission', $user['id']]);
+            ensureProposalVersionsAttachments();
+            db()->prepare("INSERT INTO proposal_versions (proposal_id, version, attachment, attachments, remarks, uploaded_by) VALUES (?, 1, ?, ?, ?, ?)")
+                ->execute([$id, $paths[0], json_encode($paths), 'Initial proposal submission (v1)', $user['id']]);
+            db()->prepare("INSERT INTO proposal_approvals (proposal_id, approver_id, action, remarks) VALUES (?, ?, 'submitted', ?)")
+                ->execute([$id, $user['id'], 'Submitted proposal (v1) for review']);
 
             // Notify admins
             $admins = db()->query("SELECT id FROM users WHERE role = 'admin' AND deleted_at IS NULL")->fetchAll();
@@ -190,6 +222,9 @@ switch ($action) {
                 if ($uploads && !isset($uploads['success'])) {
                     $paths = array_map(fn($file) => $file['file_path'], $uploads);
                     db()->prepare("UPDATE proposals SET attachment = ?, attachments = ? WHERE id = ?")->execute([$paths[0], json_encode($paths), $id]);
+                    ensureProposalVersionsAttachments();
+                    db()->prepare("INSERT INTO proposal_versions (proposal_id, version, attachment, attachments, remarks, uploaded_by) VALUES (?, 1, ?, ?, ?, ?)")
+                        ->execute([$id, $paths[0], json_encode($paths), 'Initial proposal draft (v1)', $user['id']]);
                 }
             }
             auditLog('create', 'proposal', $id, 'Created proposal: ' . $data['title'], false, $projectId);
@@ -208,13 +243,14 @@ switch ($action) {
         $isProgramProposal = empty($p['project_id']);
         $canSubmit = $user['role'] === 'faculty'
             && $isOwner
-            && in_array($p['status'], ['draft', 'returned'])
+            && in_array($p['status'], ['draft', 'returned', 'rejected'])
             && ($isProgramProposal || Permissions::canSubmitProposal((int)$p['project_id']));
         Permissions::requirePermission($canSubmit);
         try {
             db()->prepare("UPDATE proposals SET status = 'submitted', date_submitted = CURDATE(), reviewed_by = NULL, reviewed_at = NULL WHERE id = ?")->execute([$id]);
+            $actionNote = $p['status'] === 'returned' ? 'Resubmitted for review' : ($p['status'] === 'rejected' ? 'Resubmitted after rejection' : 'Submitted for review');
             db()->prepare("INSERT INTO proposal_approvals (proposal_id, approver_id, action, remarks) VALUES (?, ?, 'submitted', ?)")
-                ->execute([$id, $user['id'], $p['status'] === 'returned' ? 'Resubmitted for review' : 'Submitted for review']);
+                ->execute([$id, $user['id'], $actionNote]);
             
             // Notify admin
             $admins = db()->query("SELECT id FROM users WHERE role = 'admin' AND deleted_at IS NULL")->fetchAll();
@@ -232,37 +268,58 @@ switch ($action) {
         $id = intval($_POST['id'] ?? 0);
         $remarks = sanitize($_POST['remarks'] ?? '');
         if (!$id) jsonResponse(['success' => false, 'message' => 'Invalid proposal'], 400);
-        if (empty($_FILES['attachments']['tmp_name']) && empty($_FILES['attachment']['tmp_name'])) jsonResponse(['success' => false, 'message' => 'Revised proposal file is required'], 400);
 
         $proposal = db()->prepare("SELECT * FROM proposals WHERE id = ?");
         $proposal->execute([$id]);
         $p = $proposal->fetch();
         if (!$p) jsonResponse(['success' => false, 'message' => 'Proposal not found'], 404);
-        if ((int)$p['submitted_by'] !== (int)$user['id'] || $p['status'] !== 'returned') {
-            jsonResponse(['success' => false, 'message' => 'Only the owner can revise a returned proposal'], 403);
+        if ((int)$p['submitted_by'] !== (int)$user['id'] || !in_array($p['status'], ['returned', 'rejected'])) {
+            jsonResponse(['success' => false, 'message' => 'Only the owner can revise a returned or rejected proposal'], 403);
         }
 
-        $uploads = uploadFiles($_FILES['attachments'] ?? $_FILES['attachment'], 'proposals', ['pdf','doc','docx','jpg','jpeg','png','csv','xls','xlsx','xlsm']);
-        if (!$uploads || (isset($uploads['success']) && !$uploads['success'])) jsonResponse(['success' => false, 'message' => $uploads['error'] ?? 'Upload failed'], 400);
+        $files = $_FILES['attachments'] ?? $_FILES['attachment'] ?? [];
+        $hasFiles = false;
+        if (!empty($files['name'])) {
+            if (is_array($files['name'])) {
+                foreach ($files['name'] as $fn) {
+                    if (!empty($fn)) { $hasFiles = true; break; }
+                }
+            } else {
+                $hasFiles = true;
+            }
+        }
+        if (!$hasFiles) {
+            jsonResponse(['success' => false, 'message' => 'Revised proposal file is required'], 400);
+        }
+
+        $uploads = uploadFiles($files, 'proposals', ['pdf','doc','docx','jpg','jpeg','png','csv','xls','xlsx','xlsm']);
+        if (!$uploads || (isset($uploads['success']) && !$uploads['success'])) {
+            jsonResponse(['success' => false, 'message' => $uploads['error'] ?? 'Upload failed'], 400);
+        }
         $paths = array_map(fn($file) => $file['file_path'], $uploads);
+        if (empty($paths)) {
+            jsonResponse(['success' => false, 'message' => 'No valid file was uploaded'], 400);
+        }
 
         try {
-            $nextVersion = (int)$p['version'] + 1;
+            $nextVersion = (int)($p['version'] ?? 1) + 1;
             db()->beginTransaction();
+            ensureProposalVersionsAttachments();
             db()->prepare("UPDATE proposals SET attachment = ?, attachments = ?, version = ?, status = 'submitted', date_submitted = CURDATE(), reviewed_by = NULL, reviewed_at = NULL WHERE id = ?")
                 ->execute([$paths[0], json_encode($paths), $nextVersion, $id]);
-            db()->prepare("INSERT INTO proposal_versions (proposal_id, version, attachment, remarks, uploaded_by) VALUES (?, ?, ?, ?, ?)")
-                ->execute([$id, $nextVersion, $paths[0], $remarks ?: 'Revised submission', $user['id']]);
+            db()->prepare("INSERT INTO proposal_versions (proposal_id, version, attachment, attachments, remarks, uploaded_by) VALUES (?, ?, ?, ?, ?, ?)")
+                ->execute([$id, $nextVersion, $paths[0], json_encode($paths), $remarks ?: "Revised submission (v{$nextVersion})", $user['id']]);
             db()->prepare("INSERT INTO proposal_approvals (proposal_id, approver_id, action, remarks) VALUES (?, ?, 'submitted', ?)")
-                ->execute([$id, $user['id'], $remarks ?: 'Revised and resubmitted']);
+                ->execute([$id, $user['id'], $remarks ?: "Revised proposal submitted (v{$nextVersion})"]);
 
             $admins = db()->query("SELECT id FROM users WHERE role = 'admin' AND deleted_at IS NULL AND is_active = 1")->fetchAll();
             foreach ($admins as $a) {
-                createNotification($a['id'], 'Proposal Resubmitted', "A revised proposal '{$p['title']}' is ready for review.", 'info', 'proposal', $id, '/index.php?module=proposals');
+                createNotification($a['id'], 'Proposal Resubmitted', "A revised proposal '{$p['title']}' (v{$nextVersion}) is ready for review.", 'info', 'proposal', $id, '/index.php?module=proposals');
             }
             db()->commit();
-            auditLog('edit', 'proposal', $id, 'Revised and resubmitted proposal');
-            jsonResponse(['success' => true, 'message' => 'Proposal revised and submitted', 'attachment_count' => count($paths)]);
+            processProposalMailQueue();
+            auditLog('edit', 'proposal', $id, "Revised and resubmitted proposal (v{$nextVersion})");
+            jsonResponse(['success' => true, 'message' => "Proposal revised and submitted (v{$nextVersion})", 'attachment_count' => count($paths), 'version' => $nextVersion]);
         } catch (Exception $e) {
             db()->rollback();
             jsonResponse(['success' => false, 'message' => 'Failed: ' . $e->getMessage()], 500);
@@ -297,7 +354,19 @@ switch ($action) {
                 ->execute([$id, $user['id'], $action, $remarks]);
             
             $notifType = $action === 'approved' ? 'success' : ($action === 'returned' ? 'warning' : 'error');
-            createNotification($p['submitted_by'], 'Proposal ' . ucfirst($action), "Your proposal '{$p['title']}' has been {$action}.", $notifType, 'proposal', $id, '/index.php?module=proposals');
+            $actionWord = $action === 'returned' ? 'returned for revision' : $action;
+            $notifMsg = "Your proposal '{$p['title']}' has been {$actionWord}." . ($remarks ? " Remarks: {$remarks}" : '');
+            createNotification($p['submitted_by'], 'Proposal ' . ucfirst($action), $notifMsg, $notifType, 'proposal', $id, '/index.php?module=proposals');
+
+            // When approved: notify ETS Head and Admin (Ma'am Nancy)
+            if ($action === 'approved') {
+                $admins = db()->query("SELECT id FROM users WHERE role = 'admin' AND deleted_at IS NULL AND is_active = 1")->fetchAll();
+                foreach ($admins as $a) {
+                    if ((int)$a['id'] !== (int)$user['id']) {
+                        createNotification($a['id'], 'Proposal Approved', "Proposal '{$p['title']}' has been approved by {$user['username']}.", 'success', 'proposal', $id, '/index.php?module=proposals');
+                    }
+                }
+            }
             processProposalMailQueue();
             
             // If approved and it's a program proposal, create a program
@@ -426,20 +495,65 @@ switch ($action) {
                 $data['is_program_proposal'] = ($meta['type'] === 'program_proposal');
             }
 
+            $data['canRevise'] = ($user['role'] === 'faculty' && (int)$data['submitted_by'] === (int)$user['id'] && in_array($data['status'], ['returned', 'rejected']));
+
+            $latestReviewStmt = db()->prepare("
+                SELECT pa.*, u.username, u.role,
+                       CONCAT(COALESCE(fp.first_name, u.username), ' ', COALESCE(fp.last_name, '')) as reviewer_name
+                FROM proposal_approvals pa
+                JOIN users u ON pa.approver_id = u.id
+                LEFT JOIN faculty_profiles fp ON fp.user_id = u.id
+                WHERE pa.proposal_id = ? AND pa.action IN ('returned', 'rejected', 'approved')
+                ORDER BY pa.performed_at DESC, pa.id DESC
+                LIMIT 1
+            ");
+            $latestReviewStmt->execute([$id]);
+            $data['latest_review'] = $latestReviewStmt->fetch() ?: null;
+
+            ensureProposalVersionsAttachments();
             $history = db()->prepare("
-                SELECT 'review' as item_type, pa.action, pa.remarks, pa.performed_at as created_at, u.username as actor_name, NULL as version, NULL as attachment
+                SELECT 'review' as item_type, pa.id as ref_id, pa.action, pa.remarks, pa.performed_at as created_at,
+                       u.username, u.role,
+                       CONCAT(COALESCE(fp.first_name, u.username), ' ', COALESCE(fp.last_name, '')) as actor_name,
+                       NULL as version, NULL as attachment, NULL as attachments
                 FROM proposal_approvals pa
                 LEFT JOIN users u ON pa.approver_id = u.id
+                LEFT JOIN faculty_profiles fp ON fp.user_id = u.id
                 WHERE pa.proposal_id = ?
                 UNION ALL
-                SELECT 'version' as item_type, 'uploaded' as action, pv.remarks, pv.created_at, u.username as actor_name, pv.version, pv.attachment
+                SELECT 'version' as item_type, pv.id as ref_id, 'uploaded' as action, pv.remarks, pv.created_at,
+                       u.username, u.role,
+                       CONCAT(COALESCE(fp.first_name, u.username), ' ', COALESCE(fp.last_name, '')) as actor_name,
+                       pv.version, pv.attachment, pv.attachments
                 FROM proposal_versions pv
                 LEFT JOIN users u ON pv.uploaded_by = u.id
+                LEFT JOIN faculty_profiles fp ON fp.user_id = u.id
                 WHERE pv.proposal_id = ?
-                ORDER BY created_at DESC
+                ORDER BY created_at ASC, ref_id ASC
             ");
             $history->execute([$id, $id]);
-            $data['history'] = $history->fetchAll();
+            $historyList = $history->fetchAll();
+
+            $hasVersion = false;
+            foreach ($historyList as $item) {
+                if ($item['item_type'] === 'version') { $hasVersion = true; break; }
+            }
+            if (!$hasVersion && !empty($data['attachment'])) {
+                array_unshift($historyList, [
+                    'item_type' => 'version',
+                    'ref_id' => 0,
+                    'action' => 'uploaded',
+                    'remarks' => 'Initial proposal document',
+                    'created_at' => $data['created_at'] ?? $data['date_submitted'] ?? date('Y-m-d H:i:s'),
+                    'username' => '',
+                    'role' => 'faculty',
+                    'actor_name' => $data['submitter_name'] ?? 'Faculty Proponent',
+                    'version' => 1,
+                    'attachment' => $data['attachment'],
+                    'attachments' => $data['attachments'] ?? null,
+                ]);
+            }
+            $data['history'] = $historyList;
 
             $comments = db()->prepare("
                 SELECT pc.*, u.username, u.role, CONCAT(fp.first_name, ' ', fp.last_name) as faculty_name

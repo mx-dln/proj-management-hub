@@ -10,8 +10,14 @@ switch ($action) {
     case 'template':
         $projectId = intval($_GET['project_id'] ?? 0);
         $year = intval($_GET['year'] ?? date('Y'));
-        $quarter = sanitize($_GET['quarter'] ?? 'Q1');
-        if (!$projectId || !in_array($quarter, ['Q1','Q2','Q3','Q4'], true)) jsonResponse(['success' => false, 'message' => 'Project, year, and quarter are required'], 400);
+        $quarter = sanitize($_GET['quarter'] ?? 'auto');
+        if ($quarter === 'auto') {
+            $quarter = 'Q' . ceil(date('n') / 3);
+        }
+        $isAnnual = in_array($quarter, ['annual', 'all'], true);
+        if (!$projectId || (!$isAnnual && !in_array($quarter, ['Q1','Q2','Q3','Q4'], true))) {
+            jsonResponse(['success' => false, 'message' => 'Project and valid quarter or annual selection are required'], 400);
+        }
         Permissions::requirePermission(Permissions::canGenerateReports() && (Permissions::isAdmin() || Permissions::isViewer() || Permissions::canAccessProject($projectId)));
         try {
             $projectStmt = db()->prepare("
@@ -37,29 +43,51 @@ switch ($action) {
             $moaStmt->execute([$projectId]);
             $moa = $moaStmt->fetch();
 
-            $activitiesStmt = db()->prepare("
-                SELECT ea.*, c.title as component_title, COUNT(ap.id) as participants,
-                    SUM(CASE WHEN ap.attendance_status = 'present' THEN 1 ELSE 0 END) as present_count
-                FROM extension_activities ea
-                LEFT JOIN components c ON ea.component_id = c.id
-                LEFT JOIN activity_participants ap ON ap.activity_id = ea.id
-                WHERE c.project_id = ? AND ea.deleted_at IS NULL
-                    AND YEAR(COALESCE(ea.start_datetime, ea.created_at)) = ?
-                    AND QUARTER(COALESCE(ea.start_datetime, ea.created_at)) = ?
-                GROUP BY ea.id
-                ORDER BY ea.start_datetime, ea.title
-            ");
-            $activitiesStmt->execute([$projectId, $year, (int)substr($quarter, 1)]);
-            $activities = $activitiesStmt->fetchAll();
+            if ($isAnnual) {
+                $activitiesStmt = db()->prepare("
+                    SELECT ea.*, c.title as component_title, COUNT(ap.id) as participants,
+                        SUM(CASE WHEN ap.attendance_status = 'present' THEN 1 ELSE 0 END) as present_count
+                    FROM extension_activities ea
+                    LEFT JOIN components c ON ea.component_id = c.id
+                    LEFT JOIN activity_participants ap ON ap.activity_id = ea.id
+                    WHERE c.project_id = ? AND ea.deleted_at IS NULL
+                        AND YEAR(COALESCE(ea.start_datetime, ea.created_at)) = ?
+                    GROUP BY ea.id
+                    ORDER BY ea.start_datetime, ea.title
+                ");
+                $activitiesStmt->execute([$projectId, $year]);
+                $activities = $activitiesStmt->fetchAll();
 
-            $reportStmt = db()->prepare("SELECT * FROM accomplishment_reports WHERE project_id = ? AND period_year = ? AND period_quarter = ? ORDER BY created_at DESC LIMIT 1");
-            $reportStmt->execute([$projectId, $year, $quarter]);
-            $report = $reportStmt->fetch();
+                $reportStmt = db()->prepare("SELECT * FROM accomplishment_reports WHERE project_id = ? AND period_year = ? AND (period_quarter IS NULL OR period_quarter = '' OR report_type = 'annual') ORDER BY created_at DESC LIMIT 1");
+                $reportStmt->execute([$projectId, $year]);
+                $report = $reportStmt->fetch();
+                $headingTitle = "{$year} Annual Accomplishment Report";
+            } else {
+                $activitiesStmt = db()->prepare("
+                    SELECT ea.*, c.title as component_title, COUNT(ap.id) as participants,
+                        SUM(CASE WHEN ap.attendance_status = 'present' THEN 1 ELSE 0 END) as present_count
+                    FROM extension_activities ea
+                    LEFT JOIN components c ON ea.component_id = c.id
+                    LEFT JOIN activity_participants ap ON ap.activity_id = ea.id
+                    WHERE c.project_id = ? AND ea.deleted_at IS NULL
+                        AND YEAR(COALESCE(ea.start_datetime, ea.created_at)) = ?
+                        AND QUARTER(COALESCE(ea.start_datetime, ea.created_at)) = ?
+                    GROUP BY ea.id
+                    ORDER BY ea.start_datetime, ea.title
+                ");
+                $activitiesStmt->execute([$projectId, $year, (int)substr($quarter, 1)]);
+                $activities = $activitiesStmt->fetchAll();
+
+                $reportStmt = db()->prepare("SELECT * FROM accomplishment_reports WHERE project_id = ? AND period_year = ? AND period_quarter = ? ORDER BY created_at DESC LIMIT 1");
+                $reportStmt->execute([$projectId, $year, $quarter]);
+                $report = $reportStmt->fetch();
+                $headingTitle = "{$quarter} {$year} Accomplishment Report";
+            }
 
             ob_start();
             ?>
             <div class="report-template">
-                <h2><?= e($quarter) ?> <?= e($year) ?> Accomplishment Report</h2>
+                <h2><?= e($headingTitle) ?></h2>
                 <dl>
                     <dt>Proposal Title</dt><dd><?= e($proposal['title'] ?? $project['title']) ?></dd>
                     <dt>Project Leader / Head</dt><dd><?= e($project['leader_name'] ?: '-') ?></dd>
