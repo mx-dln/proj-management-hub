@@ -111,6 +111,14 @@
 <script>
 const siteUrl = <?= json_encode(SITE_URL) ?>;
 
+function formatDateTime(dateStr) {
+    if (!dateStr) return '-';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' }) + ' ' +
+           d.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit', hour12: true });
+}
+
 async function previewProposalFile(id, title = 'Proposal') {
     const fileUrl = `${siteUrl}/ajax/proposals.php?action=file&id=${Number(id)}`;
     const data = await fetchWithLoading(`${siteUrl}/ajax/proposals.php?action=get&id=${Number(id)}`);

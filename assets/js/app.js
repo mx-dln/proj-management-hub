@@ -270,6 +270,14 @@ function formatDate(dateStr) {
     return new Date(dateStr).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
+function formatDateTime(dateStr) {
+    if (!dateStr) return '-';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' }) + ' ' +
+           d.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit', hour12: true });
+}
+
 // Status Badge (JavaScript version)
 function getStatusBadge(status) {
     const classes = {
