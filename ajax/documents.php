@@ -50,6 +50,10 @@ try {
         }
         $count = count($notified);
         $names = implode(', ', $notified);
+        try {
+            require_once __DIR__ . '/../includes/EmailQueue.php';
+            (new EmailQueue(db()))->process(10);
+        } catch (Throwable $e) {}
         auditLog('send', 'designation', $id, "Sent designation to {$count} faculty ({$names})");
         jsonResponse(['success' => true, 'message' => "Designation order sent to {$count} faculty member(s): {$names}.", 'recipients' => $notified]);
     }

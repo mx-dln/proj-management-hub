@@ -196,6 +196,10 @@ class DocumentModel {
             self::sendDesignationEmailDirect($recipient, $title, $type, $entityTitle, $documentId);
             $notified[] = trim(($recipient['first_name'] ?? '') . ' ' . ($recipient['last_name'] ?? '')) ?: $recipient['username'];
         }
+        try {
+            require_once __DIR__ . '/../includes/EmailQueue.php';
+            (new EmailQueue(db()))->process(10);
+        } catch (Throwable $e) {}
         return $notified;
     }
 }
